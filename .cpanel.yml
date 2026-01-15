@@ -27,4 +27,17 @@ deployment:
     - echo "Copying webgsm-checkout-pro plugin..."
     - /bin/cp -Rv wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
 
-    - echo "DEPLOY FINISHED SUCCESSFULLY"
+    # Verificare fișiere copiate
+    - echo "Verifying deployed files..."
+    - /bin/ls -lah $DEPLOYPATH/themes/martfury-child/ | head -10
+    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-b2b-pricing/ | head -10
+    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-checkout-pro/ | head -10
+
+    # Setează permisiuni corecte
+    - echo "Setting correct permissions..."
+    - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
+    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
+    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
+
+    - echo "DEPLOY FINISHED SUCCESSFULLY at $(date)"
+    - echo "IMPORTANT: Clear WordPress cache and browser cache!"
