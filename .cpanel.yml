@@ -2,15 +2,29 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
+    - echo "🚀 Starting deployment..."
+    - echo "Repository location: $(pwd)"
+    - echo "Target location: $DEPLOYPATH"
+    
+    # Create directories if they don't exist
     - /bin/mkdir -p $DEPLOYPATH/themes
     - /bin/mkdir -p $DEPLOYPATH/plugins
-    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child
-    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-b2b-pricing
-    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-checkout-pro
-    - /bin/cp -Rfv wp-content/themes/martfury-child $DEPLOYPATH/themes/
-    - /bin/cp -Rfv wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
-    - /bin/cp -Rfv wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
+    
+    # Use rsync for safe sync (deletes only after successful copy)
+    - /usr/bin/rsync -avz --delete wp-content/themes/martfury-child/ $DEPLOYPATH/themes/martfury-child/
+    - /usr/bin/rsync -avz --delete wp-content/plugins/webgsm-b2b-pricing/ $DEPLOYPATH/plugins/webgsm-b2b-pricing/
+    - /usr/bin/rsync -avz --delete wp-content/plugins/webgsm-checkout-pro/ $DEPLOYPATH/plugins/webgsm-checkout-pro/
+    
+    # Set correct permissions
     - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
-    - echo "Deploy completed successfully"
+    
+    # Verify deployment
+    - echo "✅ Verifying deployed files..."
+    - /bin/ls -lah $DEPLOYPATH/themes/martfury-child/ | head -10
+    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-b2b-pricing/ | head -10
+    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-checkout-pro/ | head -10
+    
+    - echo "🎉 DEPLOY COMPLETED at $(date)"
+    - echo "⚠️  IMPORTANT: Clear WordPress cache + browser cache!"
