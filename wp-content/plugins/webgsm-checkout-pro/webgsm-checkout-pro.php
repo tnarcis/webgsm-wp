@@ -424,6 +424,50 @@ class WebGSM_Checkout_Pro {
         ?>
         <div class="webgsm-summary-box">
             <div class="summary-header">Sumar comandă</div>
+            
+            <?php
+            // Calculează și afișează economia B2B pentru clienți PJ - DEASUPRA Subtotal
+            $b2b_instance = WebGSM_B2B_Pricing::instance();
+            if ($b2b_instance && $b2b_instance->is_user_pj()) {
+                $b2b_discount_total = 0;
+                $b2b_original_total = 0;
+                
+                foreach (WC()->cart->get_cart() as $cart_item) {
+                    $product = $cart_item['data'];
+                    $product_id = $product->get_id();
+                    $quantity = $cart_item['quantity'];
+                    $original_price = get_post_meta($product_id, '_regular_price', true);
+                    
+                    $discount_pj = $b2b_instance->get_discount_pj($product);
+                    $tier = $b2b_instance->get_user_tier();
+                    $tiers = get_option('webgsm_b2b_tiers', $b2b_instance->get_default_tiers());
+                    $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
+                    $total_discount_percent = $discount_pj + $discount_tier;
+                    
+                    if ($original_price > 0 && $total_discount_percent > 0) {
+                        $discount_amount = ((float)$original_price * $total_discount_percent / 100) * $quantity;
+                        $b2b_discount_total += $discount_amount;
+                        $b2b_original_total += (float)$original_price * $quantity;
+                    }
+                }
+                
+                if ($b2b_discount_total > 0) : ?>
+                    <div class="summary-row summary-row-rrp">
+                        <span style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">Total RRC:</span>
+                        <span class="summary-value" style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">
+                            <?php echo wc_price($b2b_original_total); ?>
+                        </span>
+                    </div>
+                    <div class="summary-row summary-row-b2b-savings" style="background: #f0fdf4; border-top: 1px solid #bbf7d0; border-bottom: 1px solid #bbf7d0; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #15803d; font-weight: 500;">Economie B2B:</span>
+                        <span class="summary-value" style="font-size: 13px; color: #15803d; font-weight: 600;">
+                            -<?php echo wc_price($b2b_discount_total); ?>
+                        </span>
+                    </div>
+                <?php endif;
+            }
+            ?>
+            
             <div class="summary-row"><span>Subtotal:</span><span class="summary-value"><?php echo wc_price($subtotal); ?></span></div>
             
             <?php if ($total_discount > 0) : ?>

@@ -399,7 +399,373 @@ function webgsm_b2b_badges_css() {
         background: #2563eb;
         transform: translateY(-2px);
     }
+    
+    /* ========================================
+       Cart Table Header - Gradient Gri Stilizat
+       ======================================== */
+    
+    /* Header tabel cart cu gradient gri elegant și linii orizontale verzi */
+    .woocommerce-cart-form table.shop_table thead,
+    .woocommerce-cart table.shop_table thead {
+        background: linear-gradient(135deg, #e8eaed 0%, #f8f9fa 50%, #e8eaed 100%) !important;
+        border-top: 1px solid #2ecc71 !important;
+        border-bottom: 2px solid #2ecc71 !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table thead th,
+    .woocommerce-cart table.shop_table thead th {
+        padding: 16px 18px !important;
+        text-align: left !important;
+        font-weight: 700 !important;
+        color: #2c3e50 !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-top: none !important;
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif !important;
+        background: transparent !important;
+    }
+    
+    /* Aliniere coloane pentru consistență */
+    .woocommerce-cart-form table.shop_table thead th.product-name,
+    .woocommerce-cart table.shop_table thead th.product-name {
+        text-align: left !important;
+        padding-left: 24px !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table thead th.product-price,
+    .woocommerce-cart table.shop_table thead th.product-price {
+        text-align: center !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table thead th.product-quantity,
+    .woocommerce-cart table.shop_table thead th.product-quantity {
+        text-align: center !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table thead th.product-subtotal,
+    .woocommerce-cart table.shop_table thead th.product-subtotal {
+        text-align: right !important;
+        padding-right: 24px !important;
+    }
+    
+    /* Aliniere conținut tabel (TD) cu header-ul (TH) */
+    .woocommerce-cart-form table.shop_table tbody td.product-name,
+    .woocommerce-cart table.shop_table tbody td.product-name {
+        padding-left: 24px !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table tbody td.product-price,
+    .woocommerce-cart table.shop_table tbody td.product-price {
+        text-align: center !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table tbody td.product-quantity,
+    .woocommerce-cart table.shop_table tbody td.product-quantity {
+        text-align: center !important;
+    }
+    
+    .woocommerce-cart-form table.shop_table tbody td.product-subtotal,
+    .woocommerce-cart table.shop_table tbody td.product-subtotal {
+        text-align: right !important;
+        padding-right: 24px !important;
+    }
+    
+    /* ========================================
+       B2B Price Display - Cart/Checkout
+       ======================================== */
+    
+    /* TOTAL în roșu, bold, mare - după rândurile B2B */
+    .woocommerce-cart-form__contents .order-total th,
+    .woocommerce-checkout-review-order-table .order-total th,
+    .cart_totals .order-total th,
+    .woocommerce-checkout #order_review .order-total th {
+        color: #dc2626 !important;
+        font-weight: 700 !important;
+        font-size: 18px !important;
+    }
+    
+    .woocommerce-cart-form__contents .order-total td,
+    .woocommerce-checkout-review-order-table .order-total td,
+    .cart_totals .order-total td,
+    .woocommerce-checkout #order_review .order-total td {
+        color: #dc2626 !important;
+        font-weight: 700 !important;
+        font-size: 20px !important;
+    }
+    
+    .woocommerce-cart-form__contents .order-total .woocommerce-Price-amount,
+    .woocommerce-checkout-review-order-table .order-total .woocommerce-Price-amount,
+    .cart_totals .order-total .woocommerce-Price-amount,
+    .woocommerce-checkout #order_review .order-total .woocommerce-Price-amount {
+        color: #dc2626 !important;
+    }
+    
+    /* ========================================
+       B2B Badge - Animație Shadow per Tier
+       ======================================== */
+    
+    .webgsm-b2b-badge {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Animație shadow care trece peste badge la scroll/load */
+    @keyframes tierShadowSweep {
+        0% {
+            transform: translateX(-100%) skewX(-15deg);
+            opacity: 0;
+        }
+        50% {
+            opacity: 0.6;
+        }
+        100% {
+            transform: translateX(200%) skewX(-15deg);
+            opacity: 0;
+        }
+    }
+    
+    .webgsm-b2b-badge::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 50%;
+        height: 200%;
+        background: linear-gradient(90deg, transparent, currentColor, transparent);
+        opacity: 0;
+    }
+    
+    /* Trigger animație la page load */
+    .webgsm-b2b-badge.animate-tier::after {
+        animation: tierShadowSweep 1.2s ease-out 0.3s;
+    }
+    
+    /* Trigger animație la scroll în viewport */
+    .webgsm-b2b-badge.in-view::after {
+        animation: tierShadowSweep 1.2s ease-out;
+    }
+    
+    /* Culori shadow per tier */
+    .webgsm-b2b-badge.tier-bronze::after {
+        color: #d4a574;
+    }
+    
+    .webgsm-b2b-badge.tier-silver::after {
+        color: #c0c0c0;
+    }
+    
+    .webgsm-b2b-badge.tier-gold::after {
+        color: #d4af37;
+    }
+    
+    .webgsm-b2b-badge.tier-platinum::after {
+        color: #4a6073;
+    }
+    
+    /* ========================================
+       Cart Mobile - Stilizare X și Aliniere
+       ======================================== */
+    
+    @media (max-width: 768px) {
+        /* X pentru ștergere produs - simplu, mic, roșu pal */
+        .woocommerce-cart-form table.shop_table .product-remove a,
+        .woocommerce-cart table.shop_table .product-remove a {
+            display: inline-block !important;
+            color: #f87171 !important;
+            font-size: 18px !important;
+            font-weight: 400 !important;
+            text-decoration: none !important;
+            transition: color 0.2s ease !important;
+            line-height: 1 !important;
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        
+        .woocommerce-cart-form table.shop_table .product-remove a:hover,
+        .woocommerce-cart table.shop_table .product-remove a:hover {
+            color: #dc2626 !important;
+        }
+        
+        /* Pune X pe aceeași linie cu cantitatea */
+        .woocommerce-cart-form table.shop_table td.product-quantity,
+        .woocommerce-cart table.shop_table td.product-quantity {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            justify-content: center !important;
+        }
+        
+        .woocommerce-cart-form table.shop_table td.product-remove,
+        .woocommerce-cart table.shop_table td.product-remove {
+            display: none !important;
+        }
+        
+        /* Mutăm butonul remove în quantity */
+        .woocommerce-cart-form table.shop_table td.product-quantity::before,
+        .woocommerce-cart table.shop_table td.product-quantity::before {
+            content: '';
+        }
+        
+        /* Aliniere căsuțe pe mobile */
+        .woocommerce-cart-form table.shop_table td,
+        .woocommerce-cart table.shop_table td {
+            vertical-align: middle !important;
+            padding: 12px 8px !important;
+        }
+        
+        .woocommerce-cart-form table.shop_table td.product-name,
+        .woocommerce-cart table.shop_table td.product-name {
+            padding-left: 12px !important;
+        }
+        
+        /* Imagine produs mai mică pe mobile */
+        .woocommerce-cart-form table.shop_table td.product-thumbnail img,
+        .woocommerce-cart table.shop_table td.product-thumbnail img {
+            max-width: 60px !important;
+            height: auto !important;
+        }
+        
+        .woocommerce-cart-form table.shop_table td.product-thumbnail,
+        .woocommerce-cart table.shop_table td.product-thumbnail {
+            padding: 12px 8px !important;
+        }
+        
+        /* Input cantitate mai mic pe mobile */
+        .woocommerce-cart-form table.shop_table td.product-quantity input.qty,
+        .woocommerce-cart table.shop_table td.product-quantity input.qty {
+            max-width: 60px !important;
+            padding: 6px !important;
+            font-size: 14px !important;
+        }
+        
+        /* Prețuri aliniate pe mobile */
+        .woocommerce-cart-form table.shop_table td.product-price,
+        .woocommerce-cart table.shop_table td.product-price,
+        .woocommerce-cart-form table.shop_table td.product-subtotal,
+        .woocommerce-cart table.shop_table td.product-subtotal {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+        }
+    }
     </style>
+    
+    <script>
+    // Animație shadow la scroll pentru badge-uri B2B
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animație la page load
+        const badges = document.querySelectorAll('.webgsm-b2b-badge');
+        badges.forEach(badge => {
+            badge.classList.add('animate-tier');
+        });
+        
+        // Intersection Observer pentru animație la scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                    entry.target.classList.add('in-view');
+                    entry.target.classList.add('animated');
+                    
+                    // Reset după animație pentru a putea re-anima
+                    setTimeout(() => {
+                        entry.target.classList.remove('in-view');
+                    }, 1200);
+                }
+            });
+        }, {
+            threshold: 0.5,
+            rootMargin: '0px'
+        });
+        
+        badges.forEach(badge => observer.observe(badge));
+        
+        // Traducere header cart în română fără diacritice
+        jQuery(document).ready(function($) {
+            // Traducere header
+            var cartHeaderTranslations = {
+                'Product': 'Produs',
+                'Price': 'Pret',
+                'Quantity': 'Cantitate',
+                'Subtotal': 'Total'
+            };
+            
+            $('.woocommerce-cart-form table.shop_table thead th, .woocommerce-cart table.shop_table thead th').each(function() {
+                var $th = $(this);
+                var originalText = $th.text().trim();
+                
+                if (cartHeaderTranslations[originalText]) {
+                    $th.text(cartHeaderTranslations[originalText]);
+                }
+            });
+            
+            // Pe mobile: mută X-ul în coloana cantitate
+            function moveRemoveButtonMobile() {
+                if ($(window).width() <= 768) {
+                    $('.woocommerce-cart-form table.shop_table tbody tr, .woocommerce-cart table.shop_table tbody tr').each(function() {
+                        var $row = $(this);
+                        var $removeBtn = $row.find('.product-remove a');
+                        var $quantityCell = $row.find('.product-quantity');
+                        
+                        if ($removeBtn.length && $quantityCell.length && !$quantityCell.find('.product-remove a').length) {
+                            var $removeBtnClone = $removeBtn.clone();
+                            $quantityCell.prepend($removeBtnClone);
+                        }
+                    });
+                }
+            }
+            
+            moveRemoveButtonMobile();
+            
+            // Re-run după AJAX updates
+            $(document.body).on('updated_cart_totals updated_checkout', function() {
+                moveRemoveButtonMobile();
+            });
+        });
+        
+        // Auto-update cart când se modifică cantitatea
+        jQuery(document).ready(function($) {
+            // Pentru pagina Cart
+            var cartTimeout;
+            $(document.body).on('change input', 'input.qty, .cart input[type="number"]', function() {
+                clearTimeout(cartTimeout);
+                cartTimeout = setTimeout(function() {
+                    $('[name="update_cart"]').prop('disabled', false);
+                    $('[name="update_cart"]').trigger('click');
+                }, 1000);
+            });
+            
+            // Pentru mini-cart (dacă există input de cantitate)
+            $(document.body).on('change', '.widget_shopping_cart input.qty', function() {
+                var $input = $(this);
+                var cartItemKey = $input.attr('name').replace(/cart\[(\w+)\]\[qty\]/g, "$1");
+                var quantity = $input.val();
+                
+                $.ajax({
+                    type: 'POST',
+                    url: wc_cart_fragments_params.ajax_url,
+                    data: {
+                        action: 'webgsm_update_cart_quantity',
+                        cart_item_key: cartItemKey,
+                        quantity: quantity
+                    },
+                    success: function(response) {
+                        $(document.body).trigger('wc_fragment_refresh');
+                    }
+                });
+            });
+            
+            // Refresh fragments după update
+            $(document.body).on('updated_cart_totals', function() {
+                $(document.body).trigger('wc_fragment_refresh');
+            });
+        });
+    });
+    </script>
     <?php
 }
 
@@ -676,9 +1042,8 @@ class WebGSM_B2B_Pricing {
         // Display discount info în cart
         add_filter('woocommerce_cart_item_price', array($this, 'display_cart_item_tier_price'), 10, 3);
         
-        // Display B2B discount în cart și checkout
+        // Display B2B discount în cart (checkout e custom în webgsm-checkout-pro)
         add_action('woocommerce_cart_totals_after_order_total', array($this, 'display_b2b_savings_row'), 10);
-        add_action('woocommerce_review_order_after_order_total', array($this, 'display_b2b_savings_row'), 10);
         
         // Update user tier after order completed
         add_action('woocommerce_order_status_completed', array($this, 'update_user_tier_on_order'));
@@ -694,6 +1059,10 @@ class WebGSM_B2B_Pricing {
         if (current_user_can('manage_options')) {
             add_action('wp_footer', array($this, 'add_console_debugging'));
         }
+        
+        // AJAX pentru update cantitate în cart
+        add_action('wp_ajax_webgsm_update_cart_quantity', array($this, 'ajax_update_cart_quantity'));
+        add_action('wp_ajax_nopriv_webgsm_update_cart_quantity', array($this, 'ajax_update_cart_quantity'));
     }
     
     // =========================================
@@ -1014,27 +1383,70 @@ class WebGSM_B2B_Pricing {
     public function calculate_b2b_price($price, $product) {
         $product_id = $product->get_id();
         
+        // ========================================
+        // PROTECȚIE 1: Ia prețul ORIGINAL din meta (NICIODATĂ din $price!)
+        // ========================================
+        $original_price = get_post_meta($product_id, '_regular_price', true);
+        
+        // Fallback pentru variații
+        if (empty($original_price) && $product->is_type('variation')) {
+            $original_price = get_post_meta($product_id, '_regular_price', true);
+            if (empty($original_price)) {
+                $parent_id = $product->get_parent_id();
+                $original_price = get_post_meta($parent_id, '_regular_price', true);
+            }
+        }
+        
+        // Dacă tot nu avem preț original, folosește $price ca fallback
+        if (empty($original_price) || $original_price <= 0) {
+            $original_price = $price;
+        }
+        
+        $original_price = (float) $original_price;
+        
+        // ========================================
+        // PROTECȚIE 2: HARD LIMIT - preț minim
+        // ========================================
         $pret_minim = $this->get_pret_minim($product);
-        $sale_price = $product->get_sale_price();
-        $is_on_sale = !empty($sale_price) && $sale_price < $price;
         
+        // ========================================
+        // PROTECȚIE 3: Verifică promoție (sale price)
+        // ========================================
+        $sale_price = get_post_meta($product_id, '_sale_price', true);
+        $is_on_sale = !empty($sale_price) && (float)$sale_price < $original_price;
+        
+        // ========================================
+        // CALCUL DISCOUNT
+        // ========================================
         $discount_pj = $this->get_discount_pj($product);
-        
         $tier = $this->get_user_tier();
         $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
         $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
         
         $discount_total = $discount_pj + $discount_tier;
-        $pret_pj = $price - ($price * $discount_total / 100);
         
+        // Aplică discount pe ORIGINAL, nu pe $price
+        $pret_pj = $original_price - ($original_price * $discount_total / 100);
+        
+        // ========================================
+        // REGULA CONFLICT: cel mai mic preț câștigă
+        // ========================================
         if ($is_on_sale) {
             $pret_final = min($pret_pj, (float) $sale_price);
         } else {
             $pret_final = $pret_pj;
         }
         
+        // ========================================
+        // HARD LIMIT FINAL - NICIODATĂ sub preț minim!
+        // ========================================
         if ($pret_minim > 0 && $pret_final < $pret_minim) {
             $pret_final = $pret_minim;
+            
+            // LOG pentru debugging (opțional)
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[WebGSM B2B] Preț corectat la minim pentru produs #{$product_id}: {$pret_final}");
+            }
         }
         
         return round($pret_final, 2);
@@ -1236,16 +1648,54 @@ class WebGSM_B2B_Pricing {
             return $output;
         }
         
-        // FRONTEND: Badge tier
+        // FRONTEND: Design nou pentru prețuri B2B
         if (!$this->is_user_pj()) return $price_html;
         
-        $show_badge = get_option('webgsm_b2b_show_badge', 'yes');
-        if ($show_badge !== 'yes') return $price_html;
+        $product_id = $product->get_id();
+        $original_price = (float) get_post_meta($product_id, '_regular_price', true);
+        $b2b_price = (float) $product->get_price();
         
+        // Dacă nu e discount, returnează prețul normal
+        if ($b2b_price >= $original_price || $original_price <= 0) {
+            return $price_html;
+        }
+        
+        // Calculează economia
+        $savings = $original_price - $b2b_price;
+        $savings_percent = round(($savings / $original_price) * 100, 1);
+        
+        // Obține tier-ul pentru border color
         $tier = $this->get_user_tier();
-        $badge = webgsm_get_tier_badge($tier, 'header');
+        $tier_borders = array(
+            'bronze' => '#d4a574',
+            'silver' => '#c0c0c0',
+            'gold' => '#d4af37',
+            'platinum' => '#4a6073'
+        );
+        $border_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
         
-        return $price_html . ' ' . $badge;
+        $output = '<div class="webgsm-b2b-price-display" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0;">';
+        
+        // 1. Preț RRC (original) - TĂIAT, gri, mic
+        $output .= '<div style="font-size: 12px; color: #9ca3af; text-decoration: line-through; font-weight: 400;">';
+        $output .= 'RRC: ' . wc_price($original_price);
+        $output .= '</div>';
+        
+        // 2. Preț B2B - VERDE, bold, mai mare + Badge fin, rotunjit, la aceeași înălțime
+        $output .= '<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
+        $output .= '<span style="font-size: 20px; font-weight: 700; color: #15803d; line-height: 1.2;">' . wc_price($b2b_price) . '</span>';
+        $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; height: 18px; font-size: 10px; font-weight: 500; color: #ffffff; background: #3b82f6; border: 1.5px solid ' . esc_attr($border_color) . '; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.25); text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);">B2B</span>';
+        $output .= '</div>';
+        
+        // 3. Text "Economisești X lei (Y%)" - mai compact
+        $output .= '<div style="font-size: 12px; color: #6b7280; line-height: 1.4;">';
+        $output .= 'Economisești <span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
+        $output .= '<span style="font-weight: 600; color: #3b82f6;">(' . number_format($savings_percent, 1) . '%)</span>';
+        $output .= '</div>';
+        
+        $output .= '</div>';
+        
+        return $output;
     }
     
     public function display_cart_item_tier_price($price_html, $cart_item, $cart_item_key) {
@@ -1258,8 +1708,17 @@ class WebGSM_B2B_Pricing {
         $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
         $discount_total = $discount_pj + $discount_tier;
         
+        // Badge mic și elegant pentru mini-cart (dacă există discount)
         if ($discount_total > 0) {
-            $price_html .= '<br><small style="color: #15803d;">Discount B2B: -' . number_format($discount_total, 1) . '%</small>';
+            $tier_borders = array(
+                'bronze' => '#d4a574',
+                'silver' => '#c0c0c0',
+                'gold' => '#d4af37',
+                'platinum' => '#4a6073'
+            );
+            $border_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
+            
+            $price_html .= ' <span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; height: 14px; font-size: 8px; font-weight: 600; color: #ffffff; background: #3b82f6; border: 1px solid ' . esc_attr($border_color) . '; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.4px; line-height: 1; vertical-align: middle; margin-left: 2px;">B2B</span>';
         }
         
         return $price_html;
@@ -1295,8 +1754,17 @@ class WebGSM_B2B_Pricing {
         }
         
         if ($total_discount > 0) {
-            $discount_percent = round(($total_discount / $total_original) * 100, 1);
-            echo '<tr class="webgsm-b2b-savings-row"><th style="color: #15803d; font-weight: 600;">🎯 Economie B2B (' . $discount_percent . '%)</th><td style="color: #15803d; font-weight: 600;"><strong>-' . wc_price($total_discount) . '</strong></td></tr>';
+            // 1. Linie: Total RRC - tăiat, gri, font mic
+            echo '<tr class="webgsm-b2b-rrp-total">';
+            echo '<th style="color: #9ca3af; font-size: 12px; font-weight: 400; text-decoration: line-through; padding: 6px 12px !important; border: none !important;">Total RRC:</th>';
+            echo '<td style="color: #9ca3af; font-size: 12px; text-decoration: line-through; text-align: right; padding: 6px 12px !important; border: none !important;"><span class="woocommerce-Price-amount amount">' . wc_price($total_original) . '</span></td>';
+            echo '</tr>';
+            
+            // 2. Linie: Economie B2B - verde elegant cu fill light verde peste toată linia
+            echo '<tr class="webgsm-b2b-savings-highlight">';
+            echo '<th style="color: #15803d; font-weight: 600; background: #f0fdf4; padding: 10px 12px !important; border: 1px solid #bbf7d0 !important; border-right: none !important; font-size: 13px;">💚 Economie B2B:</th>';
+            echo '<td style="color: #15803d; font-weight: 700; font-size: 16px; background: #f0fdf4; padding: 10px 12px !important; text-align: right; border: 1px solid #bbf7d0 !important; border-left: none !important;"><span class="woocommerce-Price-amount amount">-' . wc_price($total_discount) . '</span></td>';
+            echo '</tr>';
         }
     }
     
@@ -1328,6 +1796,39 @@ class WebGSM_B2B_Pricing {
         }
         
         echo $profit > 0 ? '<span style="color: #15803d;">' . wc_price($profit) . '</span>' : ($profit < 0 ? '<span style="color: #dc2626;">' . wc_price($profit) . '</span>' : '-');
+    }
+    
+    // =========================================
+    // AJAX - UPDATE CANTITATE ÎN CART
+    // =========================================
+    
+    public function ajax_update_cart_quantity() {
+        check_ajax_referer('woocommerce-cart', 'security', false);
+        
+        if (!isset($_POST['cart_item_key']) || !isset($_POST['quantity'])) {
+            wp_send_json_error('Invalid data');
+            return;
+        }
+        
+        $cart_item_key = sanitize_text_field($_POST['cart_item_key']);
+        $quantity = intval($_POST['quantity']);
+        
+        if ($quantity <= 0) {
+            $quantity = 1;
+        }
+        
+        $cart = WC()->cart;
+        if ($cart) {
+            $cart->set_quantity($cart_item_key, $quantity, true);
+            $cart->calculate_totals();
+            
+            wp_send_json_success(array(
+                'message' => 'Cart updated',
+                'fragments' => apply_filters('woocommerce_add_to_cart_fragments', array())
+            ));
+        } else {
+            wp_send_json_error('Cart not found');
+        }
     }
     
     // =========================================

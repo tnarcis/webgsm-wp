@@ -673,7 +673,9 @@
         var data = {
             action: 'webgsm_save_company',
             nonce: webgsm_checkout.nonce,
-            // contact_first/contact_last removed
+            name: (($('#company_name').val() || '').trim()),
+            cui: (($('#company_cui').val() || '').trim()),
+            reg: (($('#company_reg').val() || '').trim()),
             phone: normalizePhone($('#company_phone').val()),
             email: (($('#company_email').val() || '').trim()),
             address: (($('#company_address').val() || '').trim()),
@@ -730,22 +732,23 @@
             log('Răspuns save_company:', response);
             
             if (response.success) {
+                // FIX: Închide popup și reload întotdeauna pentru a actualiza lista
+                log('Firmă salvată cu succes - reload pagină');
                 closePopup();
                 
-                if (response.data.saved_to_account) {
-                    // FIX PERSISTENȚĂ PJ: Forțează tipul PJ ÎNAINTE de reload
-                    log('FORȚARE TIP PJ înainte de reload');
-                    
-                    // Setează în hidden input
-                    $('input[name="billing_customer_type"][value="pj"]').prop('checked', true);
-                    
-                    // Salvează în sessionStorage pentru a persista după reload
-                    if (window.sessionStorage) {
-                        sessionStorage.setItem('webgsm_force_pj', 'yes');
-                    }
-                    
-                    location.reload();
-                } else {
+                // Setează în hidden input
+                $('input[name="billing_customer_type"][value="pj"]').prop('checked', true);
+                
+                // Salvează în sessionStorage pentru a persista după reload
+                if (window.sessionStorage) {
+                    sessionStorage.setItem('webgsm_force_pj', 'yes');
+                }
+                
+                // Reload pentru a actualiza lista de firme
+                location.reload();
+                
+                // Branch pentru guest (nu se mai execută din cauza reload)
+                if (false && !response.data.saved_to_account) {
                     // Guest - injectează direct
                     var companyData = {
                         contact_first: data.contact_first,
@@ -915,18 +918,34 @@
             
             if (response.success) {
                 var d = response.data;
-                $('#company_name').val(d.name);
-                $('#company_cui').val(d.cui);
-                $('#company_reg').val(d.j);
-                $('#company_address').val(d.address);
+                console.log('ANAF Response:', d);
+                
+                // Completează câmpurile
+                $('#company_name').val(d.name || '');
+                $('#company_cui').val(d.cui || '');
+                $('#company_reg').val(d.j || '');
+                $('#company_address').val(d.address || '');
+                
                 // Setează select-ul cu codul județului
                 var countyCode = getStateCode(d.county);
-                $('#company_county').val(countyCode);
-                $('#company_city').val(d.city);
+                console.log('County Code:', countyCode);
+                $('#company_county').val(countyCode || '');
+                $('#company_city').val(d.city || '');
+                
+                // Trigger events pentru validare
+                $('#company_name, #company_cui, #company_reg, #company_address, #company_city').trigger('input');
+                $('#company_county').trigger('change');
+                
+                // Curăță erorile de validare
+                if (typeof clearFieldErrors === 'function') {
+                    clearFieldErrors('#company_popup');
+                }
                 
                 $status.css({background: '#e8f5e9', color: '#2e7d32'})
                        .html('✓ ' + d.name + (d.is_tva ? ' (Plătitor TVA)' : ''))
                        .show();
+                       
+                console.log('Câmpuri completate cu succes');
             } else {
                 // Permite retry (sterge lastANAFcui astfel încât următoarea intrare să re-trigger-eze)
                 lastANAFcui = '';
