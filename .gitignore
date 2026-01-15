@@ -26,3 +26,5 @@ wp-content/plugins/*
 
 # MacOS junk
 .DS_Store
+ 
+!.cpanel.yml
