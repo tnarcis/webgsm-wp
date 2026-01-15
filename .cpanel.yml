@@ -1,6 +1,10 @@
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/WEBGSM/public_html/test/wp-content
+    - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
+
+    # Creăm folderele dacă nu există
+    - /bin/mkdir -p $DEPLOYPATH/themes
+    - /bin/mkdir -p $DEPLOYPATH/plugins
 
     # Curățăm versiunile vechi
     - /bin/rm -rf $DEPLOYPATH/themes/martfury-child
