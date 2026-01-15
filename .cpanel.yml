@@ -2,10 +2,15 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
-    - /bin/mkdir -p $DEPLOYPATH/themes $DEPLOYPATH/plugins
-    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child $DEPLOYPATH/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/webgsm-checkout-pro
-    - /bin/cp -R $REPO_ROOT/wp-content/themes/martfury-child $DEPLOYPATH/themes/
-    - /bin/cp -R $REPO_ROOT/wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
-    - /bin/cp -R $REPO_ROOT/wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
-    - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child $DEPLOYPATH/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/webgsm-checkout-pro
-    - echo "Deploy completed at $(date +%Y-%m-%d_%H:%M:%S)"
+    - /bin/mkdir -p $DEPLOYPATH/themes
+    - /bin/mkdir -p $DEPLOYPATH/plugins
+    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child
+    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-b2b-pricing
+    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-checkout-pro
+    - /bin/cp -Rfv wp-content/themes/martfury-child $DEPLOYPATH/themes/
+    - /bin/cp -Rfv wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
+    - /bin/cp -Rfv wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
+    - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
+    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
+    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
+    - echo "Deploy completed successfully"
