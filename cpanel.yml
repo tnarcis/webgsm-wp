@@ -1,8 +1,15 @@
----
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/webgsm/public_html/test/
-    - /bin/cp -R wp-content/themes/martfury-child $DEPLOYPATH/wp-content/themes/
-    - /bin/cp -R wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/wp-content/plugins/
-    - /bin/cp -R wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/wp-content/plugins/
-    - /bin/cp -R wp-content/plugins/webgsm-customer-tiers $DEPLOYPATH/wp-content/plugins/
+    - export DEPLOYPATH=/home/WEBGSM/public_html/test/wp-content
+
+    # Curățăm versiunile vechi
+    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child
+    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-b2b-pricing
+    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-checkout-pro
+
+    # Copiem tema child
+    - /bin/cp -R wp-content/themes/martfury-child $DEPLOYPATH/themes/
+
+    # Copiem pluginurile custom
+    - /bin/cp -R wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
+    - /bin/cp -R wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
