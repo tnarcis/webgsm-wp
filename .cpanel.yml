@@ -2,13 +2,29 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
 
-    - /bin/mkdir -p $DEPLOYPATH/themes
-    - /bin/mkdir -p $DEPLOYPATH/plugins
+    # Afișăm calea pentru debugging
+    - echo "Deploying to: $DEPLOYPATH"
 
-    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child
-    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-b2b-pricing
-    - /bin/rm -rf $DEPLOYPATH/plugins/webgsm-checkout-pro
+    # Creăm folderele dacă nu există
+    - echo "Creating directories..."
+    - /bin/mkdir -pv $DEPLOYPATH/themes
+    - /bin/mkdir -pv $DEPLOYPATH/plugins
 
-    - /bin/cp -R wp-content/themes/martfury-child $DEPLOYPATH/themes/
-    - /bin/cp -R wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
-    - /bin/cp -R wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
+    # Curățăm versiunile vechi
+    - echo "Removing old theme and plugins..."
+    - /bin/rm -rfv $DEPLOYPATH/themes/martfury-child
+    - /bin/rm -rfv $DEPLOYPATH/plugins/webgsm-b2b-pricing
+    - /bin/rm -rfv $DEPLOYPATH/plugins/webgsm-checkout-pro
+
+    # Copiem tema child
+    - echo "Copying martfury-child theme..."
+    - /bin/cp -Rv wp-content/themes/martfury-child $DEPLOYPATH/themes/
+
+    # Copiem pluginurile custom
+    - echo "Copying webgsm-b2b-pricing plugin..."
+    - /bin/cp -Rv wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
+
+    - echo "Copying webgsm-checkout-pro plugin..."
+    - /bin/cp -Rv wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
+
+    - echo "DEPLOY FINISHED SUCCESSFULLY"
