@@ -1,43 +1,11 @@
+---
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
-
-    # Afișăm calea pentru debugging
-    - echo "Deploying to: $DEPLOYPATH"
-
-    # Creăm folderele dacă nu există
-    - echo "Creating directories..."
-    - /bin/mkdir -pv $DEPLOYPATH/themes
-    - /bin/mkdir -pv $DEPLOYPATH/plugins
-
-    # Curățăm versiunile vechi
-    - echo "Removing old theme and plugins..."
-    - /bin/rm -rfv $DEPLOYPATH/themes/martfury-child
-    - /bin/rm -rfv $DEPLOYPATH/plugins/webgsm-b2b-pricing
-    - /bin/rm -rfv $DEPLOYPATH/plugins/webgsm-checkout-pro
-
-    # Copiem tema child
-    - echo "Copying martfury-child theme..."
-    - /bin/cp -Rv wp-content/themes/martfury-child $DEPLOYPATH/themes/
-
-    # Copiem pluginurile custom
-    - echo "Copying webgsm-b2b-pricing plugin..."
-    - /bin/cp -Rv wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
-
-    - echo "Copying webgsm-checkout-pro plugin..."
-    - /bin/cp -Rv wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
-
-    # Verificare fișiere copiate
-    - echo "Verifying deployed files..."
-    - /bin/ls -lah $DEPLOYPATH/themes/martfury-child/ | head -10
-    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-b2b-pricing/ | head -10
-    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-checkout-pro/ | head -10
-
-    # Setează permisiuni corecte
-    - echo "Setting correct permissions..."
-    - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
-    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
-    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
-
-    - echo "DEPLOY FINISHED SUCCESSFULLY at $(date)"
-    - echo "IMPORTANT: Clear WordPress cache and browser cache!"
+    - /bin/mkdir -p $DEPLOYPATH/themes $DEPLOYPATH/plugins
+    - /bin/rm -rf $DEPLOYPATH/themes/martfury-child $DEPLOYPATH/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/webgsm-checkout-pro
+    - /bin/cp -R $REPO_ROOT/wp-content/themes/martfury-child $DEPLOYPATH/themes/
+    - /bin/cp -R $REPO_ROOT/wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
+    - /bin/cp -R $REPO_ROOT/wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
+    - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child $DEPLOYPATH/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/webgsm-checkout-pro
+    - echo "Deploy completed at $(date +%Y-%m-%d_%H:%M:%S)"
