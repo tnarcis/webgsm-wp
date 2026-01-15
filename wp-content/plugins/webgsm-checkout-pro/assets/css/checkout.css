@@ -1,0 +1,1545 @@
+/* WebGSM Checkout Pro v5.0.0 - CSS Complet */
+
+/* Hide default WooCommerce checkout */
+.woocommerce-checkout #customer_details,
+.woocommerce-checkout .woocommerce-checkout-review-order-table,
+.woocommerce-checkout #order_review_heading,
+.woocommerce-checkout .woocommerce-form-coupon-toggle,
+.woocommerce-checkout .checkout_coupon,
+.woocommerce-checkout form.checkout_coupon,
+.woocommerce-checkout .woocommerce-info,
+.woocommerce-checkout .woocommerce-NoticeGroup-checkout,
+.woocommerce-checkout form.checkout > h3,
+.woocommerce-checkout #order_review > *:not(#payment),
+.woocommerce-checkout .woocommerce-checkout-review-order > *:not(#payment) {
+    display: none !important;
+}
+
+.woocommerce-checkout form.checkout {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+}
+
+.woocommerce-checkout #payment {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.woocommerce-checkout #payment .place-order,
+.woocommerce-checkout .woocommerce-checkout-payment > .place-order {
+    display: none !important;
+}
+
+.woocommerce-checkout #payment ul.payment_methods {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Main Layout */
+.woocommerce-checkout {
+    background: #f5f5f5 !important;
+    padding: 20px !important;
+    min-height: 100vh;
+}
+
+.webgsm-checkout-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 25px;
+    align-items: start;
+}
+
+.webgsm-checkout-main { min-height: 100%; }
+
+.webgsm-checkout-sidebar {
+    position: sticky;
+    top: 100px;
+    align-self: start;
+}
+
+@media (max-width: 1024px) {
+    .webgsm-checkout-wrapper { grid-template-columns: 1fr; }
+    .webgsm-checkout-sidebar { order: -1; position: relative; top: 0; }
+}
+
+/* Sections */
+.webgsm-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 15px;
+}
+
+.webgsm-section-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+    color: #1e293b !important;
+    padding: 12px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.webgsm-section-body { padding: 20px; }
+.webgsm-section-small .webgsm-section-body { padding: 0; }
+
+.subsection-title {
+    font-weight: 500;
+    margin: 15px 0 10px;
+    color: #666;
+    font-size: 13px;
+}
+
+/* Products Table */
+.webgsm-products-table { width: 100%; border-collapse: collapse; }
+
+.webgsm-products-table th {
+    text-align: left;
+    padding: 10px;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.webgsm-products-table td {
+    padding: 15px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.webgsm-products-table .product-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.webgsm-products-table .product-info img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.webgsm-products-table .product-name { font-size: 14px; color: #333; }
+
+.webgsm-products-table .qty-select {
+    width: 45px;
+    padding: 5px 3px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* Opțiuni dropdown - cifre mai mari */
+.webgsm-products-table .qty-select option {
+    font-size: 14px;
+    padding: 8px;
+}
+
+.webgsm-products-table .remove-item {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+}
+
+.webgsm-products-table .remove-item:hover { color: #e53935; }
+
+/* Coupon Row */
+.webgsm-coupon-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    flex-wrap: wrap;
+}
+
+.webgsm-coupon-row .coupon-label { font-size: 13px; color: #666; }
+
+.webgsm-coupon-row input {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 200px;
+}
+
+.webgsm-coupon-row .applied-coupon {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.webgsm-coupon-row .applied-coupon a {
+    color: #2e7d32;
+    margin-left: 5px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* Radio Groups */
+.webgsm-radio-group { display: flex; gap: 30px; }
+
+.webgsm-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    padding: 12px 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.webgsm-radio:hover { border-color: #2196f3; }
+.webgsm-radio input { display: none; }
+
+.webgsm-radio .radio-mark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #bbb;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    margin-top: 2px;
+}
+
+.webgsm-radio input:checked + .radio-mark { border-color: #2196f3; }
+
+.webgsm-radio input:checked + .radio-mark::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 10px;
+    height: 10px;
+    background: #2196f3;
+    border-radius: 50%;
+}
+
+.webgsm-radio .radio-label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.webgsm-radio .radio-label strong { font-size: 14px; color: #333; }
+.webgsm-radio .radio-label small { font-size: 12px; color: #666; }
+
+/* Address/Company/Person Items */
+.webgsm-addresses-list,
+.webgsm-companies-list,
+.webgsm-persons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.webgsm-radio.address-item,
+.webgsm-radio.company-item,
+.webgsm-radio.person-item {
+    width: 100%;
+}
+
+.webgsm-radio .delete-address,
+.webgsm-radio .delete-company,
+.webgsm-radio .delete-person {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+}
+
+.webgsm-radio .delete-address:hover,
+.webgsm-radio .delete-company:hover,
+.webgsm-radio .delete-person:hover { color: #e53935; }
+
+.no-items { color: #999; font-size: 13px; padding: 10px 0; }
+
+/* Buttons */
+.btn-add {
+    background: none;
+    border: 1px dashed #2196f3;
+    color: #2196f3;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.4;
+}
+
+.btn-add:hover { background: #e3f2fd; }
+
+.btn-primary {
+    background: #2196f3;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.4;
+    min-height: 44px;
+}
+
+.btn-primary:hover { background: #1976d2; }
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.4;
+    min-height: 44px;
+}
+
+.btn-secondary:hover { background: #eee; }
+
+.btn-anaf {
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1.4;
+}
+
+.btn-anaf:hover { background: #f57c00; }
+.btn-anaf.loading { opacity: 0.7; pointer-events: none; }
+
+/* Textarea */
+.webgsm-section textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+/* Summary Box */
+.webgsm-summary-box {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+}
+
+/* ANAF status - poziționat sus în popup-ul de "Adaugă firmă" */
+#company_popup #anaf_status {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+#company_popup .anaf-hint { display: none; }
+
+.webgsm-summary-box .summary-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: #fff !important;
+    padding: 14px 18px !important;
+    border-radius: 10px 10px 0 0 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    border: none !important;
+    margin: 0 !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Icon în header - SVG line art coș */
+.webgsm-summary-box .summary-header::before,
+.webgsm-checkout-sidebar .summary-header::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='21' r='1'/%3E%3Ccircle cx='20' cy='21' r='1'/%3E%3Cpath d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+
+.webgsm-summary-box .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
+
+.webgsm-summary-box .summary-row-discount {
+    padding: 8px 20px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+}
+
+.webgsm-summary-box .summary-value { font-weight: 500; }
+
+.webgsm-summary-box .summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 20px;
+    font-size: 18px;
+    font-weight: 700;
+    background: #fafafa;
+}
+
+.webgsm-summary-box .total-value { color: #e53935; }
+
+.webgsm-summary-box .shipping-notice {
+    padding: 12px 20px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.webgsm-summary-box .shipping-notice.warning { background: #fff3e0; color: #e65100; }
+.webgsm-summary-box .shipping-notice.success { background: #e8f5e9; color: #2e7d32; }
+
+.webgsm-summary-box .btn-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(100% - 40px);
+    margin: 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 14px 28px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    line-height: 1.4;
+    min-height: 50px;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+    text-transform: none !important;
+    letter-spacing: 0.3px !important;
+}
+
+.webgsm-summary-box .btn-submit:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+.webgsm-summary-box .btn-submit:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Buton place_order generic */
+#place_order,
+.btn-submit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    padding: 14px 28px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+#place_order:hover,
+.btn-submit:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+.webgsm-summary-box .terms-note {
+    padding: 0 20px 20px;
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+}
+
+.webgsm-summary-box .terms-note a { color: #2196f3; }
+
+/* Popup - now positioned absolutely within parent section */
+.webgsm-popup {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* higher than section content */
+    z-index: 1000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Center modal */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* When modal is open hide the WP admin bar (prevents overlap) */
+body.webgsm-popup-open #wpadminbar { display: none !important; }
+
+.webgsm-popup.active {
+    display: flex;
+    /* On small screens keep it top-aligned so header/footer are visible */
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Center the modal vertically on larger screens for better UX */
+@media (min-width: 760px) {
+    .webgsm-popup.active {
+        align-items: center;
+        padding: 40px;
+    }
+    /* Slightly reduce max-height on very large screens so modal doesn't overflow behind top admin bars */
+    .webgsm-popup .popup-content { max-height: calc(100vh - 120px); }
+}
+
+.webgsm-popup .popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Overlay sits within section container */
+    z-index: 999;
+    background: rgba(0,0,0,0.55);
+}
+
+.webgsm-popup .popup-content {
+    position: relative;
+    background: #fff;
+    width: 100%;
+    max-width: 720px; /* slightly wider for better layout */
+    width: calc(100% - 40px);
+    border-radius: 8px;
+    margin: 20px auto;
+    /* Limit height and hide overflow - the .popup-body will handle scrolling */
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    /* Ensure content sits above overlay */
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.webgsm-popup .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.webgsm-popup .popup-header h3 { margin: 0; font-size: 16px; }
+
+.webgsm-popup .popup-close {
+    background: #f1f5f9;
+    border: none;
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.webgsm-popup .popup-close:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.webgsm-popup .popup-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+    /* Keep space for header and sticky footer; allow the body area to scroll */
+    max-height: calc(100vh - 180px);
+}
+
+/* Ensure footer is visible and above content; add subtle shadow to separate */
+.webgsm-popup .popup-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: #fff;
+    box-shadow: 0 -10px 20px rgba(0,0,0,0.06);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.webgsm-popup .popup-footer {
+    padding: 15px 20px;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+}
+
+/* Form Rows */
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-col { flex: 1; }
+.form-col.full { flex: 100%; }
+
+.form-col label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-col input,
+.form-col select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.form-col input:focus,
+.form-col select:focus {
+    outline: none;
+    border-color: #2196f3;
+}
+
+/* SELECT DROPDOWN STYLING */
+.form-col select,
+.webgsm-popup select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+    cursor: pointer;
+}
+
+/* VALIDARE VIZUALĂ - CÂMPURI CU EROARE */
+.form-col input.error,
+.form-col select.error,
+.webgsm-popup input.error,
+.webgsm-popup select.error {
+    border-color: #e53935 !important;
+    background-color: #ffebee !important;
+}
+
+.form-col input.error:focus,
+.form-col select.error:focus {
+    box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.2) !important;
+}
+
+.field-error {
+    color: #e53935;
+    font-size: 11px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.field-error::before { content: "⚠"; font-size: 10px; }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.form-col input.error,
+.form-col select.error {
+    animation: shake 0.3s ease-in-out;
+}
+
+/* Guest Form */
+.webgsm-guest-form { margin-top: 15px; }
+
+/* Mobile Submit Bar - FIX PENTRU BARA TEMEI */
+.webgsm-mobile-submit {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 15px 20px;
+    padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 99999;
+}
+
+.webgsm-mobile-submit .mobile-total {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.webgsm-mobile-submit .btn-submit-mobile {
+    width: 100%;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 16px 24px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+.webgsm-mobile-submit .btn-submit-mobile:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+    .webgsm-checkout-sidebar {
+        position: relative !important;
+        top: auto !important;
+        margin-bottom: 150px; /* Spațiu pentru bara fixă de submit + bara temei */
+    }
+    
+    .webgsm-summary-box .btn-submit { display: none; }
+    
+    .webgsm-mobile-submit {
+        display: block;
+        bottom: 60px; /* OFFSET PENTRU BARA TEMEI - ajustează dacă e nevoie */
+    }
+    
+    .webgsm-radio-group { flex-direction: column; gap: 10px; }
+    .form-row { flex-direction: column; gap: 10px; }
+    
+    /* =============================================
+       TABEL PRODUSE CHECKOUT - MOBILE REDESIGN
+       ============================================= */
+    
+    /* Container tabel produse */
+    .webgsm-products-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    /* Ascunde header pe mobil */
+    .webgsm-products-table thead {
+        display: none !important;
+    }
+    
+    /* Fiecare produs = card separat */
+    .webgsm-products-table tbody tr {
+        display: flex !important;
+        flex-direction: column !important;
+        background: #fff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 10px !important;
+        margin-bottom: 12px !important;
+        padding: 0 !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    /* Reset toate celulele */
+    .webgsm-products-table tbody td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px 14px !important;
+        border: none !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        font-size: 13px !important;
+    }
+    
+    .webgsm-products-table tbody td:last-child {
+        border-bottom: none !important;
+    }
+    
+    /* =============================================
+       PRODUS - HEADER CU IMAGINE ȘI NUME
+       ============================================= */
+    
+    /* Prima celulă - Produs (imagine + nume) */
+    .webgsm-products-table tbody td:first-child,
+    .webgsm-products-table tbody td.product-info-cell {
+        background: #f8fafc !important;
+        padding: 12px 14px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        gap: 12px !important;
+    }
+    
+    .webgsm-products-table .product-info {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+    
+    .webgsm-products-table .product-info img {
+        width: 50px !important;
+        height: 50px !important;
+        object-fit: cover !important;
+        border-radius: 6px !important;
+        border: 1px solid #e5e7eb !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .webgsm-products-table .product-name {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        line-height: 1.4 !important;
+        flex: 1 !important;
+    }
+    
+    /* =============================================
+       CELULE CU LABEL STÂNGA - VALOARE DREAPTA
+       ============================================= */
+    
+    /* Preț unitar */
+    .webgsm-products-table tbody td.price-col,
+    .webgsm-products-table tbody td:nth-child(2) {
+        order: 2 !important;
+    }
+    
+    .webgsm-products-table tbody td.price-col::before,
+    .webgsm-products-table tbody td:nth-child(2)::before {
+        content: 'Preț unitar' !important;
+        font-size: 12px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+    }
+    
+    .webgsm-products-table tbody td.price-col .woocommerce-Price-amount,
+    .webgsm-products-table tbody td.price-col,
+    .webgsm-products-table tbody td:nth-child(2) {
+        font-weight: 600 !important;
+        color: #1e293b !important;
+    }
+    
+    /* Cantitate */
+    .webgsm-products-table tbody td.qty-col,
+    .webgsm-products-table tbody td:has(.qty-select) {
+        order: 3 !important;
+    }
+    
+    .webgsm-products-table tbody td.qty-col::before,
+    .webgsm-products-table tbody td:has(.qty-select)::before {
+        content: 'Cantitate' !important;
+        font-size: 12px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+    }
+    
+    .webgsm-products-table tbody td.qty-col .qty-select,
+    .webgsm-products-table .qty-select {
+        width: 70px !important;
+        padding: 8px 12px !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        background: #fff !important;
+    }
+    
+    /* Opțiuni dropdown - FONT MARE ȘI VIZIBIL */
+    .webgsm-products-table .qty-select option {
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        padding: 10px !important;
+        background: #fff !important;
+        color: #1e293b !important;
+    }
+    
+    /* =============================================
+       TOTAL PRODUS - CU BACKGROUND ȘI X STILIZAT
+       ============================================= */
+    
+    /* Subtotal/Total linie */
+    .webgsm-products-table tbody td.subtotal-col,
+    .webgsm-products-table tbody td:nth-child(4) {
+        order: 4 !important;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        border-radius: 0 0 10px 10px !important;
+        padding: 12px 14px !important;
+        border-bottom: none !important;
+        position: relative !important;
+    }
+    
+    .webgsm-products-table tbody td.subtotal-col::before,
+    .webgsm-products-table tbody td:nth-child(4)::before {
+        content: 'Total' !important;
+        font-size: 13px !important;
+        color: #374151 !important;
+        font-weight: 600 !important;
+    }
+    
+    .webgsm-products-table tbody td.subtotal-col .woocommerce-Price-amount,
+    .webgsm-products-table tbody td.subtotal-col,
+    .webgsm-products-table tbody td:nth-child(4) {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        color: #059669 !important;
+    }
+    
+    /* =============================================
+       BUTON ȘTERGERE (X) - RESTILIZAT
+       ============================================= */
+    
+    /* Celula cu X - ascunsă, mutată pe linia Total */
+    .webgsm-products-table tbody td.remove-col,
+    .webgsm-products-table tbody td:nth-child(5) {
+        position: absolute !important;
+        top: 12px !important;
+        right: 12px !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        width: auto !important;
+        display: block !important;
+        order: 99 !important;
+    }
+    
+    .webgsm-products-table tbody td.remove-col::before,
+    .webgsm-products-table tbody td:nth-child(5)::before {
+        display: none !important;
+    }
+    
+    /* Butonul X */
+    .webgsm-products-table .remove-item {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 50% !important;
+        background: #fff !important;
+        border: 1px solid #e5e7eb !important;
+        color: #9ca3af !important;
+        font-size: 16px !important;
+        font-weight: 400 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    }
+    
+    .webgsm-products-table .remove-item:hover {
+        background: #fef2f2 !important;
+        border-color: #fca5a5 !important;
+        color: #dc2626 !important;
+        transform: scale(1.1) !important;
+    }
+    
+    /* =============================================
+       ORDINE CORECTĂ CELULE
+       ============================================= */
+    
+    .webgsm-products-table tbody td:first-child {
+        order: 1 !important;
+    }
+    
+    /* Ascunde celulele goale sau inutile */
+    .webgsm-products-table tbody td:empty {
+        display: none !important;
+    }
+}
+
+/* =============================================
+   MOBILE VERY SMALL SCREENS - 480px
+   ============================================= */
+
+@media (max-width: 480px) {
+    .webgsm-products-table tbody tr {
+        margin-bottom: 10px !important;
+    }
+    
+    .webgsm-products-table tbody td {
+        padding: 9px 12px !important;
+        font-size: 12px !important;
+    }
+    
+    .webgsm-products-table .product-info img {
+        width: 45px !important;
+        height: 45px !important;
+    }
+    
+    .webgsm-products-table .product-name {
+        font-size: 12px !important;
+    }
+    
+    .webgsm-products-table tbody td.subtotal-col,
+    .webgsm-products-table tbody td:nth-child(4) {
+        padding: 10px 12px !important;
+    }
+    
+    .webgsm-products-table tbody td.subtotal-col .woocommerce-Price-amount,
+    .webgsm-products-table tbody td:nth-child(4) {
+        font-size: 14px !important;
+    }
+    
+    .webgsm-products-table .remove-item {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 14px !important;
+    }
+    
+    .webgsm-products-table tbody td.qty-col .qty-select,
+    .webgsm-products-table .qty-select {
+        width: 60px !important;
+        padding: 6px 10px !important;
+        font-size: 13px !important;
+    }
+    
+    .webgsm-products-table .qty-select option {
+        font-size: 16px !important;
+        padding: 8px !important;
+    }
+}
+
+/* =============================================
+   POPUP MOBILE
+   ============================================= */
+
+@media (max-width: 768px) {
+    
+    .webgsm-popup.active {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+    
+    .webgsm-popup .popup-content {
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: 100vh !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* Header popup - fix top */
+    .webgsm-popup .popup-header {
+        flex-shrink: 0 !important;
+        padding: 15px 20px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        background: #fff !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 10 !important;
+    }
+    
+    .webgsm-popup .popup-header h3 {
+        font-size: 16px !important;
+        margin: 0 !important;
+    }
+    
+    /* Body popup - scrollabil */
+    .webgsm-popup .popup-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding: 20px !important;
+        padding-bottom: 30px !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-height: none !important;
+    }
+    
+    /* Footer popup - fix bottom cu spațiu pentru bara temei */
+    .webgsm-popup .popup-footer {
+        flex-shrink: 0 !important;
+        padding: 15px 20px !important;
+        padding-bottom: calc(15px + 70px + env(safe-area-inset-bottom, 0px)) !important;
+        border-top: 1px solid #e5e7eb !important;
+        background: #fff !important;
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 10 !important;
+        display: flex !important;
+        gap: 10px !important;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05) !important;
+    }
+    
+    /* Butoane footer - full width pe mobile */
+    .webgsm-popup .popup-footer button {
+        flex: 1 !important;
+        padding: 12px 20px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Form fields pe mobile */
+    .webgsm-popup .form-row {
+        flex-direction: column !important;
+        gap: 15px !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .webgsm-popup .form-col {
+        width: 100% !important;
+    }
+    
+    .webgsm-popup input,
+    .webgsm-popup select,
+    .webgsm-popup textarea {
+        padding: 12px !important;
+        font-size: 16px !important; /* Previne zoom pe iOS */
+    }
+}
+
+@media (max-width: 480px) {
+    .webgsm-popup .popup-footer {
+        padding-bottom: calc(15px + 60px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    
+    .webgsm-popup .popup-body {
+        padding: 15px !important;
+    }
+    
+    .webgsm-popup .popup-header {
+        padding: 12px 15px !important;
+    }
+    
+    .webgsm-popup .popup-header h3 {
+        font-size: 15px !important;
+    }
+}
+
+/* Spin Animation */
+@keyframes webgsm-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.btn-anaf .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: webgsm-spin 0.8s linear infinite;
+}
+
+/* INLINE ERROR pentru checkout */
+.webgsm-inline-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin: 10px 0;
+    border-left: 3px solid #e53935;
+}
+
+/* =============================================
+   POPUP-URI CHECKOUT - BUTOANE DESKTOP
+   ============================================= */
+
+/* Footer popup - layout flexbox egal */
+.webgsm-popup .popup-footer {
+    display: flex !important;
+    gap: 12px !important;
+    padding: 16px 20px !important;
+    border-top: 1px solid #e5e7eb !important;
+    background: #f9fafb !important;
+}
+
+/* Ambele butoane - dimensiuni egale */
+.webgsm-popup .popup-footer button,
+.webgsm-popup .popup-footer .btn-primary,
+.webgsm-popup .popup-footer .btn-secondary,
+.webgsm-popup .popup-footer .popup-cancel {
+    flex: 1 !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-height: 46px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Buton Salvează - Gradient Albastru-Verde (albastru predominant → verde) */
+.webgsm-popup .popup-footer .btn-primary,
+.webgsm-popup .popup-footer #save_address_btn,
+.webgsm-popup .popup-footer #save_company_btn,
+.webgsm-popup .popup-footer #save_person_btn {
+    background: linear-gradient(135deg, #2563eb 0%, #10b981 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+}
+
+.webgsm-popup .popup-footer .btn-primary:hover,
+.webgsm-popup .popup-footer #save_address_btn:hover,
+.webgsm-popup .popup-footer #save_company_btn:hover,
+.webgsm-popup .popup-footer #save_person_btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #059669 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* Buton Anulează - Gri deschis */
+.webgsm-popup .popup-footer .btn-secondary,
+.webgsm-popup .popup-footer .popup-cancel {
+    background: #fff !important;
+    color: #475569 !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+}
+
+.webgsm-popup .popup-footer .btn-secondary:hover,
+.webgsm-popup .popup-footer .popup-cancel:hover {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #1e293b !important;
+}
+
+/* =============================================
+   POPUP-URI CHECKOUT - FIX MOBILE BARE FIXE
+   ============================================= */
+
+@media (max-width: 768px) {
+    /* Popup fullscreen pe mobile */
+    .webgsm-popup {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: flex-end !important;
+    }
+    
+    .webgsm-popup .popup-overlay {
+        background: rgba(0,0,0,0.6) !important;
+    }
+    
+    .webgsm-popup .popup-content {
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: 85vh !important;
+        min-height: 50vh !important;
+        border-radius: 16px 16px 0 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        animation: slideUpPopup 0.25s ease-out !important;
+    }
+    
+    @keyframes slideUpPopup {
+        from {
+            transform: translateY(100%);
+            opacity: 0.5;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    /* Header popup - compact */
+    .webgsm-popup .popup-header {
+        flex-shrink: 0 !important;
+        padding: 14px 18px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        background: #fff !important;
+        border-radius: 16px 16px 0 0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+    
+    .webgsm-popup .popup-header h3 {
+        font-size: 15px !important;
+        margin: 0 !important;
+        font-weight: 600 !important;
+    }
+    
+    .webgsm-popup .popup-close {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 20px !important;
+        background: #f1f5f9 !important;
+        border: none !important;
+        border-radius: 50% !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Body popup - scrollabil */
+    .webgsm-popup .popup-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding: 16px !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Footer popup - DEASUPRA barelor fixe */
+    .webgsm-popup .popup-footer {
+        flex-shrink: 0 !important;
+        padding: 12px 16px !important;
+        /* 60px bara temă + 70px bara trimite comanda + safe area */
+        padding-bottom: calc(12px + 130px + env(safe-area-inset-bottom, 0px)) !important;
+        border-top: 1px solid #e5e7eb !important;
+        background: #fff !important;
+        display: flex !important;
+        gap: 10px !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08) !important;
+    }
+    
+    /* Butoane footer - compacte dar vizibile */
+    .webgsm-popup .popup-footer button,
+    .webgsm-popup .popup-footer .btn-primary,
+    .webgsm-popup .popup-footer .btn-secondary {
+        flex: 1 !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        min-height: 44px !important;
+    }
+    
+    .webgsm-popup .popup-footer .btn-primary,
+    .webgsm-popup .popup-footer #save_address_btn,
+    .webgsm-popup .popup-footer #save_company_btn,
+    .webgsm-popup .popup-footer #save_person_btn {
+        background: linear-gradient(135deg, #2563eb 0%, #10b981 100%) !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    
+    .webgsm-popup .popup-footer .btn-secondary,
+    .webgsm-popup .popup-footer .popup-cancel {
+        background: #f8fafc !important;
+        color: #475569 !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    /* Form fields - touch-friendly */
+    .webgsm-popup .form-row {
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .webgsm-popup .form-col {
+        width: 100% !important;
+    }
+    
+    .webgsm-popup .form-col.full {
+        width: 100% !important;
+    }
+    
+    .webgsm-popup input[type="text"],
+    .webgsm-popup input[type="tel"],
+    .webgsm-popup input[type="email"],
+    .webgsm-popup select,
+    .webgsm-popup textarea {
+        width: 100% !important;
+        padding: 12px !important;
+        font-size: 16px !important; /* Previne zoom iOS */
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px !important;
+        min-height: 44px !important;
+    }
+    
+    .webgsm-popup label {
+        font-size: 13px !important;
+        margin-bottom: 4px !important;
+        display: block !important;
+    }
+    
+    /* ANAF hint - mai compact */
+    .webgsm-popup .anaf-hint {
+        font-size: 11px !important;
+        padding: 8px !important;
+    }
+    
+    #anaf_status {
+        font-size: 12px !important;
+        padding: 8px 10px !important;
+        margin: 8px 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .webgsm-popup .popup-content {
+        max-height: 90vh !important;
+    }
+    
+    .webgsm-popup .popup-footer {
+        /* Ajustare pentru telefoane mai mici */
+        padding-bottom: calc(10px + 120px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    
+    .webgsm-popup .popup-body {
+        padding: 14px !important;
+    }
+    
+    .webgsm-popup .popup-header {
+        padding: 12px 14px !important;
+    }
+    
+    .webgsm-popup .popup-header h3 {
+        font-size: 14px !important;
+    }
+    
+    .webgsm-popup .popup-footer button {
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* =============================================
+   BARA TRIMITE COMANDA - Z-INDEX MAI MIC
+   ============================================= */
+
+@media (max-width: 768px) {
+    /* Popup trebuie să fie DEASUPRA barei trimite comanda */
+    .webgsm-popup {
+        z-index: 999999 !important;
+    }
+    
+    .webgsm-mobile-submit {
+        z-index: 99998 !important;
+    }
+}
+
+/* =============================================
+   MOBILE - AJUSTĂRI BUTOANE ȘI HEADER-URI
+   ============================================= */
+
+@media (max-width: 768px) {
+    .webgsm-summary-box .btn-submit,
+    .btn-submit,
+    .webgsm-mobile-submit .btn-submit-mobile {
+        width: 100% !important;
+        padding: 16px 24px !important;
+        font-size: 16px !important;
+        border-radius: 12px !important;
+    }
+    
+    .webgsm-summary-box .summary-header,
+    .webgsm-checkout-sidebar .summary-header {
+        padding: 12px 16px !important;
+        font-size: 13px !important;
+        border-radius: 8px 8px 0 0 !important;
+    }
+    
+    .webgsm-popup .popup-footer {
+        padding: 14px 16px !important;
+        gap: 10px !important;
+    }
+    
+    .webgsm-popup .popup-footer button {
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        min-height: 44px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .webgsm-summary-box .btn-submit,
+    .webgsm-mobile-submit .btn-submit-mobile {
+        padding: 14px 20px !important;
+        font-size: 15px !important;
+    }
+    
+    .webgsm-popup .popup-footer button {
+        padding: 11px 14px !important;
+        font-size: 13px !important;
+    }
+}
+/* Cache bust 1768066686 */

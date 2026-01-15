@@ -1,0 +1,1394 @@
+<?php
+/**
+ * Plugin Name: WebGSM B2B Pricing
+ * Description: Sistem de prețuri diferențiate pentru clienți B2B (Persoane Juridice) cu discount pe produs/categorie, tiers și protecție preț minim.
+ * Version: 2.0.0
+ * Author: WebGSM
+ * Requires at least: 5.8
+ * Requires PHP: 7.4
+ * WC requires at least: 6.0
+ * Text Domain: webgsm-b2b
+ */
+
+if (!defined('ABSPATH')) exit;
+
+// Verifică dacă WooCommerce este activ
+if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+    add_action('admin_notices', function() {
+        echo '<div class="error"><p><strong>WebGSM B2B Pricing</strong> necesită WooCommerce activ.</p></div>';
+    });
+    return;
+}
+
+// Constante
+define('WEBGSM_B2B_VERSION', '2.0.0');
+define('WEBGSM_B2B_PATH', plugin_dir_path(__FILE__));
+define('WEBGSM_B2B_URL', plugin_dir_url(__FILE__));
+
+// =========================================
+// BADGES CSS - ELEGANT LINE-ART STYLE
+// =========================================
+
+add_action('wp_head', 'webgsm_b2b_badges_css');
+function webgsm_b2b_badges_css() {
+    ?>
+    <style>
+    /* ========================================
+       WebGSM B2B Tier Badges - Elegant Design
+       ======================================== */
+    
+    .webgsm-tier-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .webgsm-tier-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .webgsm-tier-badge:hover::before {
+        left: 100%;
+    }
+    
+    .webgsm-tier-badge svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }
+    
+    /* BRONZE - Arămiu elegant */
+    .webgsm-tier-badge.tier-bronze {
+        background: linear-gradient(135deg, #d4a574 0%, #b8956e 50%, #a67c52 100%);
+        color: #4a3728;
+        border: 1px solid #c9a077;
+        box-shadow: 0 2px 8px rgba(180, 140, 100, 0.25);
+    }
+    
+    .webgsm-tier-badge.tier-bronze:hover {
+        box-shadow: 0 4px 16px rgba(180, 140, 100, 0.4);
+        transform: translateY(-1px);
+    }
+    
+    .webgsm-tier-badge.tier-bronze svg {
+        stroke: #5d4532;
+    }
+    
+    /* SILVER - Argintiu strălucitor */
+    .webgsm-tier-badge.tier-silver {
+        background: linear-gradient(135deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%);
+        color: #3d3d3d;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 2px 8px rgba(160, 160, 160, 0.3);
+    }
+    
+    .webgsm-tier-badge.tier-silver:hover {
+        box-shadow: 0 4px 16px rgba(160, 160, 160, 0.5);
+        transform: translateY(-1px);
+    }
+    
+    .webgsm-tier-badge.tier-silver svg {
+        stroke: #505050;
+    }
+    
+    /* GOLD - Auriu Luxury */
+    .webgsm-tier-badge.tier-gold {
+        background: linear-gradient(135deg, #f7e199 0%, #d4af37 50%, #c5a028 100%);
+        color: #5c4813;
+        border: 1px solid #dbb840;
+        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
+    }
+    
+    .webgsm-tier-badge.tier-gold:hover {
+        box-shadow: 0 4px 16px rgba(212, 175, 55, 0.5);
+        transform: translateY(-1px);
+    }
+    
+    .webgsm-tier-badge.tier-gold svg {
+        stroke: #6b5518;
+    }
+    
+    /* PLATINUM - Exclusivist Deep Blue/Perlat */
+    .webgsm-tier-badge.tier-platinum {
+        background: linear-gradient(135deg, #2c3e50 0%, #1a252f 50%, #0d1318 100%);
+        color: #e5e5e5;
+        border: 1px solid #4a6073;
+        box-shadow: 0 2px 8px rgba(44, 62, 80, 0.4);
+    }
+    
+    .webgsm-tier-badge.tier-platinum:hover {
+        box-shadow: 0 4px 16px rgba(44, 62, 80, 0.6);
+        transform: translateY(-1px);
+    }
+    
+    .webgsm-tier-badge.tier-platinum svg {
+        stroke: #bdc3c7;
+    }
+    
+    /* Badge în header - mai mic */
+    .webgsm-tier-badge.badge-header {
+        padding: 2px 8px;
+        font-size: 9px;
+        border-radius: 12px;
+    }
+    
+    .webgsm-tier-badge.badge-header svg {
+        width: 10px;
+        height: 10px;
+    }
+    
+    /* Badge în dashboard - mai mare */
+    .webgsm-tier-badge.badge-dashboard {
+        padding: 6px 16px;
+        font-size: 13px;
+        border-radius: 25px;
+    }
+    
+    .webgsm-tier-badge.badge-dashboard svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    /* ========================================
+       Progress Bar - Elegant Design
+       ======================================== */
+    
+    .webgsm-tier-progress-wrapper {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .webgsm-tier-progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .webgsm-tier-progress-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .webgsm-tier-progress-bar-container {
+        background: #f3f4f6;
+        border-radius: 10px;
+        height: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .webgsm-tier-progress-bar {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .webgsm-tier-progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    /* Progress bar colors by tier target */
+    .webgsm-tier-progress-bar.to-silver {
+        background: linear-gradient(90deg, #d4a574, #c0c0c0);
+    }
+    
+    .webgsm-tier-progress-bar.to-gold {
+        background: linear-gradient(90deg, #c0c0c0, #d4af37);
+    }
+    
+    .webgsm-tier-progress-bar.to-platinum {
+        background: linear-gradient(90deg, #d4af37, #2c3e50);
+    }
+    
+    .webgsm-tier-progress-bar.max-tier {
+        background: linear-gradient(90deg, #2c3e50, #1a252f);
+    }
+    
+    .webgsm-tier-progress-info {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #6b7280;
+    }
+    
+    .webgsm-tier-progress-info .current-value {
+        font-weight: 600;
+        color: #3b82f6;
+    }
+    
+    .webgsm-tier-progress-info .next-tier {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .webgsm-tier-benefits {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .webgsm-tier-benefits h4 {
+        margin: 0 0 10px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .webgsm-tier-benefits ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .webgsm-tier-benefits li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #166534;
+    }
+    
+    .webgsm-tier-benefits li svg {
+        width: 12px;
+        height: 12px;
+        stroke: #22c55e;
+    }
+    
+    /* ========================================
+       Upgrade Notification - Pop-up
+       ======================================== */
+    
+    .webgsm-tier-upgrade-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .webgsm-tier-upgrade-popup.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .webgsm-tier-upgrade-content {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+    
+    .webgsm-tier-upgrade-popup.active .webgsm-tier-upgrade-content {
+        transform: scale(1);
+    }
+    
+    .webgsm-tier-upgrade-content .celebration-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: celebrate 0.6s ease;
+    }
+    
+    @keyframes celebrate {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .webgsm-tier-upgrade-content .celebration-icon svg {
+        width: 40px;
+        height: 40px;
+        stroke: #d97706;
+    }
+    
+    .webgsm-tier-upgrade-content h2 {
+        margin: 0 0 10px;
+        font-size: 24px;
+        color: #1f2937;
+    }
+    
+    .webgsm-tier-upgrade-content p {
+        margin: 0 0 20px;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+    
+    .webgsm-tier-upgrade-content .new-badge {
+        margin: 20px 0;
+    }
+    
+    .webgsm-tier-upgrade-content .close-btn {
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .webgsm-tier-upgrade-content .close-btn:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+    }
+    </style>
+    <?php
+}
+
+// =========================================
+// HELPER: Generează Badge HTML
+// =========================================
+
+function webgsm_get_tier_badge($tier, $size = 'default') {
+    $tiers_config = array(
+        'bronze' => array(
+            'label' => 'Bronze',
+            'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>'
+        ),
+        'silver' => array(
+            'label' => 'Silver',
+            'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>'
+        ),
+        'gold' => array(
+            'label' => 'Gold',
+            'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"/></svg>'
+        ),
+        'platinum' => array(
+            'label' => 'Platinum',
+            'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.5 5.5L20 9.5l-4 4.5 1 6-5-3-5 3 1-6-4-4.5 5.5-1L12 3z"/></svg>'
+        )
+    );
+    
+    $tier = strtolower($tier);
+    if (!isset($tiers_config[$tier])) {
+        $tier = 'bronze';
+    }
+    
+    $config = $tiers_config[$tier];
+    $size_class = ($size === 'header') ? 'badge-header' : (($size === 'dashboard') ? 'badge-dashboard' : '');
+    
+    return sprintf(
+        '<span class="webgsm-tier-badge tier-%s %s">%s %s</span>',
+        esc_attr($tier),
+        esc_attr($size_class),
+        $config['icon'],
+        esc_html($config['label'])
+    );
+}
+
+// =========================================
+// HELPER: Generează Progress Bar HTML
+// =========================================
+
+function webgsm_get_tier_progress_bar($user_id = null) {
+    if (is_null($user_id)) {
+        $user_id = get_current_user_id();
+    }
+    
+    if (!$user_id) {
+        return '';
+    }
+    
+    $b2b = WebGSM_B2B_Pricing::instance();
+    
+    // Verifică dacă e PJ
+    if (!$b2b->is_user_pj($user_id)) {
+        return '';
+    }
+    
+    $current_tier = $b2b->get_user_tier($user_id);
+    $total_value = $b2b->get_user_total_value($user_id);
+    $tiers = get_option('webgsm_b2b_tiers', $b2b->get_default_tiers());
+    
+    // Găsește next tier
+    $next_tier = null;
+    $next_tier_value = 0;
+    $current_tier_value = 0;
+    $tier_order = array('bronze', 'silver', 'gold', 'platinum');
+    $current_index = array_search($current_tier, $tier_order);
+    
+    foreach ($tiers as $slug => $tier_data) {
+        if ($slug === $current_tier) {
+            $current_tier_value = isset($tier_data['min_value']) ? (float)$tier_data['min_value'] : 0;
+        }
+    }
+    
+    if ($current_index !== false && $current_index < count($tier_order) - 1) {
+        $next_tier_slug = $tier_order[$current_index + 1];
+        if (isset($tiers[$next_tier_slug])) {
+            $next_tier = $tiers[$next_tier_slug];
+            $next_tier_value = isset($next_tier['min_value']) ? (float)$next_tier['min_value'] : 0;
+        }
+    }
+    
+    // Calculează progresul
+    $progress = 100;
+    $remaining = 0;
+    $progress_class = 'max-tier';
+    
+    if ($next_tier && $next_tier_value > 0) {
+        $range = $next_tier_value - $current_tier_value;
+        $progress_in_range = $total_value - $current_tier_value;
+        $progress = min(100, max(0, ($progress_in_range / $range) * 100));
+        $remaining = max(0, $next_tier_value - $total_value);
+        $progress_class = 'to-' . $tier_order[$current_index + 1];
+    }
+    
+    // Discount curent
+    $discount_extra = isset($tiers[$current_tier]['discount_extra']) ? $tiers[$current_tier]['discount_extra'] : 0;
+    
+    ob_start();
+    ?>
+    <div class="webgsm-tier-progress-wrapper">
+        <div class="webgsm-tier-progress-header">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
+                </svg>
+                Nivelul tău de Partener
+            </h3>
+            <?php echo webgsm_get_tier_badge($current_tier, 'dashboard'); ?>
+        </div>
+        
+        <div class="webgsm-tier-progress-bar-container">
+            <div class="webgsm-tier-progress-bar <?php echo esc_attr($progress_class); ?>" style="width: <?php echo esc_attr($progress); ?>%;"></div>
+        </div>
+        
+        <div class="webgsm-tier-progress-info">
+            <span>
+                Total comenzi: <span class="current-value"><?php echo number_format($total_value, 0, ',', '.'); ?> RON</span>
+            </span>
+            <?php if ($next_tier): ?>
+            <span class="next-tier">
+                <?php echo webgsm_get_tier_badge($tier_order[$current_index + 1], 'header'); ?>
+                <span>Mai ai nevoie de <strong><?php echo number_format($remaining, 0, ',', '.'); ?> RON</strong></span>
+            </span>
+            <?php else: ?>
+            <span class="next-tier">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <strong>Nivel maxim atins!</strong>
+            </span>
+            <?php endif; ?>
+        </div>
+        
+        <div class="webgsm-tier-benefits">
+            <h4>Beneficiile tale active:</h4>
+            <ul>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Discount extra <?php echo esc_html($discount_extra); ?>%
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Prețuri B2B exclusive
+                </li>
+                <?php if (in_array($current_tier, array('gold', 'platinum'))): ?>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Prioritate suport
+                </li>
+                <?php endif; ?>
+                <?php if ($current_tier === 'platinum'): ?>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Account Manager dedicat
+                </li>
+                <?php endif; ?>
+            </ul>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// =========================================
+// UPGRADE NOTIFICATION - POP-UP
+// =========================================
+
+add_action('wp_footer', 'webgsm_show_tier_upgrade_popup');
+function webgsm_show_tier_upgrade_popup() {
+    if (!is_user_logged_in()) return;
+    
+    $user_id = get_current_user_id();
+    $show_popup = get_user_meta($user_id, '_webgsm_show_tier_upgrade', true);
+    $new_tier = get_user_meta($user_id, '_webgsm_new_tier', true);
+    
+    if ($show_popup !== 'yes' || empty($new_tier)) return;
+    
+    // Marchează ca văzut
+    delete_user_meta($user_id, '_webgsm_show_tier_upgrade');
+    delete_user_meta($user_id, '_webgsm_new_tier');
+    ?>
+    <div class="webgsm-tier-upgrade-popup active" id="webgsm-upgrade-popup">
+        <div class="webgsm-tier-upgrade-content">
+            <div class="celebration-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
+                </svg>
+            </div>
+            <h2>Felicitări! 🎉</h2>
+            <p>Ai fost promovat la un nivel superior de parteneriat!</p>
+            <div class="new-badge">
+                <?php echo webgsm_get_tier_badge($new_tier, 'dashboard'); ?>
+            </div>
+            <p>Beneficiile tale au fost actualizate automat.</p>
+            <button class="close-btn" onclick="document.getElementById('webgsm-upgrade-popup').classList.remove('active');">
+                Mulțumesc!
+            </button>
+        </div>
+    </div>
+    <script>
+    setTimeout(function() {
+        var popup = document.getElementById('webgsm-upgrade-popup');
+        if (popup) popup.classList.remove('active');
+    }, 10000);
+    </script>
+    <?php
+}
+
+/**
+ * Clasa principală WebGSM B2B Pricing
+ */
+class WebGSM_B2B_Pricing {
+    
+    private static $instance = null;
+    
+    public static function instance() {
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    public function __construct() {
+        $this->init_hooks();
+        
+        // Debug buttons doar pentru admin
+        if (current_user_can('manage_options')) {
+            add_action('wp_footer', array($this, 'debug_show_pj_status'));
+            add_action('wp_footer', array($this, 'debug_set_pj_button'));
+        }
+    }
+    
+    private function init_hooks() {
+        // Admin hooks
+        add_action('admin_menu', array($this, 'add_admin_menu'));
+        add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_enqueue_scripts', array($this, 'admin_assets'));
+        
+        // Product meta fields
+        add_action('woocommerce_product_options_pricing', array($this, 'add_product_pricing_fields'));
+        add_action('woocommerce_process_product_meta', array($this, 'save_product_pricing_fields'));
+        
+        // Category meta fields
+        add_action('product_cat_add_form_fields', array($this, 'add_category_fields'));
+        add_action('product_cat_edit_form_fields', array($this, 'edit_category_fields'));
+        add_action('created_product_cat', array($this, 'save_category_fields'));
+        add_action('edited_product_cat', array($this, 'save_category_fields'));
+        
+        // Price filters - NUCLEUL SISTEMULUI
+        add_filter('woocommerce_product_get_price', array($this, 'apply_b2b_price'), 99, 2);
+        add_filter('woocommerce_product_get_regular_price', array($this, 'apply_b2b_price'), 99, 2);
+        add_filter('woocommerce_product_variation_get_price', array($this, 'apply_b2b_price'), 99, 2);
+        add_filter('woocommerce_product_variation_get_regular_price', array($this, 'apply_b2b_price'), 99, 2);
+        
+        // Price HTML display
+        add_filter('woocommerce_get_price_html', array($this, 'modify_price_html'), 99, 2);
+        
+        // Display discount info în cart
+        add_filter('woocommerce_cart_item_price', array($this, 'display_cart_item_tier_price'), 10, 3);
+        
+        // Display B2B discount în cart și checkout
+        add_action('woocommerce_cart_totals_after_order_total', array($this, 'display_b2b_savings_row'), 10);
+        add_action('woocommerce_review_order_after_order_total', array($this, 'display_b2b_savings_row'), 10);
+        
+        // Update user tier after order completed
+        add_action('woocommerce_order_status_completed', array($this, 'update_user_tier_on_order'));
+        
+        // Admin columns for orders
+        add_filter('manage_edit-shop_order_columns', array($this, 'add_order_profit_column'));
+        add_action('manage_shop_order_posts_custom_column', array($this, 'render_order_profit_column'), 10, 2);
+        
+        // ÎNREGISTRARE CONT - Doar detectare PJ
+        add_action('woocommerce_created_customer', array($this, 'detect_pj_on_registration'), 20);
+        
+        // Debugging în footer (doar admin)
+        if (current_user_can('manage_options')) {
+            add_action('wp_footer', array($this, 'add_console_debugging'));
+        }
+    }
+    
+    // =========================================
+    // DEBUGGING
+    // =========================================
+    
+    public function add_console_debugging() {
+        if (!current_user_can('manage_options')) return;
+        
+        $user_id = get_current_user_id();
+        $is_pj = $this->is_user_pj() ? 'true' : 'false';
+        $tier = $this->get_user_tier() ?: 'none';
+        $total_value = $this->get_user_total_value($user_id);
+        $discount_implicit = get_option('webgsm_b2b_discount_implicit', 0);
+        $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        
+        ?>
+        <script>
+        console.group('🔧 WebGSM B2B Pricing v2.0 - DEBUG');
+        console.log('📌 User ID:', <?php echo $user_id; ?>);
+        console.log('🏢 Is PJ:', <?php echo $is_pj; ?>);
+        console.log('⭐ Tier:', '<?php echo $tier; ?>');
+        console.log('💰 Total Value:', '<?php echo number_format($total_value, 2); ?> RON');
+        console.log('📊 Discount Implicit:', '<?php echo $discount_implicit; ?>%');
+        console.log('🏆 Tiers Config:', <?php echo json_encode($tiers); ?>);
+        console.groupEnd();
+        </script>
+        <?php
+    }
+    
+    public function debug_set_pj_button() {
+        if (!current_user_can('manage_options')) return;
+        if (isset($_GET['set_pj']) && $_GET['set_pj'] === '1') {
+            update_user_meta(get_current_user_id(), '_is_pj', 'yes');
+            update_user_meta(get_current_user_id(), 'billing_cui', 'RO12345678');
+            update_user_meta(get_current_user_id(), '_tip_client', 'pj');
+            echo '<div style="position:fixed;bottom:60px;right:20px;z-index:9999;background:#22c55e;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">Userul tău a fost setat ca PJ! <a href="'.esc_url(remove_query_arg('set_pj')).'" style="color:#fff;text-decoration:underline;">Reîncarcă</a></div>';
+        } else {
+            echo '<a href="'.esc_url(add_query_arg('set_pj','1')).'" style="position:fixed;bottom:60px;right:20px;z-index:9999;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.12);text-decoration:none;">Setează userul ca PJ (test)</a>';
+        }
+    }
+    
+    public function debug_show_pj_status() {
+        if (!current_user_can('manage_options')) return;
+        $is_pj = $this->is_user_pj() ? 'DA (PJ)' : 'NU (PF)';
+        $tier = $this->get_user_tier() ?: 'bronze';
+        $total_value = number_format($this->get_user_total_value(get_current_user_id()), 0, ',', '.');
+        $discount = get_option('webgsm_b2b_discount_implicit', 0);
+        echo '<div style="position:fixed;bottom:20px;right:20px;z-index:9999;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">'
+            .'<strong>PJ:</strong> '.$is_pj.' | <strong>Tier:</strong> '.$tier.' | <strong>Total:</strong> '.$total_value.' RON</div>';
+    }
+    
+    // =========================================
+    // CACHE MANAGEMENT
+    // =========================================
+    
+    public function clear_all_price_cache() {
+        global $wpdb;
+        wp_cache_flush();
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '%_transient_wc_%'");
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '%_transient_timeout_wc_%'");
+        
+        if (function_exists('WC') && WC()->session) {
+            WC()->session->set('cart_totals', null);
+        }
+        if (function_exists('WC') && WC()->cart) {
+            WC()->cart->calculate_totals();
+        }
+    }
+    
+    // =========================================
+    // VERIFICARE USER PJ
+    // =========================================
+    
+    public function is_user_pj($user_id = null) {
+        if (is_null($user_id)) {
+            $user_id = get_current_user_id();
+        }
+        
+        if (!$user_id) {
+            return false;
+        }
+        
+        $is_pj = get_user_meta($user_id, '_is_pj', true);
+        if ($is_pj === 'yes' || $is_pj === '1' || $is_pj === true) {
+            return true;
+        }
+        
+        $user = get_userdata($user_id);
+        if ($user && (in_array('b2b_customer', (array) $user->roles) || in_array('wholesale_customer', (array) $user->roles))) {
+            return true;
+        }
+        
+        $cui = get_user_meta($user_id, 'billing_cui', true);
+        if (!empty($cui)) {
+            return true;
+        }
+        
+        $tip_client = get_user_meta($user_id, '_tip_client', true);
+        if (strtolower($tip_client) === 'pj' || strtolower($tip_client) === 'juridica') {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // =========================================
+    // SISTEM TIERS - BAZAT PE SUMĂ (V2.0)
+    // =========================================
+    
+    public function get_user_tier($user_id = null) {
+        if (is_null($user_id)) {
+            $user_id = get_current_user_id();
+        }
+        
+        if (!$user_id || !$this->is_user_pj($user_id)) {
+            return false;
+        }
+        
+        $tier = get_user_meta($user_id, '_pj_tier', true);
+        
+        if (empty($tier)) {
+            $tier = $this->calculate_user_tier($user_id);
+            update_user_meta($user_id, '_pj_tier', $tier);
+            update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+        }
+        
+        return $tier;
+    }
+    
+    public function calculate_user_tier($user_id) {
+        $total_value = $this->get_user_total_value($user_id);
+        $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        
+        $current_tier = 'bronze';
+        
+        $sorted_tiers = array();
+        foreach ($tiers as $tier_name => $tier_data) {
+            $min_value = isset($tier_data['min_value']) ? (float)$tier_data['min_value'] : 0;
+            $sorted_tiers[$tier_name] = $min_value;
+        }
+        arsort($sorted_tiers);
+        
+        foreach ($sorted_tiers as $tier_name => $min_value) {
+            if ($total_value >= $min_value) {
+                $current_tier = $tier_name;
+                break;
+            }
+        }
+        
+        return $current_tier;
+    }
+    
+    public function get_user_total_value($user_id) {
+        $cached = get_user_meta($user_id, '_pj_total_value', true);
+        $last_calc = get_user_meta($user_id, '_pj_value_calculated', true);
+        
+        if ($cached !== '' && $last_calc && (time() - $last_calc) < 3600) {
+            return (float) $cached;
+        }
+        
+        $orders = wc_get_orders(array(
+            'customer_id' => $user_id,
+            'status' => array('completed', 'processing'),
+            'limit' => -1
+        ));
+        
+        $total = 0;
+        foreach ($orders as $order) {
+            $total += $order->get_total();
+        }
+        
+        update_user_meta($user_id, '_pj_total_value', $total);
+        update_user_meta($user_id, '_pj_value_calculated', time());
+        
+        return $total;
+    }
+    
+    public function get_user_total_orders($user_id) {
+        $orders = wc_get_orders(array(
+            'customer_id' => $user_id,
+            'status' => array('completed', 'processing'),
+            'limit' => -1,
+            'return' => 'ids'
+        ));
+        return count($orders);
+    }
+    
+    public function get_default_tiers() {
+        return array(
+            'bronze' => array(
+                'min_value' => 0,
+                'discount_extra' => 0,
+                'label' => 'Bronze'
+            ),
+            'silver' => array(
+                'min_value' => 5000,
+                'discount_extra' => 3,
+                'label' => 'Silver'
+            ),
+            'gold' => array(
+                'min_value' => 25000,
+                'discount_extra' => 5,
+                'label' => 'Gold'
+            ),
+            'platinum' => array(
+                'min_value' => 100000,
+                'discount_extra' => 8,
+                'label' => 'Platinum'
+            )
+        );
+    }
+    
+    public function update_user_tier_on_order($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) return;
+        
+        $user_id = $order->get_customer_id();
+        if (!$user_id || !$this->is_user_pj($user_id)) return;
+        
+        delete_user_meta($user_id, '_pj_value_calculated');
+        
+        $old_tier = get_user_meta($user_id, '_pj_tier', true);
+        $new_tier = $this->calculate_user_tier($user_id);
+        
+        if ($old_tier && $new_tier !== $old_tier) {
+            $tier_order = array('bronze' => 1, 'silver' => 2, 'gold' => 3, 'platinum' => 4);
+            $old_level = isset($tier_order[$old_tier]) ? $tier_order[$old_tier] : 0;
+            $new_level = isset($tier_order[$new_tier]) ? $tier_order[$new_tier] : 0;
+            
+            if ($new_level > $old_level) {
+                update_user_meta($user_id, '_pj_tier', $new_tier);
+                update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+                update_user_meta($user_id, '_webgsm_show_tier_upgrade', 'yes');
+                update_user_meta($user_id, '_webgsm_new_tier', $new_tier);
+                $this->send_tier_upgrade_email($user_id, $old_tier, $new_tier);
+                do_action('webgsm_b2b_tier_upgraded', $user_id, $old_tier, $new_tier);
+            }
+        } else if (empty($old_tier)) {
+            update_user_meta($user_id, '_pj_tier', $new_tier);
+            update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+        }
+    }
+    
+    private function send_tier_upgrade_email($user_id, $old_tier, $new_tier) {
+        $user = get_userdata($user_id);
+        if (!$user) return;
+        
+        $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        $new_tier_data = isset($tiers[$new_tier]) ? $tiers[$new_tier] : array();
+        $discount = isset($new_tier_data['discount_extra']) ? $new_tier_data['discount_extra'] : 0;
+        $label = isset($new_tier_data['label']) ? $new_tier_data['label'] : ucfirst($new_tier);
+        
+        $to = $user->user_email;
+        $subject = 'Felicitări! Ai fost promovat la nivel ' . $label . ' - WebGSM';
+        
+        $badge_style = '';
+        switch ($new_tier) {
+            case 'silver':
+                $badge_style = 'background: linear-gradient(135deg, #e8e8e8, #c0c0c0); color: #3d3d3d;';
+                break;
+            case 'gold':
+                $badge_style = 'background: linear-gradient(135deg, #f7e199, #d4af37); color: #5c4813;';
+                break;
+            case 'platinum':
+                $badge_style = 'background: linear-gradient(135deg, #2c3e50, #1a252f); color: #e5e5e5;';
+                break;
+            default:
+                $badge_style = 'background: linear-gradient(135deg, #d4a574, #a67c52); color: #4a3728;';
+        }
+        
+        $message = '
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #1f2937; margin: 0;">🎉 Felicitări!</h1>
+            </div>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Dragă ' . esc_html($user->display_name) . ',
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Mulțumim pentru încrederea acordată! Ai fost promovat la nivelul:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <span style="display: inline-block; padding: 10px 25px; border-radius: 25px; font-size: 18px; font-weight: bold; text-transform: uppercase; ' . $badge_style . '">' . esc_html($label) . '</span>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #166534; margin: 0 0 15px 0;">✅ Beneficiile tale noi:</h3>
+                <ul style="color: #166534; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;">Discount suplimentar de <strong>' . $discount . '%</strong></li>
+                    <li style="margin-bottom: 8px;">Prețuri B2B exclusive</li>
+                </ul>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="' . esc_url(wc_get_account_endpoint_url('dashboard')) . '" style="display: inline-block; background: #3b82f6; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600;">Vezi contul tău</a>
+            </div>
+        </div>';
+        
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($to, $subject, $message, $headers);
+    }
+    
+    // =========================================
+    // CALCUL PREȚ B2B
+    // =========================================
+    
+    public function apply_b2b_price($price, $product) {
+        if (is_admin() && !wp_doing_ajax()) {
+            return $price;
+        }
+        
+        if (!$this->is_user_pj()) {
+            return $price;
+        }
+        
+        return $this->calculate_b2b_price($price, $product);
+    }
+    
+    public function calculate_b2b_price($price, $product) {
+        $product_id = $product->get_id();
+        
+        $pret_minim = $this->get_pret_minim($product);
+        $sale_price = $product->get_sale_price();
+        $is_on_sale = !empty($sale_price) && $sale_price < $price;
+        
+        $discount_pj = $this->get_discount_pj($product);
+        
+        $tier = $this->get_user_tier();
+        $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
+        
+        $discount_total = $discount_pj + $discount_tier;
+        $pret_pj = $price - ($price * $discount_total / 100);
+        
+        if ($is_on_sale) {
+            $pret_final = min($pret_pj, (float) $sale_price);
+        } else {
+            $pret_final = $pret_pj;
+        }
+        
+        if ($pret_minim > 0 && $pret_final < $pret_minim) {
+            $pret_final = $pret_minim;
+        }
+        
+        return round($pret_final, 2);
+    }
+    
+    public function get_pret_minim($product) {
+        $product_id = $product->get_id();
+        $pret_minim = get_post_meta($product_id, '_pret_minim_vanzare', true);
+        
+        if (!empty($pret_minim) && $pret_minim > 0) {
+            return (float) $pret_minim;
+        }
+        
+        $pret_achizitie = get_post_meta($product_id, '_pret_achizitie', true);
+        $marja_minima = get_option('webgsm_b2b_marja_minima', 5);
+        
+        if (!empty($pret_achizitie) && $pret_achizitie > 0) {
+            return (float) $pret_achizitie * (1 + $marja_minima / 100);
+        }
+        
+        return 0;
+    }
+    
+    public function get_discount_pj($product, $return_source = false) {
+        $product_id = $product->get_id();
+        
+        $discount_produs = get_post_meta($product_id, '_discount_pj', true);
+        
+        if ($discount_produs !== '' && $discount_produs !== false && $discount_produs !== null) {
+            if ($return_source) return array('discount' => (float) $discount_produs, 'source' => 'produs');
+            return (float) $discount_produs;
+        }
+        
+        $categories = $product->get_category_ids();
+        $discount_categorie = 0;
+        $cat_name = '';
+        
+        foreach ($categories as $cat_id) {
+            $cat_discount = get_term_meta($cat_id, '_discount_pj_categorie', true);
+            if (!empty($cat_discount) && $cat_discount > $discount_categorie) {
+                $discount_categorie = (float) $cat_discount;
+                $term = get_term($cat_id);
+                $cat_name = $term ? $term->name : '';
+            }
+        }
+        
+        if ($discount_categorie > 0) {
+            if ($return_source) return array('discount' => $discount_categorie, 'source' => 'categorie: ' . $cat_name);
+            return $discount_categorie;
+        }
+        
+        $discount_implicit = (float) get_option('webgsm_b2b_discount_implicit', 0);
+        if ($return_source) return array('discount' => $discount_implicit, 'source' => 'implicit');
+        return $discount_implicit;
+    }
+    
+    // =========================================
+    // ADMIN MENU & SETTINGS
+    // =========================================
+    
+    public function add_admin_menu() {
+        add_menu_page('B2B Pricing', 'B2B Pricing', 'manage_options', 'webgsm-b2b-pricing', array($this, 'render_admin_page'), 'dashicons-chart-line', 56);
+        add_submenu_page('webgsm-b2b-pricing', 'Setări', 'Setări', 'manage_options', 'webgsm-b2b-pricing', array($this, 'render_admin_page'));
+        add_submenu_page('webgsm-b2b-pricing', 'Clienți B2B', 'Clienți B2B', 'manage_options', 'webgsm-b2b-customers', array($this, 'render_customers_page'));
+        add_submenu_page('webgsm-b2b-pricing', 'Rapoarte', 'Rapoarte', 'manage_options', 'webgsm-b2b-reports', array($this, 'render_reports_page'));
+    }
+    
+    public function register_settings() {
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_discount_implicit');
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_marja_minima');
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_tiers');
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_show_badge');
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_badge_text');
+        register_setting('webgsm_b2b_settings', 'webgsm_b2b_tier_retention_months');
+        
+        add_action('update_option_webgsm_b2b_discount_implicit', array($this, 'clear_all_price_cache'));
+        add_action('update_option_webgsm_b2b_tiers', array($this, 'clear_all_price_cache'));
+    }
+    
+    public function admin_assets($hook) {
+        if (strpos($hook, 'webgsm-b2b') !== false) {
+            wp_enqueue_style('webgsm-b2b-admin', WEBGSM_B2B_URL . 'assets/admin.css', array(), WEBGSM_B2B_VERSION);
+            wp_enqueue_script('webgsm-b2b-admin', WEBGSM_B2B_URL . 'assets/admin.js', array('jquery'), WEBGSM_B2B_VERSION, true);
+        }
+    }
+    
+    public function render_admin_page() {
+        include WEBGSM_B2B_PATH . 'admin/settings-page.php';
+    }
+    
+    public function render_customers_page() {
+        include WEBGSM_B2B_PATH . 'admin/customers-page.php';
+    }
+    
+    public function render_reports_page() {
+        include WEBGSM_B2B_PATH . 'admin/reports-page.php';
+    }
+    
+    // =========================================
+    // PRODUCT META FIELDS
+    // =========================================
+    
+    public function add_product_pricing_fields() {
+        echo '<div class="options_group webgsm-b2b-fields">';
+        echo '<h4 style="padding-left: 12px; margin-top: 15px; color: #2563eb; border-top: 1px solid #e5e7eb; padding-top: 15px;"><span class="dashicons dashicons-building" style="margin-right: 5px;"></span>Prețuri B2B</h4>';
+        
+        woocommerce_wp_text_input(array('id' => '_pret_achizitie', 'label' => 'Preț achiziție (cost)', 'desc_tip' => true, 'description' => 'Prețul de achiziție al produsului.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
+        woocommerce_wp_text_input(array('id' => '_pret_minim_vanzare', 'label' => 'Preț minim vânzare', 'desc_tip' => true, 'description' => 'HARD LIMIT: Niciun discount nu va coborî prețul sub această valoare.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
+        woocommerce_wp_text_input(array('id' => '_discount_pj', 'label' => 'Discount PJ (%)', 'desc_tip' => true, 'description' => 'Discount pentru PJ. Lasă gol pentru discount din categorie.', 'type' => 'number', 'custom_attributes' => array('step' => '0.1', 'min' => '0', 'max' => '100'), 'placeholder' => 'Din categorie'));
+        
+        echo '</div>';
+    }
+    
+    public function save_product_pricing_fields($post_id) {
+        if (isset($_POST['_pret_achizitie'])) update_post_meta($post_id, '_pret_achizitie', sanitize_text_field($_POST['_pret_achizitie']));
+        if (isset($_POST['_pret_minim_vanzare'])) update_post_meta($post_id, '_pret_minim_vanzare', sanitize_text_field($_POST['_pret_minim_vanzare']));
+        if (isset($_POST['_discount_pj'])) {
+            $discount = sanitize_text_field($_POST['_discount_pj']);
+            if ($discount !== '' && ($discount < 0 || $discount > 100)) $discount = max(0, min(100, $discount));
+            update_post_meta($post_id, '_discount_pj', $discount);
+        }
+        $this->clear_all_price_cache();
+    }
+    
+    // =========================================
+    // CATEGORY META FIELDS
+    // =========================================
+    
+    public function add_category_fields() {
+        echo '<div class="form-field"><label for="_discount_pj_categorie">Discount PJ (%)</label><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value=""><p class="description">Discount implicit pentru produsele din această categorie.</p></div>';
+    }
+    
+    public function edit_category_fields($term) {
+        $discount = get_term_meta($term->term_id, '_discount_pj_categorie', true);
+        echo '<tr class="form-field"><th scope="row"><label for="_discount_pj_categorie">Discount PJ (%)</label></th><td><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value="' . esc_attr($discount) . '"><p class="description">Discount implicit pentru produsele din această categorie.</p></td></tr>';
+    }
+    
+    public function save_category_fields($term_id) {
+        if (isset($_POST['_discount_pj_categorie'])) {
+            update_term_meta($term_id, '_discount_pj_categorie', sanitize_text_field($_POST['_discount_pj_categorie']));
+        }
+        $this->clear_all_price_cache();
+    }
+    
+    // =========================================
+    // DISPLAY PREȚ
+    // =========================================
+    
+    public function modify_price_html($price_html, $product) {
+        // În admin, afișează ÎNTOTDEAUNA (nu doar pentru PJ)
+        $is_admin = is_admin();
+        
+        // Frontend: doar pentru PJ
+        if (!$is_admin && !$this->is_user_pj()) {
+            return $price_html;
+        }
+        
+        // ADMIN: Afișare pe 3 linii în coloana Price
+        if ($is_admin) {
+            $product_id = $product->get_id();
+            $original_price = get_post_meta($product_id, '_regular_price', true);
+            $b2b_price = $product->get_price();
+            $pret_minim = get_post_meta($product_id, '_pret_minim_vanzare', true);
+            
+            $output = '<div style="line-height:1.5; font-size:10px;">';
+            
+            // Linia 1: Preț setat (NEGRU)
+            if ($original_price > 0) {
+                $output .= '<div style="color:#000; font-weight:500; display:flex; align-items:center; gap:3px; font-size:10px; white-space:nowrap;">';
+                $output .= '<span style="color:#000; font-size:7px; line-height:1;">●</span>';
+                $output .= '<span style="font-size:10px;">' . wc_price($original_price) . '</span>';
+                $output .= '</div>';
+            }
+            
+            // Linia 2: Preț B2B (ALBASTRU)
+            if ($b2b_price > 0) {
+                if ((float)$b2b_price < (float)$original_price) {
+                    $output .= '<div style="color:#2196F3; font-weight:600; display:flex; align-items:center; gap:3px; font-size:10px; white-space:nowrap;">';
+                    $output .= '<span style="color:#2196F3; font-size:7px; line-height:1;">●</span>';
+                    $output .= '<span style="font-size:10px;">' . wc_price($b2b_price) . '</span>';
+                    $output .= '</div>';
+                } elseif ((float)$b2b_price == (float)$original_price) {
+                    $output .= '<div style="color:#999; font-size:9px; display:flex; align-items:center; gap:3px; white-space:nowrap;">';
+                    $output .= '<span style="color:#999; font-size:7px; line-height:1;">●</span>';
+                    $output .= 'Fără discount B2B';
+                    $output .= '</div>';
+                }
+            }
+            
+            // Linia 3: Preț minim (ROȘU)
+            if ($pret_minim > 0) {
+                $output .= '<div style="color:#f44336; font-size:9px; display:flex; align-items:center; gap:3px; white-space:nowrap;">';
+                $output .= '<span style="color:#f44336; font-size:7px; line-height:1;">●</span>';
+                $output .= '<span style="font-size:9px;">' . wc_price($pret_minim) . '</span>';
+                $output .= '</div>';
+            }
+            
+            $output .= '</div>';
+            return $output;
+        }
+        
+        // FRONTEND: Badge tier
+        if (!$this->is_user_pj()) return $price_html;
+        
+        $show_badge = get_option('webgsm_b2b_show_badge', 'yes');
+        if ($show_badge !== 'yes') return $price_html;
+        
+        $tier = $this->get_user_tier();
+        $badge = webgsm_get_tier_badge($tier, 'header');
+        
+        return $price_html . ' ' . $badge;
+    }
+    
+    public function display_cart_item_tier_price($price_html, $cart_item, $cart_item_key) {
+        if (!$this->is_user_pj()) return $price_html;
+        
+        $product = $cart_item['data'];
+        $discount_pj = $this->get_discount_pj($product);
+        $tier = $this->get_user_tier();
+        $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
+        $discount_total = $discount_pj + $discount_tier;
+        
+        if ($discount_total > 0) {
+            $price_html .= '<br><small style="color: #15803d;">Discount B2B: -' . number_format($discount_total, 1) . '%</small>';
+        }
+        
+        return $price_html;
+    }
+    
+    public function display_b2b_savings_row() {
+        if (!$this->is_user_pj()) return;
+        
+        $cart = WC()->cart;
+        if (!$cart) return;
+        
+        $total_discount = 0;
+        $total_original = 0;
+        
+        foreach ($cart->get_cart() as $cart_item) {
+            $product = $cart_item['data'];
+            $product_id = $product->get_id();
+            $quantity = $cart_item['quantity'];
+            
+            $original_price = get_post_meta($product_id, '_regular_price', true);
+            
+            $discount_pj = $this->get_discount_pj($product);
+            $tier = $this->get_user_tier();
+            $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+            $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
+            $total_discount_percent = $discount_pj + $discount_tier;
+            
+            if ($original_price > 0 && $total_discount_percent > 0) {
+                $discount_amount = ((float)$original_price * $total_discount_percent / 100) * $quantity;
+                $total_discount += $discount_amount;
+                $total_original += (float)$original_price * $quantity;
+            }
+        }
+        
+        if ($total_discount > 0) {
+            $discount_percent = round(($total_discount / $total_original) * 100, 1);
+            echo '<tr class="webgsm-b2b-savings-row"><th style="color: #15803d; font-weight: 600;">🎯 Economie B2B (' . $discount_percent . '%)</th><td style="color: #15803d; font-weight: 600;"><strong>-' . wc_price($total_discount) . '</strong></td></tr>';
+        }
+    }
+    
+    // =========================================
+    // ADMIN COLUMNS
+    // =========================================
+    
+    public function add_order_profit_column($columns) {
+        $new_columns = array();
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            if ($key === 'order_total') $new_columns['order_profit'] = 'Profit';
+        }
+        return $new_columns;
+    }
+    
+    public function render_order_profit_column($column, $post_id) {
+        if ($column !== 'order_profit') return;
+        
+        $order = wc_get_order($post_id);
+        if (!$order) { echo '-'; return; }
+        
+        $profit = 0;
+        foreach ($order->get_items() as $item) {
+            $pret_achizitie = get_post_meta($item->get_product_id(), '_pret_achizitie', true);
+            if ($pret_achizitie) {
+                $profit += $item->get_total() - ((float)$pret_achizitie * $item->get_quantity());
+            }
+        }
+        
+        echo $profit > 0 ? '<span style="color: #15803d;">' . wc_price($profit) . '</span>' : ($profit < 0 ? '<span style="color: #dc2626;">' . wc_price($profit) . '</span>' : '-');
+    }
+    
+    // =========================================
+    // DETECTARE PJ LA ÎNREGISTRARE
+    // =========================================
+    
+    public function detect_pj_on_registration($customer_id) {
+        $tip = '';
+        foreach (array('tip_facturare', 'tip_client', '_tip_facturare', '_tip_client') as $field) {
+            if (!empty($_POST[$field])) { $tip = sanitize_text_field($_POST[$field]); break; }
+        }
+        
+        $cui = '';
+        foreach (array('firma_cui', 'billing_cui', '_firma_cui', 'cui', 'cif') as $field) {
+            if (!empty($_POST[$field])) { $cui = sanitize_text_field($_POST[$field]); break; }
+        }
+        if (empty($cui)) $cui = get_user_meta($customer_id, '_firma_cui', true) ?: get_user_meta($customer_id, 'billing_cui', true);
+        
+        $company = '';
+        foreach (array('firma_nume', 'billing_company', '_firma_nume') as $field) {
+            if (!empty($_POST[$field])) { $company = sanitize_text_field($_POST[$field]); break; }
+        }
+        
+        $is_pj = ($tip === 'pj' || !empty($cui) || !empty($company));
+        
+        if ($is_pj) {
+            update_user_meta($customer_id, '_is_pj', 'yes');
+            update_user_meta($customer_id, '_tip_client', 'pj');
+            update_user_meta($customer_id, '_pj_tier', 'bronze');
+            update_user_meta($customer_id, '_pj_tier_achieved_date', current_time('mysql'));
+            if (!empty($cui)) update_user_meta($customer_id, 'billing_cui', $cui);
+            if (!empty($company)) update_user_meta($customer_id, 'billing_company', $company);
+        } else {
+            update_user_meta($customer_id, '_tip_client', 'pf');
+        }
+        
+        if (empty(get_user_meta($customer_id, 'billing_country', true))) {
+            update_user_meta($customer_id, 'billing_country', 'RO');
+            update_user_meta($customer_id, 'shipping_country', 'RO');
+        }
+    }
+}
+
+// Inițializare
+function webgsm_b2b_pricing() {
+    return WebGSM_B2B_Pricing::instance();
+}
+add_action('plugins_loaded', 'webgsm_b2b_pricing');
+
+// Activare
+register_activation_hook(__FILE__, function() {
+    if (!get_option('webgsm_b2b_discount_implicit')) update_option('webgsm_b2b_discount_implicit', 5);
+    if (!get_option('webgsm_b2b_marja_minima')) update_option('webgsm_b2b_marja_minima', 5);
+    if (!get_option('webgsm_b2b_tiers')) {
+        update_option('webgsm_b2b_tiers', array(
+            'bronze' => array('min_value' => 0, 'discount_extra' => 0, 'label' => 'Bronze'),
+            'silver' => array('min_value' => 5000, 'discount_extra' => 3, 'label' => 'Silver'),
+            'gold' => array('min_value' => 25000, 'discount_extra' => 5, 'label' => 'Gold'),
+            'platinum' => array('min_value' => 100000, 'discount_extra' => 8, 'label' => 'Platinum')
+        ));
+    }
+    if (!get_option('webgsm_b2b_tier_retention_months')) update_option('webgsm_b2b_tier_retention_months', 3);
+    flush_rewrite_rules();
+});

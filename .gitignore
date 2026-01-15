@@ -1,0 +1,28 @@
+# Ignorăm tot WordPress-ul
+/*
+
+# Permitem fișierele necesare pentru deploy
+!cpanel.yml
+!.gitignore
+
+# Permitem wp-content
+!wp-content/
+
+# Ignorăm tot din wp-content
+wp-content/*
+
+# Permitem themes și plugins
+!wp-content/themes/
+!wp-content/plugins/
+
+# Ignorăm toate temele, apoi permitem doar tema child
+wp-content/themes/*
+!wp-content/themes/martfury-child/
+
+# Ignorăm toate pluginurile, apoi permitem doar pluginurile tale custom
+wp-content/plugins/*
+!wp-content/plugins/webgsm-b2b-pricing/
+!wp-content/plugins/webgsm-checkout-pro/
+
+# MacOS junk
+.DS_Store
