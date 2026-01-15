@@ -13,4 +13,3 @@ deployment:
     # Copiem pluginurile custom
     - /bin/cp -R wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
     - /bin/cp -R wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
-s
