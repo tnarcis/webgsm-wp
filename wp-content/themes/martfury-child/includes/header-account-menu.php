@@ -290,6 +290,74 @@ add_action('wp_head', function() {
         }
     }
     </style>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        // Debug tier doar pe My Account
+        if (!$('body').hasClass('woocommerce-account')) return;
+        
+        console.group('🔧 WebGSM Tier Debug - Local');
+        console.log('📍 Pagina: My Account');
+        console.log('⏰ Timp: ' + new Date().toLocaleString());
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'webgsm_debug_tier',
+                nonce: '<?php echo wp_create_nonce('webgsm_debug'); ?>'
+            },
+            success: function(response) {
+                console.log('📦 Response complet:', response);
+                
+                if (response.success) {
+                    var data = response.data;
+                    
+                    console.log('');
+                    console.log('👤 USER INFO:');
+                    console.log('   ID:', data.user_id);
+                    console.log('   Este PJ:', data.is_pj);
+                    
+                    console.log('');
+                    console.log('💾 CACHE ACTUAL:');
+                    console.log('   Comenzi cached:', data.cached_orders || 'GOL');
+                    console.log('   Valoare cached:', data.cached_value || 'GOL');
+                    console.log('   Tier cached:', data.cached_tier || 'GOL');
+                    
+                    console.log('');
+                    console.log('📊 WOOCOMMERCE REAL:');
+                    console.log('   Total comenzi:', data.wc_orders_total);
+                    console.log('   Comenzi valide (completed/processing):', data.wc_orders_valid);
+                    console.log('   Valoare totală:', data.wc_total_value);
+                    
+                    console.log('');
+                    console.log('📋 DETALII COMENZI:');
+                    console.table(data.orders_detail);
+                    
+                    // Alertă vizuală dacă cache != realitate
+                    var cachedValueClean = parseFloat(String(data.cached_value).replace(',', ''));
+                    var realValueClean = parseFloat(data.wc_total_value.replace(' RON', '').replace(',', ''));
+                    
+                    if (data.cached_orders != data.wc_orders_valid || cachedValueClean != realValueClean) {
+                        console.warn('⚠️ CACHE OUTDATED! Valorile cached nu corespund cu realitatea!');
+                        console.warn('   Cached orders:', data.cached_orders, 'vs Real:', data.wc_orders_valid);
+                        console.warn('   Cached value:', data.cached_value, 'vs Real:', data.wc_total_value);
+                    } else {
+                        console.log('✅ Cache este actualizat corect!');
+                    }
+                } else {
+                    console.error('❌ Eroare:', response.data);
+                }
+                
+                console.groupEnd();
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ AJAX Error:', error);
+                console.groupEnd();
+            }
+        });
+    });
+    </script>
     <?php
 }, 100);
 

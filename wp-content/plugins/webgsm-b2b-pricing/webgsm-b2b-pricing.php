@@ -1075,6 +1075,9 @@ class WebGSM_B2B_Pricing {
         // AJAX pentru update cantitate în cart
         add_action('wp_ajax_webgsm_update_cart_quantity', array($this, 'ajax_update_cart_quantity'));
         add_action('wp_ajax_nopriv_webgsm_update_cart_quantity', array($this, 'ajax_update_cart_quantity'));
+        
+        // AJAX Debug (TEMPORAR)
+        add_action('wp_ajax_webgsm_debug_tier', array($this, 'ajax_debug_tier'));
     }
     
     // =========================================
@@ -1097,11 +1100,24 @@ class WebGSM_B2B_Pricing {
         // Afișează notificare vizuală dacă cache-ul a fost invalidat recent (ultimele 5 minute)
         if ($last_invalidation && (time() - $last_invalidation) < 300) {
             ?>
-            <div style="position:fixed;top:60px;right:20px;background:#fef2f2;border:2px solid #ef4444;color:#991b1b;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px;max-width:300px;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+            <div id="webgsm-cache-notice" style="position:fixed;top:60px;right:20px;background:#fef2f2;border:2px solid #ef4444;color:#991b1b;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px;max-width:300px;box-shadow:0 4px 12px rgba(239,68,68,0.3);transition:opacity 0.5s ease-out;">
                 <strong>⚠️ Cache Tier Invalidat:</strong><br>
                 <span style="font-size:11px;"><?php echo date('Y-m-d H:i:s', $last_invalidation); ?></span><br>
                 <span style="font-size:11px;color:#dc2626;margin-top:4px;display:block;">Datele tier-ului au fost recalculate.</span>
             </div>
+            <script>
+            (function() {
+                var notice = document.getElementById('webgsm-cache-notice');
+                if (notice) {
+                    setTimeout(function() {
+                        notice.style.opacity = '0';
+                        setTimeout(function() {
+                            notice.remove();
+                        }, 500);
+                    }, 5000);
+                }
+            })();
+            </script>
             <?php
         }
         
@@ -1243,6 +1259,12 @@ class WebGSM_B2B_Pricing {
     }
     
     public function get_user_total_value($user_id) {
+        // DEBUG: Forțează recalculare - ȘTERGE după debugging
+        if (current_user_can('manage_options')) {
+            delete_user_meta($user_id, '_pj_total_value');
+            delete_user_meta($user_id, '_pj_value_calculated');
+        }
+        
         $cached = get_user_meta($user_id, '_pj_total_value', true);
         $last_calc = get_user_meta($user_id, '_pj_value_calculated', true);
         
@@ -1268,6 +1290,12 @@ class WebGSM_B2B_Pricing {
     }
     
     public function get_user_total_orders($user_id) {
+        // DEBUG: Forțează recalculare - ȘTERGE după debugging
+        if (current_user_can('manage_options')) {
+            delete_user_meta($user_id, '_pj_total_orders');
+            delete_user_meta($user_id, '_pj_orders_calculated');
+        }
+        
         $orders = wc_get_orders(array(
             'customer_id' => $user_id,
             'status' => array('completed', 'processing'),
@@ -1985,6 +2013,55 @@ class WebGSM_B2B_Pricing {
             update_user_meta($customer_id, 'billing_country', 'RO');
             update_user_meta($customer_id, 'shipping_country', 'RO');
         }
+    }
+    
+    /**
+     * AJAX Debug pentru tier-uri (TEMPORAR)
+     */
+    public function ajax_debug_tier() {
+        check_ajax_referer('webgsm_debug', 'nonce');
+        
+        $user_id = get_current_user_id();
+        
+        // Comenzi WooCommerce
+        $orders = wc_get_orders(array(
+            'customer_id' => $user_id,
+            'status' => 'any',
+            'limit' => -1
+        ));
+        
+        $orders_data = array();
+        $total_value = 0;
+        $valid_count = 0;
+        
+        foreach ($orders as $order) {
+            $is_valid = in_array($order->get_status(), array('completed', 'processing'));
+            
+            $orders_data[] = array(
+                'ID' => $order->get_id(),
+                'Status' => $order->get_status(),
+                'Total' => number_format($order->get_total(), 2) . ' RON',
+                'Date' => $order->get_date_created()->format('Y-m-d H:i:s'),
+                'Valid' => $is_valid ? 'YES' : 'NO'
+            );
+            
+            if ($is_valid) {
+                $total_value += $order->get_total();
+                $valid_count++;
+            }
+        }
+        
+        wp_send_json_success(array(
+            'user_id' => $user_id,
+            'is_pj' => $this->is_user_pj($user_id) ? 'YES' : 'NO',
+            'cached_orders' => get_user_meta($user_id, '_pj_total_orders', true),
+            'cached_value' => get_user_meta($user_id, '_pj_total_value', true),
+            'cached_tier' => get_user_meta($user_id, '_pj_tier', true),
+            'wc_orders_total' => count($orders),
+            'wc_orders_valid' => $valid_count,
+            'wc_total_value' => number_format($total_value, 2) . ' RON',
+            'orders_detail' => $orders_data
+        ));
     }
 }
 
