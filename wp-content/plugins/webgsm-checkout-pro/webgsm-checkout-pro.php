@@ -8,7 +8,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WEBGSM_CHECKOUT_VERSION', '5.0.1');
+define('WEBGSM_CHECKOUT_VERSION', '5.0.2');
 define('WEBGSM_CHECKOUT_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_CHECKOUT_URL', plugin_dir_url(__FILE__));
 

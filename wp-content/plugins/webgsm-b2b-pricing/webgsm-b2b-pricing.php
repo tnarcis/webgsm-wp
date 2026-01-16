@@ -21,7 +21,7 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
 }
 
 // Constante
-define('WEBGSM_B2B_VERSION', '2.0.0');
+define('WEBGSM_B2B_VERSION', '2.0.1');
 define('WEBGSM_B2B_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_B2B_URL', plugin_dir_url(__FILE__));
 
