@@ -1048,6 +1048,18 @@ class WebGSM_B2B_Pricing {
         // Update user tier after order completed
         add_action('woocommerce_order_status_completed', array($this, 'update_user_tier_on_order'));
         
+        // INVALIDARE CACHE la ANULARE comenzi
+        add_action('woocommerce_order_status_cancelled', array($this, 'invalidate_user_tier_cache'));
+        add_action('woocommerce_order_status_refunded', array($this, 'invalidate_user_tier_cache'));
+        add_action('woocommerce_order_status_failed', array($this, 'invalidate_user_tier_cache'));
+        
+        // INVALIDARE CACHE la ȘTERGERE comandă
+        add_action('before_delete_post', array($this, 'invalidate_tier_on_delete'));
+        add_action('trashed_post', array($this, 'invalidate_tier_on_delete'));
+        
+        // INVALIDARE CACHE la SCHIMBARE STATUS (din completed în altceva)
+        add_action('woocommerce_order_status_changed', array($this, 'invalidate_tier_on_status_change'), 10, 4);
+        
         // Admin columns for orders
         add_filter('manage_edit-shop_order_columns', array($this, 'add_order_profit_column'));
         add_action('manage_shop_order_posts_custom_column', array($this, 'render_order_profit_column'), 10, 2);
@@ -1078,6 +1090,20 @@ class WebGSM_B2B_Pricing {
         $total_value = $this->get_user_total_value($user_id);
         $discount_implicit = get_option('webgsm_b2b_discount_implicit', 0);
         $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        
+        // Verifică invalidări recente
+        $last_invalidation = get_user_meta($user_id, '_pj_last_invalidation', true);
+        
+        // Afișează notificare vizuală dacă cache-ul a fost invalidat recent (ultimele 5 minute)
+        if ($last_invalidation && (time() - $last_invalidation) < 300) {
+            ?>
+            <div style="position:fixed;top:60px;right:20px;background:#fef2f2;border:2px solid #ef4444;color:#991b1b;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px;max-width:300px;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                <strong>⚠️ Cache Tier Invalidat:</strong><br>
+                <span style="font-size:11px;"><?php echo date('Y-m-d H:i:s', $last_invalidation); ?></span><br>
+                <span style="font-size:11px;color:#dc2626;margin-top:4px;display:block;">Datele tier-ului au fost recalculate.</span>
+            </div>
+            <?php
+        }
         
         ?>
         <script>
@@ -1304,6 +1330,96 @@ class WebGSM_B2B_Pricing {
         } else if (empty($old_tier)) {
             update_user_meta($user_id, '_pj_tier', $new_tier);
             update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+        }
+    }
+    
+    /**
+     * Invalidează cache-ul tier-ului la anulare/refund
+     */
+    public function invalidate_user_tier_cache($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) return;
+        
+        $user_id = $order->get_customer_id();
+        if (!$user_id) return;
+        
+        // Șterge TOATE cache-urile tier
+        delete_user_meta($user_id, '_pj_total_orders');
+        delete_user_meta($user_id, '_pj_total_value');
+        delete_user_meta($user_id, '_pj_orders_calculated');
+        delete_user_meta($user_id, '_pj_value_calculated');
+        delete_user_meta($user_id, '_pj_tier');
+        
+        // Recalculează tier-ul
+        $new_tier = $this->calculate_user_tier($user_id);
+        update_user_meta($user_id, '_pj_tier', $new_tier);
+        
+        // Marchează invalidare
+        update_user_meta($user_id, '_pj_last_invalidation', time());
+        
+        // Log pentru debug
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă anulată #' . $order_id);
+        }
+    }
+    
+    /**
+     * Invalidează cache la ștergere comandă
+     */
+    public function invalidate_tier_on_delete($post_id) {
+        // Verifică dacă este comandă WooCommerce
+        if (get_post_type($post_id) !== 'shop_order') return;
+        
+        $order = wc_get_order($post_id);
+        if (!$order) return;
+        
+        $user_id = $order->get_customer_id();
+        if (!$user_id) return;
+        
+        // Șterge cache
+        delete_user_meta($user_id, '_pj_total_orders');
+        delete_user_meta($user_id, '_pj_total_value');
+        delete_user_meta($user_id, '_pj_orders_calculated');
+        delete_user_meta($user_id, '_pj_value_calculated');
+        delete_user_meta($user_id, '_pj_tier');
+        
+        // Marchează invalidare
+        update_user_meta($user_id, '_pj_last_invalidation', time());
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă ștearsă #' . $post_id);
+        }
+    }
+    
+    /**
+     * Invalidează cache la schimbare status (ex: completed → cancelled)
+     */
+    public function invalidate_tier_on_status_change($order_id, $old_status, $new_status, $order) {
+        // Invalidează DOAR dacă se schimbă DIN completed/processing ÎN altceva
+        $valid_old = in_array($old_status, array('completed', 'processing'));
+        $valid_new = in_array($new_status, array('completed', 'processing'));
+        
+        // Dacă status-ul era valid și acum NU mai e → invalidează
+        if ($valid_old && !$valid_new) {
+            $user_id = $order->get_customer_id();
+            if (!$user_id) return;
+            
+            delete_user_meta($user_id, '_pj_total_orders');
+            delete_user_meta($user_id, '_pj_total_value');
+            delete_user_meta($user_id, '_pj_orders_calculated');
+            delete_user_meta($user_id, '_pj_value_calculated');
+            delete_user_meta($user_id, '_pj_tier');
+            
+            // Recalculează
+            $new_tier = $this->calculate_user_tier($user_id);
+            update_user_meta($user_id, '_pj_tier', $new_tier);
+            
+            // Marchează invalidare
+            update_user_meta($user_id, '_pj_last_invalidation', time());
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Status schimbat: ' . $old_status . ' → ' . $new_status);
+            }
         }
     }
     
