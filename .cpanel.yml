@@ -1,61 +1,15 @@
 ---
 deployment:
   tasks:
-    # Setează calea de deploy
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
     
-    # Log pentru debugging
-    - echo "=========================================="
-    - echo "🚀 WebGSM Deploy Start"
-    - echo "=========================================="
-    - echo "📍 Repository: $(pwd)"
-    - echo "📂 Deploy to: $DEPLOYPATH"
-    - echo "⏰ Time: $(date)"
-    - echo ""
-    
-    # Verifică că destinația există
     - /bin/mkdir -p $DEPLOYPATH/themes
     - /bin/mkdir -p $DEPLOYPATH/plugins
-    - echo "✅ Directories created/verified"
     
-    # DEPLOY cu rsync (NU șterge până nu copiază cu succes!)
-    - echo ""
-    - echo "📦 Deploying martfury-child theme..."
-    - /usr/bin/rsync -avz --delete --stats wp-content/themes/martfury-child/ $DEPLOYPATH/themes/martfury-child/
+    - /bin/cp -Rf wp-content/themes/martfury-child $DEPLOYPATH/themes/
+    - /bin/cp -Rf wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
+    - /bin/cp -Rf wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
     
-    - echo ""
-    - echo "📦 Deploying webgsm-b2b-pricing plugin..."
-    - /usr/bin/rsync -avz --delete --stats wp-content/plugins/webgsm-b2b-pricing/ $DEPLOYPATH/plugins/webgsm-b2b-pricing/
-    
-    - echo ""
-    - echo "📦 Deploying webgsm-checkout-pro plugin..."
-    - /usr/bin/rsync -avz --delete --stats wp-content/plugins/webgsm-checkout-pro/ $DEPLOYPATH/plugins/webgsm-checkout-pro/
-    
-    # Set permissions
-    - echo ""
-    - echo "🔐 Setting permissions..."
     - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
-    - echo "✅ Permissions set"
-    
-    # Verify deployment
-    - echo ""
-    - echo "🔍 Verifying deployed files..."
-    - echo "Theme files:"
-    - /bin/ls -lah $DEPLOYPATH/themes/martfury-child/ | /bin/head -5
-    - echo ""
-    - echo "B2B Pricing plugin files:"
-    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-b2b-pricing/ | /bin/head -5
-    - echo ""
-    - echo "Checkout Pro plugin files:"
-    - /bin/ls -lah $DEPLOYPATH/plugins/webgsm-checkout-pro/ | /bin/head -5
-    
-    # Success message
-    - echo ""
-    - echo "=========================================="
-    - echo "🎉 DEPLOY COMPLETED SUCCESSFULLY!"
-    - echo "=========================================="
-    - echo "⚠️  IMPORTANT: Clear WordPress cache + browser cache!"
-    - echo "⚠️  Test site before deploying to production!"
-    - echo ""
