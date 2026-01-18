@@ -1274,7 +1274,7 @@ class WebGSM_B2B_Pricing {
         
         $orders = wc_get_orders(array(
             'customer_id' => $user_id,
-            'status' => array('completed', 'processing'),
+            'status' => array('completed'),
             'limit' => -1
         ));
         
@@ -1298,7 +1298,7 @@ class WebGSM_B2B_Pricing {
         
         $orders = wc_get_orders(array(
             'customer_id' => $user_id,
-            'status' => array('completed', 'processing'),
+            'status' => array('completed'),
             'limit' => -1,
             'return' => 'ids'
         ));
@@ -1423,9 +1423,9 @@ class WebGSM_B2B_Pricing {
      * Invalidează cache la schimbare status (ex: completed → cancelled)
      */
     public function invalidate_tier_on_status_change($order_id, $old_status, $new_status, $order) {
-        // Invalidează DOAR dacă se schimbă DIN completed/processing ÎN altceva
-        $valid_old = in_array($old_status, array('completed', 'processing'));
-        $valid_new = in_array($new_status, array('completed', 'processing'));
+        // Invalidează DOAR dacă se schimbă DIN completed ÎN altceva
+        $valid_old = in_array($old_status, array('completed'));
+        $valid_new = in_array($new_status, array('completed'));
         
         // Dacă status-ul era valid și acum NU mai e → invalidează
         if ($valid_old && !$valid_new) {
@@ -2035,7 +2035,7 @@ class WebGSM_B2B_Pricing {
         $valid_count = 0;
         
         foreach ($orders as $order) {
-            $is_valid = in_array($order->get_status(), array('completed', 'processing'));
+            $is_valid = in_array($order->get_status(), array('completed'));
             
             $orders_data[] = array(
                 'ID' => $order->get_id(),
