@@ -451,7 +451,24 @@ class WebGSM_Checkout_Pro {
                     }
                 }
                 
-                if ($b2b_discount_total > 0) : ?>
+                if ($b2b_discount_total > 0) :
+                    // Obține culoarea și label-ul tier-ului pentru B2B
+                    $tier_borders = array(
+                        'bronze' => '#d4a574',
+                        'silver' => '#c0c0c0',
+                        'gold' => '#d4af37',
+                        'platinum' => '#4a6073'
+                    );
+                    $tier_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
+                    
+                    $tier_labels = array(
+                        'bronze' => 'Bronze',
+                        'silver' => 'Silver',
+                        'gold' => 'Gold',
+                        'platinum' => 'Platinum'
+                    );
+                    $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
+                ?>
                     <div class="summary-row summary-row-rrp">
                         <span style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">Total RRC:</span>
                         <span class="summary-value" style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">
@@ -459,7 +476,9 @@ class WebGSM_Checkout_Pro {
                         </span>
                     </div>
                     <div class="summary-row summary-row-b2b-savings" style="background: #f0fdf4; border-top: 1px solid #bbf7d0; border-bottom: 1px solid #bbf7d0; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: #15803d; font-weight: 500;">Economie B2B:</span>
+                        <span style="font-size: 12px; color: <?php echo esc_attr($tier_color); ?>;">
+                            Discountul tau <?php echo esc_html($tier_label); ?> :
+                        </span>
                         <span class="summary-value" style="font-size: 13px; color: #15803d; font-weight: 600;">
                             -<?php echo wc_price($b2b_discount_total); ?>
                         </span>

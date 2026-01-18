@@ -200,7 +200,7 @@ function webgsm_b2b_badges_css() {
         background: #f3f4f6;
         border-radius: 10px;
         height: 12px;
-        overflow: hidden;
+        overflow: visible;
         position: relative;
     }
     
@@ -884,8 +884,26 @@ function webgsm_get_tier_progress_bar($user_id = null) {
             <?php echo webgsm_get_tier_badge($current_tier, 'dashboard'); ?>
         </div>
         
-        <div class="webgsm-tier-progress-bar-container">
+        <div class="webgsm-tier-progress-bar-container" style="position: relative; margin-bottom: 30px;">
             <div class="webgsm-tier-progress-bar <?php echo esc_attr($progress_class); ?>" style="width: <?php echo esc_attr($progress); ?>%;"></div>
+            
+            <?php if ($next_tier): 
+                $next_discount = isset($next_tier['discount_extra']) ? $next_tier['discount_extra'] : 0;
+                // Culoare tier pentru border
+                $next_tier_slug = $tier_order[$current_index + 1];
+                $tier_colors = array(
+                    'bronze' => '#d4a574',
+                    'silver' => '#c0c0c0',
+                    'gold' => '#d4af37',
+                    'platinum' => '#4a6073'
+                );
+                $next_tier_color = isset($tier_colors[$next_tier_slug]) ? $tier_colors[$next_tier_slug] : '#3b82f6';
+            ?>
+            <!-- Etichetă Recompensă - Line Art Elegant, Vizibil -->
+            <div style="position: absolute; top: -24px; right: 0; background: #fff; color: <?php echo esc_attr($next_tier_color); ?>; padding: 3px 8px; border: 1.5px solid <?php echo esc_attr($next_tier_color); ?>; border-radius: 12px; font-size: 10px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.12); letter-spacing: 0.3px;">
+                EXTRA <?php echo esc_html($next_discount); ?>%
+            </div>
+            <?php endif; ?>
         </div>
         
         <div class="webgsm-tier-progress-info">
@@ -910,12 +928,14 @@ function webgsm_get_tier_progress_bar($user_id = null) {
         <div class="webgsm-tier-benefits">
             <h4>Beneficiile tale active:</h4>
             <ul>
+                <?php if ($discount_extra > 0): ?>
                 <li>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Discount extra <?php echo esc_html($discount_extra); ?>%
                 </li>
+                <?php endif; ?>
                 <li>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -940,6 +960,20 @@ function webgsm_get_tier_progress_bar($user_id = null) {
                 <?php endif; ?>
             </ul>
         </div>
+        
+        <?php if ($next_tier): 
+            $next_discount = isset($next_tier['discount_extra']) ? $next_tier['discount_extra'] : 0;
+            $next_tier_slug = $tier_order[$current_index + 1];
+            $next_tier_label = isset($next_tier['label']) ? $next_tier['label'] : ucfirst($next_tier_slug);
+        ?>
+        <!-- Text Explicativ - Transparență -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 11px; color: #6b7280; line-height: 1.5; font-style: italic;">
+                La nivelul <strong style="color: #374151;"><?php echo esc_html($next_tier_label); ?></strong>, primești un discount extra de <strong style="color: #374151;"><?php echo esc_html($next_discount); ?>%</strong> aplicat direct peste prețurile tale exclusive B2B. 
+                <span style="color: #9ca3af;">Discount-urile per nivel nu se cumulează - la fiecare nivel atins, procentul se actualizează la valoarea corespunzătoare.</span>
+            </p>
+        </div>
+        <?php endif; ?>
     </div>
     <?php
     return ob_get_clean();
@@ -1821,9 +1855,18 @@ class WebGSM_B2B_Pricing {
         $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; height: 18px; font-size: 9px; font-weight: 600; color: #475569; background: rgba(241, 245, 249, 0.9); border: 1px solid ' . esc_attr($border_color) . '; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 18px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; opacity: 0.9;">B2B</span>';
         $output .= '</div>';
         
-        // 3. Text "Avantaj Partener X lei (Y%)" - mai compact
-        $output .= '<div style="font-size: 12px; color: #6b7280; line-height: 1.4;">';
-        $output .= 'Avantaj Partener <span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
+        // 3. Text "Discountul tau [Tier] :" - simplu, fără animație
+        $tier_labels = array(
+            'bronze' => 'Bronze',
+            'silver' => 'Silver',
+            'gold' => 'Gold',
+            'platinum' => 'Platinum'
+        );
+        $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
+        
+        $output .= '<div style="font-size: 12px; line-height: 1.4;">';
+        $output .= '<span style="color: ' . esc_attr($border_color) . ';">Discountul tau ' . esc_html($tier_label) . ' :</span> ';
+        $output .= '<span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
         $output .= '<span style="font-weight: 600; color: #3b82f6;">(' . number_format($savings_percent, 1) . '%)</span>';
         $output .= '</div>';
         
@@ -1888,15 +1931,33 @@ class WebGSM_B2B_Pricing {
         }
         
         if ($total_discount > 0) {
+            // Obține tier-ul pentru culoare și label
+            $tier = $this->get_user_tier();
+            $tier_borders = array(
+                'bronze' => '#d4a574',
+                'silver' => '#c0c0c0',
+                'gold' => '#d4af37',
+                'platinum' => '#4a6073'
+            );
+            $tier_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
+            
+            $tier_labels = array(
+                'bronze' => 'Bronze',
+                'silver' => 'Silver',
+                'gold' => 'Gold',
+                'platinum' => 'Platinum'
+            );
+            $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
+            
             // 1. Linie: Total RRC - tăiat, gri, font mic
             echo '<tr class="webgsm-b2b-rrp-total">';
             echo '<th style="color: #9ca3af; font-size: 12px; font-weight: 400; text-decoration: line-through; padding: 6px 12px !important; border: none !important;">Total RRC:</th>';
             echo '<td style="color: #9ca3af; font-size: 12px; text-decoration: line-through; text-align: right; padding: 6px 12px !important; border: none !important;"><span class="woocommerce-Price-amount amount">' . wc_price($total_original) . '</span></td>';
             echo '</tr>';
             
-            // 2. Linie: Economie B2B - verde elegant cu fill light verde peste toată linia
+            // 2. Linie: Discountul tau [Tier] - simplu, fără animație
             echo '<tr class="webgsm-b2b-savings-highlight">';
-            echo '<th style="color: #15803d; font-weight: 600; background: #f0fdf4; padding: 10px 12px !important; border: 1px solid #bbf7d0 !important; border-right: none !important; font-size: 13px;">💚 Economie B2B:</th>';
+            echo '<th style="color: ' . esc_attr($tier_color) . '; background: #f0fdf4; padding: 10px 12px !important; border: 1px solid #bbf7d0 !important; border-right: none !important; font-size: 13px;">💚 Discountul tau ' . esc_html($tier_label) . ' :</th>';
             echo '<td style="color: #15803d; font-weight: 700; font-size: 16px; background: #f0fdf4; padding: 10px 12px !important; text-align: right; border: 1px solid #bbf7d0 !important; border-left: none !important;"><span class="woocommerce-Price-amount amount">-' . wc_price($total_discount) . '</span></td>';
             echo '</tr>';
         }
