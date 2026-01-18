@@ -334,16 +334,19 @@ add_action('wp_head', function() {
                     console.log('📋 DETALII COMENZI:');
                     console.table(data.orders_detail);
                     
-                    // Alertă vizuală dacă cache != realitate
-                    var cachedValueClean = parseFloat(String(data.cached_value).replace(',', ''));
-                    var realValueClean = parseFloat(data.wc_total_value.replace(' RON', '').replace(',', ''));
-                    
-                    if (data.cached_orders != data.wc_orders_valid || cachedValueClean != realValueClean) {
-                        console.warn('⚠️ CACHE OUTDATED! Valorile cached nu corespund cu realitatea!');
-                        console.warn('   Cached orders:', data.cached_orders, 'vs Real:', data.wc_orders_valid);
-                        console.warn('   Cached value:', data.cached_value, 'vs Real:', data.wc_total_value);
+                    // Verificare îmbunătățită - ignore format differences
+                    var cachedOrdersNum = parseInt(data.cached_orders) || 0;
+                    var realOrdersNum = parseInt(data.wc_orders_valid) || 0;
+                    var cachedValueNum = parseFloat(data.cached_value) || 0;
+                    var realValueStr = data.wc_total_value.replace(' RON', '').replace(/,/g, '');
+                    var realValueNum = parseFloat(realValueStr) || 0;
+
+                    if (cachedOrdersNum != realOrdersNum || Math.abs(cachedValueNum - realValueNum) > 0.01) {
+                        console.warn('⚠️ CACHE OUTDATED!');
+                        console.warn('   Cached orders: ' + cachedOrdersNum + ' vs Real: ' + realOrdersNum);
+                        console.warn('   Cached value: ' + cachedValueNum + ' vs Real: ' + realValueNum);
                     } else {
-                        console.log('✅ Cache este actualizat corect!');
+                        console.log('✅ Cache sincronizat corect');
                     }
                 } else {
                     console.error('❌ Eroare:', response.data);

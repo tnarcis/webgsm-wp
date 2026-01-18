@@ -1259,12 +1259,6 @@ class WebGSM_B2B_Pricing {
     }
     
     public function get_user_total_value($user_id) {
-        // DEBUG: Forțează recalculare - ȘTERGE după debugging
-        if (current_user_can('manage_options')) {
-            delete_user_meta($user_id, '_pj_total_value');
-            delete_user_meta($user_id, '_pj_value_calculated');
-        }
-        
         $cached = get_user_meta($user_id, '_pj_total_value', true);
         $last_calc = get_user_meta($user_id, '_pj_value_calculated', true);
         
@@ -1290,12 +1284,6 @@ class WebGSM_B2B_Pricing {
     }
     
     public function get_user_total_orders($user_id) {
-        // DEBUG: Forțează recalculare - ȘTERGE după debugging
-        if (current_user_can('manage_options')) {
-            delete_user_meta($user_id, '_pj_total_orders');
-            delete_user_meta($user_id, '_pj_orders_calculated');
-        }
-        
         $orders = wc_get_orders(array(
             'customer_id' => $user_id,
             'status' => array('completed'),
@@ -1541,9 +1529,11 @@ class WebGSM_B2B_Pricing {
             }
         }
         
-        // Dacă tot nu avem preț original, folosește $price ca fallback
+        // SECURITY: Dacă nu avem preț original valid, NU aplica discount!
         if (empty($original_price) || $original_price <= 0) {
-            $original_price = $price;
+            // Altfel, dacă $price e deja redus de alt plugin, pierdem bani
+            error_log('[WebGSM B2B] EROARE: Preț original lipsă pentru produs #' . $product_id . ' - discount NU aplicat');
+            return $price; // Returnează prețul așa cum e, fără discount
         }
         
         $original_price = (float) $original_price;
@@ -1699,7 +1689,7 @@ class WebGSM_B2B_Pricing {
         
         woocommerce_wp_text_input(array('id' => '_pret_achizitie', 'label' => 'Preț achiziție (cost)', 'desc_tip' => true, 'description' => 'Prețul de achiziție al produsului.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
         woocommerce_wp_text_input(array('id' => '_pret_minim_vanzare', 'label' => 'Preț minim vânzare', 'desc_tip' => true, 'description' => 'HARD LIMIT: Niciun discount nu va coborî prețul sub această valoare.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
-        woocommerce_wp_text_input(array('id' => '_discount_pj', 'label' => 'Discount PJ (%)', 'desc_tip' => true, 'description' => 'Discount pentru PJ. Lasă gol pentru discount din categorie.', 'type' => 'number', 'custom_attributes' => array('step' => '0.1', 'min' => '0', 'max' => '100'), 'placeholder' => 'Din categorie'));
+        woocommerce_wp_text_input(array('id' => '_discount_pj', 'label' => 'Discount PJ (%)', 'desc_tip' => true, 'description' => '🎯 PRIORITATE 1: Discount specific pentru ACEST produs. Lasă gol pentru a moșteni din categorie (prioritate 2) sau din setări globale (prioritate 3). Discount-ul tier se ADAUGĂ peste acesta.', 'type' => 'number', 'custom_attributes' => array('step' => '0.1', 'min' => '0', 'max' => '100'), 'placeholder' => 'Din categorie'));
         
         echo '</div>';
     }
@@ -1720,12 +1710,12 @@ class WebGSM_B2B_Pricing {
     // =========================================
     
     public function add_category_fields() {
-        echo '<div class="form-field"><label for="_discount_pj_categorie">Discount PJ (%)</label><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value=""><p class="description">Discount implicit pentru produsele din această categorie.</p></div>';
+        echo '<div class="form-field"><label for="_discount_pj_categorie">Discount PJ (%)</label><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value=""><p class="description">🎯 PRIORITATE 2: Discount pentru TOATE produsele din această categorie (dacă produsul nu are discount specific). Lasă gol pentru a folosi discountul global din setări.</p></div>';
     }
     
     public function edit_category_fields($term) {
         $discount = get_term_meta($term->term_id, '_discount_pj_categorie', true);
-        echo '<tr class="form-field"><th scope="row"><label for="_discount_pj_categorie">Discount PJ (%)</label></th><td><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value="' . esc_attr($discount) . '"><p class="description">Discount implicit pentru produsele din această categorie.</p></td></tr>';
+        echo '<tr class="form-field"><th scope="row"><label for="_discount_pj_categorie">Discount PJ (%)</label></th><td><input type="number" name="_discount_pj_categorie" step="0.1" min="0" max="100" value="' . esc_attr($discount) . '"><p class="description">🎯 PRIORITATE 2: Discount pentru TOATE produsele din această categorie (dacă produsul nu are discount specific). Lasă gol pentru a folosi discountul global din setări.</p></td></tr>';
     }
     
     public function save_category_fields($term_id) {
@@ -1821,19 +1811,19 @@ class WebGSM_B2B_Pricing {
         $output = '<div class="webgsm-b2b-price-display" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0;">';
         
         // 1. Preț RRC (original) - TĂIAT, gri, mic
-        $output .= '<div style="font-size: 12px; color: #9ca3af; text-decoration: line-through; font-weight: 400;">';
+        $output .= '<div style="font-size: 12px; color: #9ca3af; text-decoration: line-through; text-decoration-thickness: 0.5px; font-weight: 400;">';
         $output .= 'RRC: ' . wc_price($original_price);
         $output .= '</div>';
         
-        // 2. Preț B2B - VERDE, bold, mai mare + Badge fin, rotunjit, la aceeași înălțime
-        $output .= '<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
+        // 2. Preț B2B - VERDE, bold, mai mare + Badge subtil, discret
+        $output .= '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">';
         $output .= '<span style="font-size: 20px; font-weight: 700; color: #15803d; line-height: 1.2;">' . wc_price($b2b_price) . '</span>';
-        $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; height: 18px; font-size: 10px; font-weight: 500; color: #ffffff; background: #3b82f6; border: 1.5px solid ' . esc_attr($border_color) . '; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.25); text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);">B2B</span>';
+        $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; height: 18px; font-size: 9px; font-weight: 600; color: #475569; background: rgba(241, 245, 249, 0.9); border: 1px solid ' . esc_attr($border_color) . '; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 18px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; opacity: 0.9;">B2B</span>';
         $output .= '</div>';
         
-        // 3. Text "Economisești X lei (Y%)" - mai compact
+        // 3. Text "Avantaj Partener X lei (Y%)" - mai compact
         $output .= '<div style="font-size: 12px; color: #6b7280; line-height: 1.4;">';
-        $output .= 'Economisești <span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
+        $output .= 'Avantaj Partener <span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
         $output .= '<span style="font-weight: 600; color: #3b82f6;">(' . number_format($savings_percent, 1) . '%)</span>';
         $output .= '</div>';
         

@@ -351,7 +351,7 @@ if (isset($_POST['webgsm_b2b_save_settings']) && wp_verify_nonce($_POST['webgsm_
                                 <input type="number" name="discount_implicit" id="discount_implicit" 
                                        value="<?php echo esc_attr($discount_implicit); ?>" 
                                        step="0.1" min="0" max="100" class="small-text">
-                                <p class="description">Discount aplicat dacă produsul/categoria nu are discount specific.</p>
+                                <p class="description">🎯 PRIORITATE 3: Discount IMPLICIT pentru toate produsele PJ care nu au discount specific pe produs sau categorie. Discount-ul tier se ADAUGĂ peste acesta.</p>
                             </td>
                         </tr>
                         <tr>
