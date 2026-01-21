@@ -19,6 +19,21 @@ add_action('wp_head', function() {
     </script>';
 }, 1);
 
+// Suppress font loading errors in console (non-critical)
+add_action('wp_footer', function() {
+    ?>
+    <script>
+    // Suppress 404 errors for font files (non-critical)
+    window.addEventListener('error', function(e) {
+        if (e.target && e.target.tagName === 'LINK' && e.target.href && e.target.href.includes('.woff2')) {
+            e.preventDefault();
+            return false;
+        }
+    }, true);
+    </script>
+    <?php
+}, 1);
+
 // Ascunde butonul mare "Vezi cos" din popup "Adăugat în coș"
 add_action('wp_footer', function() {
     ?>

@@ -293,8 +293,9 @@ add_action('wp_head', function() {
     
     <script>
     jQuery(document).ready(function($) {
-        // Debug tier doar pe My Account
+        // Debug tier doar pe My Account și doar pentru utilizatori autentificați
         if (!$('body').hasClass('woocommerce-account')) return;
+        if (!$('body').hasClass('logged-in')) return;
         
         console.group('🔧 WebGSM Tier Debug - Local');
         console.log('📍 Pagina: My Account');
@@ -355,6 +356,12 @@ add_action('wp_head', function() {
                 console.groupEnd();
             },
             error: function(xhr, status, error) {
+                // Ignore 400 errors for non-authenticated users
+                if (xhr.status === 400 && !$('body').hasClass('logged-in')) {
+                    console.log('ℹ️ Debug tier: Utilizator neautentificat');
+                    console.groupEnd();
+                    return;
+                }
                 console.error('❌ AJAX Error:', error);
                 console.groupEnd();
             }

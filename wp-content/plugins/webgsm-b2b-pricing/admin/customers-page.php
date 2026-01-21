@@ -511,6 +511,7 @@ $tier_keys = array_keys($tiers);
                 <th>Firmă / CUI</th>
                 <th>Nivel</th>
                 <th>Valoare comenzi</th>
+                <th>Certificat</th>
                 <th>Înregistrat</th>
                 <th>Acțiuni</th>
             </tr>
@@ -518,7 +519,7 @@ $tier_keys = array_keys($tiers);
         <tbody>
             <?php if (empty($customers)): ?>
             <tr>
-                <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
                     Nu au fost găsiți clienți B2B.
                 </td>
             </tr>
@@ -529,6 +530,12 @@ $tier_keys = array_keys($tiers);
                 $cui = get_user_meta($customer->ID, 'billing_cui', true);
                 $total_value = WebGSM_B2B_Pricing::instance()->get_user_total_value($customer->ID);
                 $initial = strtoupper(substr($customer->display_name ?: $customer->user_login, 0, 1));
+                
+                // Check certificate
+                $file_upload = new WebGSM_B2B_File_Upload();
+                $cert_path = get_user_meta($customer->ID, '_b2b_certificate_path', true);
+                $has_cert = !empty($cert_path) && file_exists($cert_path);
+                $cert_url = $has_cert ? $file_upload->get_certificate_url($customer->ID) : false;
             ?>
             <tr>
                 <td>
@@ -549,6 +556,25 @@ $tier_keys = array_keys($tiers);
                 </td>
                 <td class="value-cell">
                     <?php echo number_format($total_value, 0, ',', '.'); ?> RON
+                </td>
+                <td>
+                    <?php if ($has_cert && $cert_url): ?>
+                        <button type="button" class="action-btn view-cert-btn" 
+                                data-user-id="<?php echo $customer->ID; ?>"
+                                data-cert-url="<?php echo esc_url($cert_url); ?>"
+                                style="background: #3b82f6; color: #fff; padding: 6px 12px; font-size: 12px; margin-bottom: 4px;">
+                            <span class="dashicons dashicons-media-document" style="font-size: 14px; vertical-align: middle;"></span>
+                            Vezi Certificat
+                        </button>
+                        <button type="button" class="action-btn delete-cert-btn" 
+                                data-user-id="<?php echo $customer->ID; ?>"
+                                style="background: #ef4444; color: #fff; padding: 6px 12px; font-size: 12px;">
+                            <span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span>
+                            Șterge
+                        </button>
+                    <?php else: ?>
+                        <span style="color: #9ca3af; font-size: 12px;">Lipsă</span>
+                    <?php endif; ?>
                 </td>
                 <td class="date-cell">
                     <?php echo date_i18n('d M Y', strtotime($customer->user_registered)); ?>
@@ -664,4 +690,179 @@ jQuery(document).ready(function($) {
 function closeTierModal() {
     jQuery('#tier-modal').removeClass('active');
 }
+
+// Certificate preview modal
+var certModal = jQuery('<div class="webgsm-cert-modal"><div class="webgsm-cert-modal-content"><div class="webgsm-cert-modal-header"><h3>Preview Certificat</h3><button class="webgsm-cert-modal-close">&times;</button></div><div class="webgsm-cert-modal-body"><iframe class="webgsm-cert-preview" src=""></iframe></div></div></div>');
+jQuery('body').append(certModal);
+
+jQuery('.view-cert-btn').on('click', function() {
+    var certUrl = jQuery(this).data('cert-url');
+    var isImage = certUrl.match(/\.(jpg|jpeg|png)$/i);
+    
+    if (isImage) {
+        certModal.find('.webgsm-cert-preview').replaceWith('<img class="webgsm-cert-preview" src="' + certUrl + '" alt="Certificat">');
+    } else {
+        certModal.find('.webgsm-cert-preview').replaceWith('<iframe class="webgsm-cert-preview" src="' + certUrl + '"></iframe>');
+    }
+    
+    certModal.addClass('active');
+});
+
+certModal.find('.webgsm-cert-modal-close').on('click', function() {
+    certModal.removeClass('active');
+});
+
+certModal.on('click', function(e) {
+    if (jQuery(e.target).hasClass('webgsm-cert-modal')) {
+        certModal.removeClass('active');
+    }
+});
+
+// Delete certificate
+jQuery('.delete-cert-btn').on('click', function() {
+    var $btn = jQuery(this);
+    var userId = $btn.data('user-id');
+    var $row = $btn.closest('tr');
+    
+    if (!confirm('Ești sigur că vrei să ștergi certificatul acestui client? Această acțiune nu poate fi anulată.')) {
+        return;
+    }
+    
+    $btn.prop('disabled', true).text('Se șterge...');
+    
+    jQuery.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        data: {
+            action: 'webgsm_delete_certificate',
+            user_id: userId,
+            nonce: '<?php echo wp_create_nonce('webgsm_delete_cert'); ?>'
+        },
+        success: function(response) {
+            if (response.success) {
+                // Update certificate cell
+                $row.find('td:nth-child(5)').html('<span style="color: #9ca3af; font-size: 12px;">Lipsă</span>');
+            } else {
+                alert('Eroare: ' + (response.data || 'Nu s-a putut șterge certificatul.'));
+                $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span> Șterge');
+            }
+        },
+        error: function() {
+            alert('Eroare la comunicarea cu serverul.');
+            $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span> Șterge');
+        }
+    });
+});
+
+// Close on ESC key
+jQuery(document).on('keydown', function(e) {
+    if (e.key === 'Escape' && certModal.hasClass('active')) {
+        certModal.removeClass('active');
+    }
+});
+</script>
+
+<style>
+/* Certificate Preview Modal */
+.webgsm-cert-modal {
+    display: none;
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    animation: fadeIn 0.2s ease;
+}
+
+.webgsm-cert-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.webgsm-cert-modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.webgsm-cert-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.webgsm-cert-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #111827;
+}
+
+.webgsm-cert-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.webgsm-cert-modal-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.webgsm-cert-modal-body {
+    padding: 24px;
+    overflow: auto;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+}
+
+.webgsm-cert-preview {
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.webgsm-cert-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+</style>
 </script>

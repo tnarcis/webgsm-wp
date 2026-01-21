@@ -21,9 +21,18 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
 }
 
 // Constante
-define('WEBGSM_B2B_VERSION', '2.0.1');
+define('WEBGSM_B2B_VERSION', '2.1.0');
 define('WEBGSM_B2B_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_B2B_URL', plugin_dir_url(__FILE__));
+
+// =========================================
+// INCLUDE APPROVAL SYSTEM CLASSES
+// =========================================
+require_once WEBGSM_B2B_PATH . 'includes/class-file-upload.php';
+require_once WEBGSM_B2B_PATH . 'includes/class-approval-system.php';
+
+// Initialize approval system
+WebGSM_B2B_Approval_System::instance();
 
 // =========================================
 // BADGES CSS - ELEGANT LINE-ART STYLE
@@ -1101,6 +1110,9 @@ class WebGSM_B2B_Pricing {
         // ÎNREGISTRARE CONT - Doar detectare PJ
         add_action('woocommerce_created_customer', array($this, 'detect_pj_on_registration'), 20);
         
+        // Show pending approval message on My Account
+        add_action('woocommerce_account_dashboard', array($this, 'show_pending_approval_message'), 5);
+        
         // Debugging în footer (doar admin)
         if (current_user_can('manage_options')) {
             add_action('wp_footer', array($this, 'add_console_debugging'));
@@ -1222,6 +1234,12 @@ class WebGSM_B2B_Pricing {
             return false;
         }
         
+        // Check if user is approved - pending users don't get B2B prices
+        $b2b_status = get_user_meta($user_id, '_b2b_status', true);
+        if ($b2b_status === 'pending') {
+            return false; // Pending users don't get B2B prices
+        }
+        
         $is_pj = get_user_meta($user_id, '_is_pj', true);
         if ($is_pj === 'yes' || $is_pj === '1' || $is_pj === true) {
             return true;
@@ -1243,6 +1261,199 @@ class WebGSM_B2B_Pricing {
         }
         
         return false;
+    }
+    
+    /**
+     * Show pending approval message on My Account dashboard
+     */
+    public function show_pending_approval_message() {
+        if (!is_user_logged_in()) return;
+        
+        $user_id = get_current_user_id();
+        $b2b_status = get_user_meta($user_id, '_b2b_status', true);
+        
+        if ($b2b_status === 'pending') {
+            $file_upload = new WebGSM_B2B_File_Upload();
+            $cert_path = get_user_meta($user_id, '_b2b_certificate_path', true);
+            $has_cert = !empty($cert_path) && file_exists($cert_path);
+            $company = get_user_meta($user_id, 'billing_company', true) ?: 'Firma';
+            ?>
+            <div style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);border:1px solid #f59e0b;border-radius:8px;padding:16px;margin:16px 0;box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+                <h3 style="color:#92400e;margin:0 0 10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;font-size:16px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Cont în preaprobare
+                </h3>
+                <p style="color:#78350f;margin:0 0 12px;font-size:13px;text-align:center;">
+                    Contul dumneavoastră B2B așteaptă validare. Veți beneficia de prețurile pentru parteneri după aprobare.
+                </p>
+                
+                <?php if (!$has_cert): ?>
+                <div style="background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);border:1px solid #ef4444;border-radius:6px;padding:12px;margin:12px 0;box-shadow:0 1px 3px rgba(239,68,68,0.08);">
+                    <p style="color:#dc2626;margin:0 0 8px;font-size:13px;font-weight:600;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        Certificatul CUI nu a fost încărcat!
+                    </p>
+                    <p style="color:#991b1b;margin:0 0 12px;font-size:12px;text-align:center;">
+                        Pentru aprobare rapidă, vă rugăm să trimiteți certificatul de înregistrare CUI prin una din opțiunile de mai jos:
+                    </p>
+                    
+                    <div style="display:flex;flex-direction:column;gap:8px;max-width:450px;margin:0 auto;">
+                        <!-- Upload din cont -->
+                        <div id="cert-upload-section" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                            <label style="display:block;margin-bottom:6px;font-weight:600;color:#374151;font-size:12px;">1. Încarcă certificatul aici:</label>
+                            <input type="file" id="pending_cert_upload" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;font-size:13px;">
+                            <button type="button" id="upload_cert_btn" style="background:#22c55e;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-weight:600;width:100%;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Încarcă Certificat
+                            </button>
+                            <div id="cert_upload_status" style="margin-top:8px;font-size:12px;"></div>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                            <label style="display:block;margin-bottom:6px;font-weight:600;color:#374151;font-size:12px;">2. Trimite pe email:</label>
+                            <?php 
+                            $email_subject = 'Certificat CUI - ' . esc_html($company);
+                            $email_body = 'Bună ziua,' . "\n\n" . 'Vă trimit certificatul de înregistrare CUI pentru aprobarea contului B2B.' . "\n\n" . 'Mulțumesc!';
+                            // Use rawurlencode to convert spaces to %20 instead of +
+                            $email_subject_encoded = rawurlencode($email_subject);
+                            $email_body_encoded = rawurlencode($email_body);
+                            ?>
+                            <a href="mailto:info@webgsm.ro?subject=<?php echo $email_subject_encoded; ?>&body=<?php echo $email_body_encoded; ?>" 
+                               style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#3b82f6;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:600;font-size:13px;transition:background 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                                Trimite pe Email
+                            </a>
+                            <p style="margin:8px 0 0;font-size:11px;color:#6b7280;">info@webgsm.ro</p>
+                        </div>
+                        
+                        <!-- WhatsApp -->
+                        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                            <label style="display:block;margin-bottom:6px;font-weight:600;color:#374151;font-size:12px;">3. Trimite pe WhatsApp:</label>
+                            <?php 
+                            // WhatsApp number - leave empty for now, will be added later
+                            $whatsapp_number = ''; // Will be configured later
+                            $whatsapp_text = 'Bună ziua, aș dori să trimit certificatul de înregistrare CUI pentru aprobarea contului B2B - ' . esc_html($company);
+                            ?>
+                            <?php if (!empty($whatsapp_number)): ?>
+                            <a href="https://wa.me/<?php echo esc_attr($whatsapp_number); ?>?text=<?php echo rawurlencode($whatsapp_text); ?>" 
+                               target="_blank"
+                               style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#25D366;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:600;font-size:13px;transition:background 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                                </svg>
+                                Trimite pe WhatsApp
+                            </a>
+                            <?php else: ?>
+                            <p style="color:#6b7280;font-size:12px;margin:0;">Disponibil în curând</p>
+                            <?php endif; ?>
+                            <p style="margin:8px 0 0;font-size:11px;color:#6b7280;">Contact direct</p>
+                        </div>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div style="background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);border:1px solid #22c55e;border-radius:6px;padding:10px;margin:12px 0;text-align:center;box-shadow:0 1px 3px rgba(34,197,94,0.08);">
+                    <p style="color:#15803d;margin:0;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Certificatul CUI a fost încărcat cu succes!
+                    </p>
+                </div>
+                <?php endif; ?>
+                
+                <p style="color:#78350f;margin:12px 0 0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#78350f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <strong>Important:</strong> Verificați și completați adresa de facturare în secțiunea "Adrese" dacă lipsesc detalii.
+                </p>
+            </div>
+            
+            <style>
+            #upload_cert_btn:hover {
+                background: #16a34a !important;
+            }
+            #cert-upload-section a:hover,
+            #cert-upload-section a[href^="mailto"]:hover {
+                background: #2563eb !important;
+            }
+            #cert-upload-section a[href^="https://wa.me"]:hover {
+                background: #20ba5a !important;
+            }
+            </style>
+            
+            <script>
+            jQuery(document).ready(function($) {
+                $('#upload_cert_btn').on('click', function() {
+                    var fileInput = $('#pending_cert_upload')[0];
+                    var $btn = $(this);
+                    var $status = $('#cert_upload_status');
+                    
+                    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                        $status.html('<span style="color:#ef4444;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Selectează un fișier mai întâi!</span>');
+                        return;
+                    }
+                    
+                    var file = fileInput.files[0];
+                    var fileSize = file.size / 1024 / 1024;
+                    
+                    if (fileSize > 5) {
+                        $status.html('<span style="color:#ef4444;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Fișierul este prea mare! Max 5MB.</span>');
+                        return;
+                    }
+                    
+                    var formData = new FormData();
+                    formData.append('action', 'webgsm_upload_pending_cert');
+                    formData.append('cert_file', file);
+                    formData.append('nonce', '<?php echo wp_create_nonce('webgsm_upload_pending_cert'); ?>');
+                    
+                    $btn.prop('disabled', true).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Se încarcă...');
+                    $status.html('<span style="color:#3b82f6;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>Se încarcă...</span>');
+                    
+                    $.ajax({
+                        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                $status.html('<span style="color:#22c55e;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>Certificat încărcat cu succes! Pagina se va reîmprospăta...</span>');
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 1500);
+                            } else {
+                                $status.html('<span style="color:#ef4444;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Eroare: ' + (response.data || 'Nu s-a putut încărca') + '</span>');
+                                $btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Încarcă Certificat');
+                            }
+                        },
+                        error: function() {
+                            $status.html('<span style="color:#ef4444;display:flex;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Eroare la comunicarea cu serverul.</span>');
+                            $btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Încarcă Certificat');
+                        }
+                    });
+                });
+            });
+            </script>
+            <?php
+        }
     }
     
     // =========================================
@@ -1678,6 +1889,7 @@ class WebGSM_B2B_Pricing {
     public function add_admin_menu() {
         add_menu_page('B2B Pricing', 'B2B Pricing', 'manage_options', 'webgsm-b2b-pricing', array($this, 'render_admin_page'), 'dashicons-chart-line', 56);
         add_submenu_page('webgsm-b2b-pricing', 'Setări', 'Setări', 'manage_options', 'webgsm-b2b-pricing', array($this, 'render_admin_page'));
+        add_submenu_page('webgsm-b2b-pricing', 'Conturi Pending', 'Conturi Pending', 'manage_options', 'webgsm-b2b-pending', array($this, 'render_pending_page'));
         add_submenu_page('webgsm-b2b-pricing', 'Clienți B2B', 'Clienți B2B', 'manage_options', 'webgsm-b2b-customers', array($this, 'render_customers_page'));
         add_submenu_page('webgsm-b2b-pricing', 'Rapoarte', 'Rapoarte', 'manage_options', 'webgsm-b2b-reports', array($this, 'render_reports_page'));
     }
@@ -1703,6 +1915,10 @@ class WebGSM_B2B_Pricing {
     
     public function render_admin_page() {
         include WEBGSM_B2B_PATH . 'admin/settings-page.php';
+    }
+    
+    public function render_pending_page() {
+        include WEBGSM_B2B_PATH . 'admin/pending-accounts.php';
     }
     
     public function render_customers_page() {
@@ -2050,12 +2266,50 @@ class WebGSM_B2B_Pricing {
         $is_pj = ($tip === 'pj' || !empty($cui) || !empty($company));
         
         if ($is_pj) {
-            update_user_meta($customer_id, '_is_pj', 'yes');
+            // Handle certificate upload
+            if (isset($_FILES['certificat_cui']) && !empty($_FILES['certificat_cui']['name'])) {
+                $file_upload = new WebGSM_B2B_File_Upload();
+                $result = $file_upload->handle_certificate_upload($_FILES['certificat_cui'], $customer_id);
+                
+                if (is_wp_error($result)) {
+                    error_log('[WebGSM B2B] Upload certificat eșuat pentru user ' . $customer_id . ': ' . $result->get_error_message());
+                } else {
+                    // Save path to user meta
+                    update_user_meta($customer_id, '_b2b_certificate_path', $result);
+                }
+            }
+            
+            // Set user to pending approval
+            $approval_system = WebGSM_B2B_Approval_System::instance();
+            $approval_system->set_pending_on_registration($customer_id);
+            
+            // Save basic info
             update_user_meta($customer_id, '_tip_client', 'pj');
-            update_user_meta($customer_id, '_pj_tier', 'bronze');
-            update_user_meta($customer_id, '_pj_tier_achieved_date', current_time('mysql'));
             if (!empty($cui)) update_user_meta($customer_id, 'billing_cui', $cui);
             if (!empty($company)) update_user_meta($customer_id, 'billing_company', $company);
+            
+            // Get address fields from POST
+            $adresa = isset($_POST['firma_adresa']) ? sanitize_text_field($_POST['firma_adresa']) : '';
+            $judet = isset($_POST['firma_judet']) ? sanitize_text_field($_POST['firma_judet']) : '';
+            $oras = isset($_POST['firma_oras']) ? sanitize_text_field($_POST['firma_oras']) : '';
+            
+            // Save to addresses array for easy access
+            if (!empty($company)) {
+                $addresses = get_user_meta($customer_id, 'webgsm_addresses', true);
+                if (!is_array($addresses)) $addresses = [];
+                
+                $addresses[] = [
+                    'label' => 'Adresa firmă (din ANAF)',
+                    'name' => $company,
+                    'phone' => get_user_meta($customer_id, 'billing_phone', true) ?: '',
+                    'address' => !empty($adresa) ? $adresa : '',
+                    'city' => !empty($oras) ? $oras : '',
+                    'county' => !empty($judet) ? $judet : '',
+                    'postcode' => ''
+                ];
+                
+                update_user_meta($customer_id, 'webgsm_addresses', $addresses);
+            }
         } else {
             update_user_meta($customer_id, '_tip_client', 'pf');
         }
@@ -2070,7 +2324,13 @@ class WebGSM_B2B_Pricing {
      * AJAX Debug pentru tier-uri (TEMPORAR)
      */
     public function ajax_debug_tier() {
-        check_ajax_referer('webgsm_debug', 'nonce');
+        // Only for logged-in users
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Utilizator neautentificat.');
+            return;
+        }
+        
+        check_ajax_referer('webgsm_debug', 'nonce', false);
         
         $user_id = get_current_user_id();
         

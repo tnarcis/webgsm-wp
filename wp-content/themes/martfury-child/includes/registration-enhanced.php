@@ -13,6 +13,12 @@
 // Adaugă câmpuri noi în formularul de înregistrare cu LINE-ART design
 add_action('woocommerce_register_form_start', function() {
     ?>
+    <script>
+    jQuery(function($) {
+        // Add enctype to registration form
+        $('form.woocommerce-form-register').attr('enctype', 'multipart/form-data');
+    });
+    </script>
     <style>
     /* ====== TOGGLE PF/PJ LINE-ART ====== */
     .webgsm-account-toggle {
@@ -292,7 +298,7 @@ add_action('woocommerce_register_form_start', function() {
                     <circle cx="11" cy="11" r="7"/>
                     <line x1="16" y1="16" x2="21" y2="21"/>
                 </svg>
-                Autocompletare
+                Preia date
             </button>
         </div>
         
@@ -306,6 +312,16 @@ add_action('woocommerce_register_form_start', function() {
         <p class="form-row form-row-wide">
             <label for="reg_firma_reg_com">Nr. Reg. Comerțului</label>
             <input type="text" class="input-text" name="firma_reg_com" id="reg_firma_reg_com" placeholder="ex: J40/1234/2020">
+        </p>
+        
+        <p class="form-row form-row-wide">
+            <label for="certificat_cui">Certificat de înregistrare CUI <span class="required" id="certificat_required" style="display:none;">*</span></label>
+            <input type="file" class="input-text" name="certificat_cui" id="certificat_cui" accept=".pdf,.jpg,.jpeg,.png" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">Format: PDF, JPG, PNG. Max 5MB.</small>
+            <div id="certificat-feedback" style="display: none; margin-top: 8px; padding: 10px; background: #d1fae5; border: 1px solid #22c55e; border-radius: 6px; font-size: 13px;">
+                <span style="color: #22c55e; font-weight: 600;">✓</span> <span id="certificat-filename"></span> <span id="certificat-size" style="color: #6b7280;"></span>
+            </div>
+            <div id="certificate_status" style="margin-top:5px;font-size:13px;"></div>
         </p>
         
         <p class="form-row form-row-wide">
@@ -333,12 +349,30 @@ add_action('woocommerce_register_form_start', function() {
             $('.webgsm-account-toggle label').removeClass('active');
             $(this).closest('label').addClass('active');
             
-            if($(this).val() === 'pj') {
+            var isPJ = $(this).val() === 'pj';
+            var $certInput = $('#certificat_cui');
+            var $certRequired = $('#certificat_required');
+            
+            if(isPJ) {
                 $('#campuri-firma-register').slideDown(300);
+                // Certificatul este opțional - nu setăm required
+                $certInput.prop('required', false);
+                $certRequired.hide(); // Ascunde asteriscul
             } else {
                 $('#campuri-firma-register').slideUp(300);
+                $certInput.prop('required', false);
+                $certInput.val(''); // Clear file input
+                $certRequired.hide();
+                $('#certificat-feedback').hide();
+                $('#certificate_status').html('');
             }
         });
+        
+        // Set initial state
+        if ($('input[name="tip_facturare"]:checked').val() !== 'pj') {
+            $('#certificat_cui').prop('required', false);
+            $('#certificat_required').hide();
+        }
         
         // Căutare ANAF cu iconițe line-art
         $('#btn_cauta_cui_register').on('click', function() {
@@ -386,6 +420,67 @@ add_action('woocommerce_register_form_start', function() {
                         .show();
                 }
             });
+        });
+        
+        // Validate certificate upload before form submit (optional - only validate if file is selected)
+        $('form.woocommerce-form-register').on('submit', function(e) {
+            var tipClient = $('input[name="tip_facturare"]:checked').val();
+            
+            if (tipClient === 'pj') {
+                var fileInput = $('#certificat_cui')[0];
+                
+                // Only validate if file is selected (certificate is optional)
+                if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                    // Check file size (max 5MB)
+                    var fileSize = fileInput.files[0].size / 1024 / 1024; // MB
+                    if (fileSize > 5) {
+                        e.preventDefault();
+                        alert('⚠️ Fișierul este prea mare! Dimensiunea maximă: 5MB');
+                        $('#certificat_cui').val('');
+                        return false;
+                    }
+                    
+                    // Check file type
+                    var fileName = fileInput.files[0].name;
+                    var ext = fileName.split('.').pop().toLowerCase();
+                    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext)) {
+                        e.preventDefault();
+                        alert('⚠️ Format invalid! Acceptăm: PDF, JPG, PNG');
+                        $('#certificat_cui').val('');
+                        return false;
+                    }
+                }
+            }
+        });
+        
+        // File upload feedback
+        $('#certificat_cui').on('change', function() {
+            var fileInput = this;
+            var $feedback = $('#certificat-feedback');
+            var $filename = $('#certificat-filename');
+            var $size = $('#certificat-size');
+            var $status = $('#certificate_status');
+            
+            if (fileInput.files && fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var fileName = file.name;
+                var fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+                
+                $filename.text(fileName);
+                $size.text('(' + fileSize + ' MB)');
+                $feedback.show();
+                
+                // Status display
+                $status.html('✅ ' + fileName + ' (' + fileSize + ' MB)').css('color', '#15803d');
+            } else {
+                $feedback.hide();
+                $status.html('').css('color', '');
+            }
+        });
+        
+        // DON'T hide PJ fields on validation error - keep data
+        $(document).on('checkout_error', function() {
+            // Form data is preserved automatically, don't reset
         });
     });
     </script>
