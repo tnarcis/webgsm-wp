@@ -104,3 +104,6 @@ require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-myaccount-modals.php';
 
+
+// B2B Teaser pentru clienți neautentificați
+require_once get_stylesheet_directory() . '/includes/webgsm-b2b-teaser.php';

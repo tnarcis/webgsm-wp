@@ -46,6 +46,15 @@ add_action('admin_menu', function() {
         'cautare-client',
         'render_cautare_client_page'
     );
+    
+    add_submenu_page(
+        'suport-clienti',
+        'Transformare PF → PJ',
+        'Transformare PF → PJ',
+        'manage_options',
+        'transformare-pf-pj',
+        'render_transformare_pf_pj_page'
+    );
 });
 
 // =============================================
@@ -813,4 +822,319 @@ add_action('save_post_cerere_garantie', function($post_id) {
     if(isset($_POST['nota_interna'])) {
         update_post_meta($post_id, '_nota_interna', sanitize_textarea_field($_POST['nota_interna']));
     }
+});
+
+// =============================================
+// PAGINĂ TRANSFORMARE PF → PJ
+// =============================================
+
+function render_transformare_pf_pj_page() {
+    ?>
+    <div class="wrap">
+        <h1>🔄 Transformare Cont PF → PJ</h1>
+        <p style="color: #666; margin-bottom: 20px;">
+            Transformă un cont de persoană fizică (PF) în persoană juridică (PJ) pentru a accesa prețurile B2B.
+        </p>
+        
+        <div style="background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
+            <h2 style="margin-top: 0;">Căutare utilizator</h2>
+            
+            <form id="search-user-form" style="margin-bottom: 20px;">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="search_query">Email, nume sau telefon</label>
+                        </th>
+                        <td>
+                            <input type="text" id="search_query" name="search_query" class="regular-text" placeholder="ex: client@example.com sau 0721234567" required />
+                            <p class="description">Caută utilizatorul după email, nume sau număr de telefon.</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <p class="submit">
+                    <button type="submit" class="button button-primary">🔍 Caută utilizator</button>
+                </p>
+            </form>
+            
+            <div id="user-results" style="display: none;">
+                <hr style="margin: 20px 0;" />
+                <h3>Rezultate căutare</h3>
+                <div id="user-info" style="background: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 15px;"></div>
+                
+                <form id="transform-form">
+                    <input type="hidden" id="user_id" name="user_id" />
+                    
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="billing_cui">CUI (opțional)</label>
+                            </th>
+                            <td>
+                                <input type="text" id="billing_cui" name="billing_cui" class="regular-text" placeholder="RO12345678" />
+                                <p class="description">CUI-ul firmei (poate fi completat ulterior).</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="billing_company">Denumire firmă (opțional)</label>
+                            </th>
+                            <td>
+                                <input type="text" id="billing_company" name="billing_company" class="regular-text" placeholder="Nume firmă S.R.L." />
+                                <p class="description">Denumirea completă a firmei.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label>
+                                    <input type="checkbox" id="auto_approve_b2b" name="auto_approve_b2b" checked />
+                                    Aprobare automată B2B
+                                </label>
+                            </th>
+                            <td>
+                                <p class="description">Dacă este bifat, utilizatorul va primi automat acces la prețurile B2B (fără așteptare aprobare).</p>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <p class="submit">
+                        <button type="submit" class="button button-primary button-large">✅ Transformă în PJ</button>
+                        <span id="transform-status" style="margin-left: 15px;"></span>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        // Căutare utilizator
+        $('#search-user-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            var query = $('#search_query').val().trim();
+            if (!query) {
+                alert('Introduceți un email, nume sau telefon pentru căutare.');
+                return;
+            }
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'webgsm_search_user_for_pj',
+                    query: query,
+                    nonce: '<?php echo wp_create_nonce('webgsm_search_user'); ?>'
+                },
+                success: function(response) {
+                    if (response.success && response.data.user) {
+                        var user = response.data.user;
+                        var is_pj = user.is_pj === 'yes';
+                        var b2b_status = user.b2b_status || 'none';
+                        
+                        var html = '<div style="display: flex; gap: 20px; align-items: start;">';
+                        html += '<div style="flex: 1;">';
+                        html += '<h4 style="margin-top: 0;">' + user.display_name + '</h4>';
+                        html += '<p><strong>Email:</strong> ' + user.email + '</p>';
+                        html += '<p><strong>Telefon:</strong> ' + (user.phone || 'N/A') + '</p>';
+                        html += '<p><strong>Tip cont:</strong> <span style="color: ' + (is_pj ? '#22c55e' : '#ef4444') + '; font-weight: bold;">' + (is_pj ? 'PJ (Persoană Juridică)' : 'PF (Persoană Fizică)') + '</span></p>';
+                        html += '<p><strong>Status B2B:</strong> ' + (b2b_status === 'approved' ? '<span style="color: #22c55e;">✓ Aprobat</span>' : b2b_status === 'pending' ? '<span style="color: #f59e0b;">⏳ În așteptare</span>' : '<span style="color: #6b7280;">— Nu este B2B</span>') + '</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        $('#user-info').html(html);
+                        $('#user_id').val(user.ID);
+                        $('#user-results').show();
+                        
+                        if (is_pj) {
+                            $('#transform-form').html('<div style="background: #d1fae5; border: 1px solid #22c55e; padding: 15px; border-radius: 4px; color: #15803d;"><strong>ℹ️ Acest utilizator este deja PJ.</strong></div>');
+                        }
+                    } else {
+                        alert('Utilizatorul nu a fost găsit. Verificați email-ul, numele sau telefonul.');
+                        $('#user-results').hide();
+                    }
+                },
+                error: function() {
+                    alert('Eroare la căutare. Vă rugăm să încercați din nou.');
+                }
+            });
+        });
+        
+        // Transformare PF → PJ
+        $('#transform-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            var userId = $('#user_id').val();
+            if (!userId) {
+                alert('Vă rugăm să căutați mai întâi un utilizator.');
+                return;
+            }
+            
+            var data = {
+                action: 'webgsm_transform_pf_to_pj',
+                user_id: userId,
+                billing_cui: $('#billing_cui').val(),
+                billing_company: $('#billing_company').val(),
+                auto_approve_b2b: $('#auto_approve_b2b').is(':checked') ? 1 : 0,
+                nonce: '<?php echo wp_create_nonce('webgsm_transform_pj'); ?>'
+            };
+            
+            $('#transform-status').html('<span style="color: #f59e0b;">⏳ Se procesează...</span>');
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    if (response.success) {
+                        $('#transform-status').html('<span style="color: #22c55e;">✓ ' + response.data.message + '</span>');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        $('#transform-status').html('<span style="color: #ef4444;">✗ ' + (response.data.message || 'Eroare la transformare') + '</span>');
+                    }
+                },
+                error: function() {
+                    $('#transform-status').html('<span style="color: #ef4444;">✗ Eroare la comunicare cu serverul.</span>');
+                }
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+// =============================================
+// AJAX HANDLERS
+// =============================================
+
+// Căutare utilizator pentru transformare
+add_action('wp_ajax_webgsm_search_user_for_pj', function() {
+    check_ajax_referer('webgsm_search_user', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Permisiuni insuficiente'));
+        return;
+    }
+    
+    $query = sanitize_text_field($_POST['query']);
+    if (empty($query)) {
+        wp_send_json_error(array('message' => 'Query gol'));
+        return;
+    }
+    
+    // Caută după email
+    $user = get_user_by('email', $query);
+    
+    // Dacă nu găsește după email, caută după login/nume
+    if (!$user) {
+        $users = get_users(array(
+            'search' => '*' . esc_attr($query) . '*',
+            'search_columns' => array('user_login', 'user_nicename', 'display_name'),
+            'number' => 1
+        ));
+        if (!empty($users)) {
+            $user = $users[0];
+        }
+    }
+    
+    // Dacă tot nu găsește, caută după telefon în meta
+    if (!$user) {
+        $users = get_users(array(
+            'meta_key' => 'billing_phone',
+            'meta_value' => $query,
+            'number' => 1
+        ));
+        if (!empty($users)) {
+            $user = $users[0];
+        }
+    }
+    
+    if (!$user) {
+        wp_send_json_error(array('message' => 'Utilizator negăsit'));
+        return;
+    }
+    
+    $user_data = array(
+        'ID' => $user->ID,
+        'display_name' => $user->display_name,
+        'email' => $user->user_email,
+        'phone' => get_user_meta($user->ID, 'billing_phone', true),
+        'is_pj' => get_user_meta($user->ID, '_is_pj', true),
+        'b2b_status' => get_user_meta($user->ID, '_b2b_status', true),
+        'billing_cui' => get_user_meta($user->ID, 'billing_cui', true),
+        'billing_company' => get_user_meta($user->ID, 'billing_company', true)
+    );
+    
+    wp_send_json_success(array('user' => $user_data));
+});
+
+// Transformare PF → PJ
+add_action('wp_ajax_webgsm_transform_pf_to_pj', function() {
+    check_ajax_referer('webgsm_transform_pj', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Permisiuni insuficiente'));
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    if (!$user_id) {
+        wp_send_json_error(array('message' => 'ID utilizator invalid'));
+        return;
+    }
+    
+    $user = get_userdata($user_id);
+    if (!$user) {
+        wp_send_json_error(array('message' => 'Utilizator negăsit'));
+        return;
+    }
+    
+    // Verifică dacă e deja PJ
+    $is_pj = get_user_meta($user_id, '_is_pj', true);
+    if ($is_pj === 'yes') {
+        wp_send_json_error(array('message' => 'Utilizatorul este deja PJ'));
+        return;
+    }
+    
+    // Setează ca PJ
+    update_user_meta($user_id, '_is_pj', 'yes');
+    update_user_meta($user_id, '_tip_client', 'pj');
+    update_user_meta($user_id, 'webgsm_customer_type', 'pj');
+    
+    // Actualizează CUI și denumire firmă dacă sunt furnizate
+    if (!empty($_POST['billing_cui'])) {
+        update_user_meta($user_id, 'billing_cui', sanitize_text_field($_POST['billing_cui']));
+    }
+    if (!empty($_POST['billing_company'])) {
+        update_user_meta($user_id, 'billing_company', sanitize_text_field($_POST['billing_company']));
+    }
+    
+    // Aprobare automată B2B dacă e cerută
+    $auto_approve = isset($_POST['auto_approve_b2b']) && $_POST['auto_approve_b2b'] == '1';
+    if ($auto_approve) {
+        if (class_exists('WebGSM_B2B_Approval_System')) {
+            $approval_system = new WebGSM_B2B_Approval_System();
+            $approval_system->approve_account($user_id);
+        } else {
+            // Fallback dacă clasa nu există
+            update_user_meta($user_id, '_b2b_status', 'approved');
+            update_user_meta($user_id, '_b2b_approved_date', current_time('mysql'));
+            $user->add_role('b2b_customer');
+            $user->add_role('customer');
+        }
+    }
+    
+    // Log acțiunea
+    $admin_user = wp_get_current_user();
+    update_user_meta($user_id, '_pf_to_pj_converted_by', $admin_user->ID);
+    update_user_meta($user_id, '_pf_to_pj_converted_date', current_time('mysql'));
+    
+    $message = 'Utilizatorul ' . $user->display_name . ' (' . $user->user_email . ') a fost transformat cu succes în PJ.';
+    if ($auto_approve) {
+        $message .= ' Status B2B: Aprobat automat.';
+    }
+    
+    wp_send_json_success(array('message' => $message));
 });

@@ -48,6 +48,12 @@ class WebGSM_B2B_Approval_System {
         
         // Certificate upload for pending users
         add_action('wp_ajax_webgsm_upload_pending_cert', array($this, 'ajax_upload_pending_cert'));
+        
+        // Certificate upload for admin (from customers page)
+        add_action('wp_ajax_webgsm_admin_upload_certificate', array($this, 'ajax_admin_upload_certificate'));
+        
+        // Tier history handler
+        add_action('wp_ajax_webgsm_get_tier_history', array($this, 'ajax_get_tier_history'));
     }
     
     /**
@@ -349,5 +355,94 @@ class WebGSM_B2B_Approval_System {
         } else {
             wp_send_json_success('Certificat încărcat cu succes!');
         }
+    }
+    
+    /**
+     * AJAX handler for admin uploading certificate for any B2B customer
+     */
+    public function ajax_admin_upload_certificate() {
+        check_ajax_referer('webgsm_admin_upload_cert', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permisiuni insuficiente.'));
+            return;
+        }
+        
+        $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        
+        if (!$user_id) {
+            wp_send_json_error(array('message' => 'ID utilizator invalid.'));
+            return;
+        }
+        
+        $user = get_userdata($user_id);
+        if (!$user) {
+            wp_send_json_error(array('message' => 'Utilizator negăsit.'));
+            return;
+        }
+        
+        // Verifică dacă utilizatorul este B2B
+        $is_pj = get_user_meta($user_id, '_is_pj', true);
+        if ($is_pj !== 'yes') {
+            wp_send_json_error(array('message' => 'Utilizatorul nu este B2B.'));
+            return;
+        }
+        
+        if (!isset($_FILES['certificate_file']) || empty($_FILES['certificate_file']['tmp_name'])) {
+            wp_send_json_error(array('message' => 'Nu a fost selectat niciun fișier.'));
+            return;
+        }
+        
+        $result = $this->file_upload->handle_certificate_upload($_FILES['certificate_file'], $user_id);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+        } else {
+            // Log acțiunea
+            $admin_user = wp_get_current_user();
+            update_user_meta($user_id, '_certificate_uploaded_by_admin', $admin_user->ID);
+            update_user_meta($user_id, '_certificate_uploaded_date', current_time('mysql'));
+            
+            wp_send_json_success(array(
+                'message' => 'Certificat încărcat cu succes pentru ' . $user->display_name . '!'
+            ));
+        }
+    }
+    
+    /**
+     * AJAX Handler pentru istoric tier
+     */
+    public function ajax_get_tier_history() {
+        check_ajax_referer('webgsm_get_tier_history', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permisiuni insuficiente.'));
+            return;
+        }
+        
+        $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        
+        if (!$user_id) {
+            wp_send_json_error(array('message' => 'ID utilizator invalid.'));
+            return;
+        }
+        
+        $history = get_user_meta($user_id, '_pj_tier_history', true);
+        
+        if (!is_array($history)) {
+            $history = array();
+        }
+        
+        // Adaugă numele adminilor pentru fiecare intrare
+        foreach ($history as $key => $entry) {
+            if (isset($entry['by'])) {
+                $admin = get_userdata($entry['by']);
+                $history[$key]['admin_name'] = $admin ? $admin->display_name : 'Admin #' . $entry['by'];
+            } else {
+                $history[$key]['admin_name'] = 'Necunoscut';
+            }
+        }
+        
+        wp_send_json_success(array('history' => $history));
     }
 }

@@ -7,6 +7,33 @@
  */
 if (!defined('ABSPATH')) exit;
 
+// Procesare ștergere istoric tier
+if (isset($_GET['clear_tier_history']) && $_GET['clear_tier_history'] === '1' && isset($_GET['nonce']) && wp_verify_nonce($_GET['nonce'], 'clear_tier_history')) {
+    if (current_user_can('manage_options')) {
+        $b2b_users = get_users(array(
+            'meta_key' => '_is_pj',
+            'meta_value' => 'yes',
+            'number' => -1
+        ));
+        
+        $cleared = 0;
+        foreach ($b2b_users as $user) {
+            delete_user_meta($user->ID, '_pj_tier_history');
+            $cleared++;
+        }
+        
+        // Redirecționează pentru a elimina parametrii din URL
+        wp_redirect(admin_url('admin.php?page=webgsm-b2b-customers&history_cleared=' . $cleared));
+        exit;
+    }
+}
+
+// Afișează mesaj de succes după redirect
+if (isset($_GET['history_cleared']) && current_user_can('manage_options')) {
+    $cleared = intval($_GET['history_cleared']);
+    echo '<div class="notice notice-success is-dismissible"><p>✅ Istoricul tier-urilor a fost șters pentru <strong>' . $cleared . '</strong> utilizatori B2B.</p></div>';
+}
+
 // Procesare acțiuni (schimbare tier)
 if (isset($_POST['webgsm_change_tier']) && wp_verify_nonce($_POST['webgsm_tier_nonce'], 'webgsm_change_tier')) {
     $user_id = intval($_POST['user_id']);
@@ -14,23 +41,28 @@ if (isset($_POST['webgsm_change_tier']) && wp_verify_nonce($_POST['webgsm_tier_n
     $old_tier = get_user_meta($user_id, '_pj_tier', true);
     
     if ($user_id && $new_tier) {
-        update_user_meta($user_id, '_pj_tier', $new_tier);
-        update_user_meta($user_id, '_pj_tier_changed_by_admin', current_time('mysql'));
-        update_user_meta($user_id, '_pj_tier_admin_note', sanitize_textarea_field($_POST['admin_note'] ?? ''));
-        
-        // Log the change
-        $log = get_user_meta($user_id, '_pj_tier_history', true);
-        if (!is_array($log)) $log = array();
-        $log[] = array(
-            'date' => current_time('mysql'),
-            'from' => $old_tier,
-            'to' => $new_tier,
-            'by' => get_current_user_id(),
-            'note' => sanitize_textarea_field($_POST['admin_note'] ?? '')
-        );
-        update_user_meta($user_id, '_pj_tier_history', $log);
-        
-        echo '<div class="notice notice-success"><p>✅ Tier-ul a fost actualizat pentru utilizator #' . $user_id . ' de la <strong>' . ucfirst($old_tier) . '</strong> la <strong>' . ucfirst($new_tier) . '</strong>.</p></div>';
+        // Verifică dacă tier-ul s-a schimbat efectiv
+        if ($old_tier === $new_tier) {
+            echo '<div class="notice notice-info"><p>ℹ️ Tier-ul este deja setat la <strong>' . ucfirst($new_tier) . '</strong>. Nu s-a făcut nicio modificare.</p></div>';
+        } else {
+            update_user_meta($user_id, '_pj_tier', $new_tier);
+            update_user_meta($user_id, '_pj_tier_changed_by_admin', current_time('mysql'));
+            update_user_meta($user_id, '_pj_tier_admin_note', sanitize_textarea_field($_POST['admin_note'] ?? ''));
+            
+            // Log the change DOAR dacă s-a schimbat efectiv
+            $log = get_user_meta($user_id, '_pj_tier_history', true);
+            if (!is_array($log)) $log = array();
+            $log[] = array(
+                'date' => current_time('mysql'),
+                'from' => $old_tier,
+                'to' => $new_tier,
+                'by' => get_current_user_id(),
+                'note' => sanitize_textarea_field($_POST['admin_note'] ?? '')
+            );
+            update_user_meta($user_id, '_pj_tier_history', $log);
+            
+            echo '<div class="notice notice-success"><p>✅ Tier-ul a fost actualizat pentru utilizator #' . $user_id . ' de la <strong>' . ucfirst($old_tier) . '</strong> la <strong>' . ucfirst($new_tier) . '</strong>.</p></div>';
+        }
     }
 }
 
@@ -179,19 +211,21 @@ $tier_keys = array_keys($tiers);
 
 .customers-table thead th {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 14px 16px;
+    padding: 8px 10px;
     text-align: left;
     font-weight: 600;
     color: #374151;
     border-bottom: 1px solid #e5e7eb;
-    font-size: 13px;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .customers-table tbody td {
-    padding: 14px 16px;
+    padding: 8px 10px;
     border-bottom: 1px solid #f3f4f6;
-    font-size: 14px;
+    font-size: 13px;
     vertical-align: middle;
+    white-space: nowrap;
 }
 
 .customers-table tbody tr:hover {
@@ -205,12 +239,12 @@ $tier_keys = array_keys($tiers);
 .customer-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .customer-avatar {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     border-radius: 50%;
     display: flex;
@@ -218,32 +252,39 @@ $tier_keys = array_keys($tiers);
     justify-content: center;
     color: #fff;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
+    flex-shrink: 0;
 }
 
 .customer-details h4 {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #1f2937;
+    line-height: 1.3;
 }
 
 .customer-details p {
-    margin: 2px 0 0;
-    font-size: 12px;
+    margin: 1px 0 0;
+    font-size: 11px;
     color: #6b7280;
+    line-height: 1.2;
 }
 
 /* Tier Badges */
 .tier-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 16px;
-    font-size: 11px;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
+    white-space: nowrap;
+    min-width: 70px;
+    box-sizing: border-box;
 }
 
 .tier-badge.bronze {
@@ -269,23 +310,30 @@ $tier_keys = array_keys($tiers);
 .value-cell {
     font-weight: 600;
     color: #3b82f6;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .date-cell {
     color: #6b7280;
-    font-size: 13px;
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 /* Actions */
 .action-btn {
-    padding: 6px 12px;
+    padding: 4px 8px;
     border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    border-radius: 4px;
     background: #fff;
     color: #374151;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .action-btn:hover {
@@ -301,6 +349,12 @@ $tier_keys = array_keys($tiers);
 
 .action-btn.change-tier:hover {
     background: #dbeafe;
+}
+
+.action-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
 }
 
 /* Modal */
@@ -438,7 +492,15 @@ $tier_keys = array_keys($tiers);
 <div class="wrap webgsm-customers-page">
     <h1>
         <span class="dashicons dashicons-groups" style="color: #3b82f6;"></span>
-        Clienți B2B
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Clienți B2B<?php if (current_user_can('manage_options')): ?> <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=webgsm-b2b-customers&clear_tier_history=1'), 'clear_tier_history', 'nonce'); ?>" 
+               class="button" 
+               onclick="return confirm('Ești sigur că vrei să ștergi TOT istoricul tier-urilor pentru toți clienții B2B? Această acțiune nu poate fi anulată.');"
+               style="background: #dc2626; color: #fff; border-color: #dc2626; font-size: 10px; padding: 2px 6px; height: auto; line-height: 1.3; border-radius: 12px; margin-left: 12px; display: inline-flex; align-items: center; gap: 3px;">
+                <span class="dashicons dashicons-trash" style="font-size: 11px; vertical-align: middle;"></span>
+                Șterge istoric
+            </a><?php endif; ?></span>
+        </div>
         <span style="font-size: 12px; background: #dbeafe; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; margin-left: 10px;">
             <?php echo $total; ?> clienți
         </span>
@@ -547,9 +609,11 @@ $tier_keys = array_keys($tiers);
                         </div>
                     </div>
                 </td>
-                <td>
-                    <strong><?php echo esc_html($company ?: '-'); ?></strong><br>
-                    <small style="color: #6b7280;"><?php echo esc_html($cui ?: '-'); ?></small>
+                <td style="white-space: nowrap;">
+                    <div style="font-size: 12px; line-height: 1.4;">
+                        <strong><?php echo esc_html($company ?: '-'); ?></strong><br>
+                        <small style="color: #6b7280; font-size: 11px;"><?php echo esc_html($cui ?: '-'); ?></small>
+                    </div>
                 </td>
                 <td>
                     <span class="tier-badge <?php echo $tier; ?>"><?php echo ucfirst($tier); ?></span>
@@ -559,33 +623,56 @@ $tier_keys = array_keys($tiers);
                 </td>
                 <td>
                     <?php if ($has_cert && $cert_url): ?>
-                        <button type="button" class="action-btn view-cert-btn" 
-                                data-user-id="<?php echo $customer->ID; ?>"
-                                data-cert-url="<?php echo esc_url($cert_url); ?>"
-                                style="background: #3b82f6; color: #fff; padding: 6px 12px; font-size: 12px; margin-bottom: 4px;">
-                            <span class="dashicons dashicons-media-document" style="font-size: 14px; vertical-align: middle;"></span>
-                            Vezi Certificat
-                        </button>
-                        <button type="button" class="action-btn delete-cert-btn" 
-                                data-user-id="<?php echo $customer->ID; ?>"
-                                style="background: #ef4444; color: #fff; padding: 6px 12px; font-size: 12px;">
-                            <span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span>
-                            Șterge
-                        </button>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button type="button" class="action-btn view-cert-btn" 
+                                    data-user-id="<?php echo $customer->ID; ?>"
+                                    data-cert-url="<?php echo esc_url($cert_url); ?>"
+                                    style="background: #3b82f6; color: #fff; border: none; padding: 4px 8px; font-size: 11px;">
+                                <span class="dashicons dashicons-media-document"></span>
+                                Vezi
+                            </button>
+                            <button type="button" class="action-btn delete-cert-btn" 
+                                    data-user-id="<?php echo $customer->ID; ?>"
+                                    style="background: #ef4444; color: #fff; border: none; padding: 4px 8px; font-size: 11px;">
+                                <span class="dashicons dashicons-trash"></span>
+                                Șterge
+                            </button>
+                        </div>
                     <?php else: ?>
-                        <span style="color: #9ca3af; font-size: 12px;">Lipsă</span>
+                        <button type="button" class="action-btn upload-cert-btn" 
+                                data-user-id="<?php echo $customer->ID; ?>"
+                                data-user-name="<?php echo esc_attr($customer->display_name ?: $customer->user_login); ?>"
+                                style="background: #22c55e; color: #fff; border: none; padding: 4px 8px; font-size: 11px;">
+                            <span class="dashicons dashicons-upload"></span>
+                            Încarcă
+                        </button>
                     <?php endif; ?>
                 </td>
                 <td class="date-cell">
                     <?php echo date_i18n('d M Y', strtotime($customer->user_registered)); ?>
                 </td>
                 <td>
-                    <button type="button" class="action-btn change-tier" 
-                            data-user-id="<?php echo $customer->ID; ?>"
-                            data-user-name="<?php echo esc_attr($customer->display_name ?: $customer->user_login); ?>"
-                            data-current-tier="<?php echo $tier; ?>">
-                        Schimbă nivel
-                    </button>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <button type="button" class="action-btn change-tier" 
+                                data-user-id="<?php echo $customer->ID; ?>"
+                                data-user-name="<?php echo esc_attr($customer->display_name ?: $customer->user_login); ?>"
+                                data-current-tier="<?php echo $tier; ?>"
+                                style="padding: 4px 8px; font-size: 11px;">
+                            Schimbă nivel
+                        </button>
+                        <?php
+                        $tier_history = get_user_meta($customer->ID, '_pj_tier_history', true);
+                        if (!empty($tier_history) && is_array($tier_history)):
+                        ?>
+                        <button type="button" class="action-btn view-history-btn" 
+                                data-user-id="<?php echo $customer->ID; ?>"
+                                data-user-name="<?php echo esc_attr($customer->display_name ?: $customer->user_login); ?>"
+                                style="padding: 4px 6px; font-size: 11px; background: #f3f4f6; border-color: #d1d5db;"
+                                title="Vezi istoric schimbări tier">
+                            <span class="dashicons dashicons-clock" style="font-size: 14px;"></span>
+                        </button>
+                        <?php endif; ?>
+                    </div>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -623,6 +710,49 @@ $tier_keys = array_keys($tiers);
         </div>
     </div>
     <?php endif; ?>
+</div>
+
+<!-- Modal Istoric Tier -->
+<div class="tier-modal" id="tier-history-modal">
+    <div class="tier-modal-content" style="max-width: 600px;">
+        <h3>Istoric schimbări tier</h3>
+        <p style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+            <strong id="history-user-name"></strong>
+        </p>
+        <div id="tier-history-content" style="max-height: 400px; overflow-y: auto;">
+            <!-- Conținutul va fi încărcat via JavaScript -->
+        </div>
+        <div class="tier-modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeHistoryModal()">Închide</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload Certificat -->
+<div class="tier-modal" id="upload-cert-modal">
+    <div class="tier-modal-content">
+        <h3>Încarcă certificat CUI</h3>
+        <form id="upload-cert-form" enctype="multipart/form-data">
+            <input type="hidden" name="user_id" id="upload-user-id">
+            
+            <p style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                <strong id="upload-user-name"></strong>
+            </p>
+            
+            <label for="certificate_file">Selectează fișier:</label>
+            <input type="file" name="certificate_file" id="certificate_file" accept=".pdf,.jpg,.jpeg,.png" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 16px;" />
+            <p class="description" style="margin-top: -10px; margin-bottom: 16px; color: #6b7280; font-size: 13px;">
+                Formate acceptate: PDF, JPG, PNG. Dimensiune maximă: 5MB.
+            </p>
+            
+            <div id="upload-status" style="margin-bottom: 16px;"></div>
+            
+            <div class="tier-modal-actions">
+                <button type="button" class="cancel-btn" onclick="closeUploadModal()">Anulează</button>
+                <button type="submit" class="save-btn" id="upload-submit-btn">Încarcă</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Modal Schimbare Tier -->
@@ -759,6 +889,175 @@ jQuery(document).on('keydown', function(e) {
     if (e.key === 'Escape' && certModal.hasClass('active')) {
         certModal.removeClass('active');
     }
+    if (e.key === 'Escape' && jQuery('#upload-cert-modal').hasClass('active')) {
+        closeUploadModal();
+    }
+    if (e.key === 'Escape' && jQuery('#tier-history-modal').hasClass('active')) {
+        closeHistoryModal();
+    }
+});
+
+// Tier History Modal
+jQuery('.view-history-btn').on('click', function() {
+    var userId = jQuery(this).data('user-id');
+    var userName = jQuery(this).data('user-name');
+    
+    jQuery('#history-user-name').text(userName);
+    jQuery('#tier-history-content').html('<div style="text-align: center; padding: 20px; color: #6b7280;">⏳ Se încarcă...</div>');
+    jQuery('#tier-history-modal').addClass('active');
+    
+    // Load history via AJAX
+    jQuery.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        data: {
+            action: 'webgsm_get_tier_history',
+            user_id: userId,
+            nonce: '<?php echo wp_create_nonce('webgsm_get_tier_history'); ?>'
+        },
+        success: function(response) {
+            if (response.success && response.data.history) {
+                var history = response.data.history;
+                var html = '';
+                
+                if (history.length === 0) {
+                    html = '<div style="text-align: center; padding: 20px; color: #6b7280;">Nu există schimbări înregistrate.</div>';
+                } else {
+                    html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<thead><tr style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">';
+                    html += '<th style="padding: 8px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600;">Data</th>';
+                    html += '<th style="padding: 8px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600;">De la</th>';
+                    html += '<th style="padding: 8px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600;">La</th>';
+                    html += '<th style="padding: 8px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600;">De către</th>';
+                    html += '<th style="padding: 8px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600;">Notă</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    // Sortare descrescătoare (cele mai recente primele)
+                    history.reverse();
+                    
+                    history.forEach(function(entry) {
+                        var date = new Date(entry.date);
+                        var dateStr = date.toLocaleDateString('ro-RO', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        var fromTier = entry.from || 'N/A';
+                        var toTier = entry.to || 'N/A';
+                        var adminName = entry.admin_name || 'Admin #' + entry.by;
+                        var note = entry.note || '-';
+                        
+                        // Formatare tier pentru badge
+                        var formatTier = function(tier) {
+                            if (tier === 'N/A' || !tier) return 'N/A';
+                            return tier.charAt(0).toUpperCase() + tier.slice(1);
+                        };
+                        
+                        html += '<tr style="border-bottom: 1px solid #f3f4f6;">';
+                        html += '<td style="padding: 10px 8px; font-size: 11px; color: #374151;">' + dateStr + '</td>';
+                        html += '<td style="padding: 10px 8px; text-align: center;"><span class="tier-badge ' + (fromTier !== 'N/A' ? fromTier : '') + '" style="' + (fromTier === 'N/A' ? 'background: #f3f4f6; color: #6b7280;' : '') + '">' + formatTier(fromTier) + '</span></td>';
+                        html += '<td style="padding: 10px 8px; text-align: center;"><span class="tier-badge ' + (toTier !== 'N/A' ? toTier : '') + '" style="' + (toTier === 'N/A' ? 'background: #f3f4f6; color: #6b7280;' : '') + '">' + formatTier(toTier) + '</span></td>';
+                        html += '<td style="padding: 10px 8px; font-size: 11px; color: #6b7280;">' + adminName + '</td>';
+                        html += '<td style="padding: 10px 8px; font-size: 11px; color: #6b7280; max-width: 200px;">' + (note !== '-' ? note : '<em style="color: #9ca3af;">-</em>') + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                }
+                
+                jQuery('#tier-history-content').html(html);
+            } else {
+                jQuery('#tier-history-content').html('<div style="text-align: center; padding: 20px; color: #ef4444;">Eroare la încărcarea istoricului.</div>');
+            }
+        },
+        error: function() {
+            jQuery('#tier-history-content').html('<div style="text-align: center; padding: 20px; color: #ef4444;">Eroare la comunicarea cu serverul.</div>');
+        }
+    });
+});
+
+jQuery('#tier-history-modal').on('click', function(e) {
+    if (jQuery(e.target).is('#tier-history-modal')) {
+        closeHistoryModal();
+    }
+});
+
+function closeHistoryModal() {
+    jQuery('#tier-history-modal').removeClass('active');
+}
+
+// Upload Certificate Modal
+jQuery('.upload-cert-btn').on('click', function() {
+    var userId = jQuery(this).data('user-id');
+    var userName = jQuery(this).data('user-name');
+    
+    jQuery('#upload-user-id').val(userId);
+    jQuery('#upload-user-name').text(userName);
+    jQuery('#certificate_file').val('');
+    jQuery('#upload-status').html('');
+    jQuery('#upload-cert-modal').addClass('active');
+});
+
+jQuery('#upload-cert-modal').on('click', function(e) {
+    if (jQuery(e.target).is('#upload-cert-modal')) {
+        closeUploadModal();
+    }
+});
+
+function closeUploadModal() {
+    jQuery('#upload-cert-modal').removeClass('active');
+    jQuery('#certificate_file').val('');
+    jQuery('#upload-status').html('');
+}
+
+// Upload Certificate Form
+jQuery('#upload-cert-form').on('submit', function(e) {
+    e.preventDefault();
+    
+    var userId = jQuery('#upload-user-id').val();
+    var fileInput = jQuery('#certificate_file')[0];
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        jQuery('#upload-status').html('<div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; font-size: 13px;">⚠️ Selectează un fișier.</div>');
+        return;
+    }
+    
+    var formData = new FormData();
+    formData.append('action', 'webgsm_admin_upload_certificate');
+    formData.append('user_id', userId);
+    formData.append('certificate_file', fileInput.files[0]);
+    formData.append('nonce', '<?php echo wp_create_nonce('webgsm_admin_upload_cert'); ?>');
+    
+    jQuery('#upload-submit-btn').prop('disabled', true).text('Se încarcă...');
+    jQuery('#upload-status').html('<div style="padding: 10px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; color: #92400e; font-size: 13px;">⏳ Se încarcă certificatul...</div>');
+    
+    jQuery.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                jQuery('#upload-status').html('<div style="padding: 10px; background: #d1fae5; border: 1px solid #22c55e; border-radius: 6px; color: #15803d; font-size: 13px;">✅ ' + response.data.message + '</div>');
+                
+                // Update certificate cell
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                jQuery('#upload-status').html('<div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; font-size: 13px;">✗ ' + (response.data.message || 'Eroare la încărcare') + '</div>');
+                jQuery('#upload-submit-btn').prop('disabled', false).text('Încarcă');
+            }
+        },
+        error: function() {
+            jQuery('#upload-status').html('<div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; font-size: 13px;">✗ Eroare la comunicarea cu serverul.</div>');
+            jQuery('#upload-submit-btn').prop('disabled', false).text('Încarcă');
+        }
+    });
 });
 </script>
 
