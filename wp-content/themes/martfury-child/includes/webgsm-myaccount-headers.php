@@ -116,17 +116,23 @@ add_action('wp_footer', function() {
         function insertHeaders() {
             var nav = document.querySelector('.woocommerce-MyAccount-navigation ul');
             if (!nav) {
+                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
                 console.warn('Nav ul not found');
+                <?php endif; ?>
                 return;
             }
             
             // Verifică dacă headerele au fost deja inserate
             if (nav.querySelector('.menu-group-header')) {
+                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
                 console.log('Headers already inserted');
+                <?php endif; ?>
                 return;
             }
             
+            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
             console.log('Inserting menu headers...');
+            <?php endif; ?>
             
             // ACHIZIȚIILE MELE - înainte de Comenzi
             var ordersLi = nav.querySelector('.woocommerce-MyAccount-navigation-link--orders');
@@ -175,7 +181,9 @@ add_action('wp_footer', function() {
                 }
             });
             
+            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
             console.log('✅ Menu headers inserted successfully!');
+            <?php endif; ?>
         }
     })();
     </script>

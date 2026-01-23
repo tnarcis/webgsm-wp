@@ -291,6 +291,7 @@ add_action('wp_head', function() {
     }
     </style>
     
+    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
     <script>
     jQuery(document).ready(function($) {
         // Debug tier doar pe My Account și doar pentru utilizatori autentificați
@@ -368,6 +369,7 @@ add_action('wp_head', function() {
         });
     });
     </script>
+    <?php endif; ?>
     <?php
 }, 100);
 

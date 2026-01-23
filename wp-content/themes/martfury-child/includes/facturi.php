@@ -198,7 +198,9 @@ function webgsm_auto_generate_sku($product_id) {
         $product->set_sku($auto_sku);
         $product->save();
         
-        error_log('Auto-generated SKU for product #' . $product_id . ': ' . $auto_sku);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Auto-generated SKU for product #' . $product_id . ': ' . $auto_sku);
+        }
     }
 }
 
@@ -227,7 +229,7 @@ function smartbill_request($endpoint, $data = null, $method = 'POST') {
         $args['body'] = json_encode($data);
         
         // Log SKU-uri trimise (pentru debugging)
-        if (isset($data['products'])) {
+        if (defined('WP_DEBUG') && WP_DEBUG && isset($data['products'])) {
             error_log('=== SmartBill API Request ===');
             error_log('Endpoint: ' . $endpoint);
             foreach ($data['products'] as $product) {
@@ -239,7 +241,9 @@ function smartbill_request($endpoint, $data = null, $method = 'POST') {
     $response = wp_remote_request($url, $args);
     
     if(is_wp_error($response)) {
-        error_log('SmartBill API Error: ' . $response->get_error_message());
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SmartBill API Error: ' . $response->get_error_message());
+        }
         return array('error' => $response->get_error_message());
     }
     
@@ -247,7 +251,7 @@ function smartbill_request($endpoint, $data = null, $method = 'POST') {
     $result = json_decode($body, true);
     
     // Log răspuns (pentru debugging)
-    if (isset($result['errorText'])) {
+    if (defined('WP_DEBUG') && WP_DEBUG && isset($result['errorText'])) {
         error_log('SmartBill Error Response: ' . $result['errorText']);
     }
     
@@ -347,7 +351,9 @@ function genereaza_factura_smartbill($order_id) {
         );
         
         // Log pentru debugging
-        error_log('SmartBill Product: ' . $item->get_name() . ' | SKU: ' . $sku . ' | TVA: ' . $item_tva_percentage . '%');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SmartBill Product: ' . $item->get_name() . ' | SKU: ' . $sku . ' | TVA: ' . $item_tva_percentage . '%');
+        }
     }
     
     // Adaugă transport dacă există

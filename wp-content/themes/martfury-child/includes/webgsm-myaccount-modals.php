@@ -14,7 +14,11 @@ if (!defined('ABSPATH')) exit;
 // Render popupurile și flag-ul doar pe My Account page cu endpoint-ul "adrese-salvate"
 add_action('woocommerce_account_adrese-salvate_endpoint', function() {
     // Set flag for JavaScript - popupurile sunt pe pagina
-    echo '<script>window.webgsm_is_myaccount = true; console.log("[WebGSM] My Account page detected");</script>';
+    echo '<script>window.webgsm_is_myaccount = true;';
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        echo ' console.log("[WebGSM] My Account page detected");';
+    }
+    echo '</script>';
     
     // Get counties helper function
     $get_counties = function() {
