@@ -120,6 +120,7 @@ require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
 require_once get_stylesheet_directory() . '/includes/setup-categories.php';
+require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
 
 // ============================================
 // WebGSM B2B Teaser - "De la..." cu REGULI CORECTE B2B
