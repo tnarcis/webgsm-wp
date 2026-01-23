@@ -21,11 +21,24 @@ if (!defined('ABSPATH')) exit; // Exit dacă accesat direct
 add_action('woocommerce_single_product_summary', 'webgsm_b2b_teaser_single_product', 11);
 
 function webgsm_b2b_teaser_single_product() {
-    // Nu afișăm pentru utilizatori PJ (deja au cont B2B)
+    // Nu afișăm pentru utilizatori B2B (PJ) - folosim funcția din plugin pentru verificare corectă
     if (is_user_logged_in()) {
-        $user_id = get_current_user_id();
-        $is_pj = get_user_meta($user_id, '_is_pj', true);
-        if ($is_pj === 'yes') return;
+        // Verifică dacă plugin-ul B2B este activ
+        if (class_exists('WebGSM_B2B_Pricing')) {
+            $b2b = WebGSM_B2B_Pricing::instance();
+            if ($b2b->is_user_pj()) {
+                return; // Utilizatorul este deja B2B - nu afișăm bannerul
+            }
+        } else {
+            // Fallback dacă plugin-ul nu este activ
+            $user_id = get_current_user_id();
+            $is_pj = get_user_meta($user_id, '_is_pj', true);
+            $b2b_status = get_user_meta($user_id, '_b2b_status', true);
+            // Nu afișăm dacă este PJ sau dacă are status pending (în proces de aprobare)
+            if ($is_pj === 'yes' || $b2b_status === 'pending' || $b2b_status === 'approved') {
+                return;
+            }
+        }
     }
     
     global $product;
