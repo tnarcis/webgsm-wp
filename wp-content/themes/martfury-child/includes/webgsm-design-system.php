@@ -434,6 +434,71 @@ nav.woocommerce-breadcrumb a:hover {
     border: 1px solid #e5e7eb;
 }
 
+/* Container badge stoc cu informații livrare - REFĂCUT */
+.webgsm-stock-badge {
+    margin: 15px 0;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.webgsm-badge-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.webgsm-badge-header .stock-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.webgsm-badge-header .badge-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.webgsm-delivery-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.webgsm-delivery-info .delivery-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.webgsm-delivery-info .delivery-line:last-child {
+    margin-bottom: 0;
+}
+
+.webgsm-delivery-info .delivery-icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.webgsm-delivery-info .delivery-icon {
+    display: inline-block;
+    vertical-align: middle;
+    color: #666;
+}
+
+.webgsm-delivery-info .delivery-text {
+    flex: 1;
+}
+
 .wgsm-badge-stock { color: #1f2937; }
 .wgsm-badge-limited { color: #1f2937; }
 .wgsm-badge-outofstock { color: #6b7280; }
@@ -748,21 +813,112 @@ button.button {
 <?php
 }
 
-// Badge stoc cu punct animat
+// Badge stoc cu logică stoc virtual - REFĂCUT COMPLET
 add_action('woocommerce_single_product_summary', 'webgsm_stock_badge', 15);
 function webgsm_stock_badge() {
     global $product;
     
-    if ($product->is_in_stock()) {
-        $stock_qty = $product->get_stock_quantity();
-        
-        if ($stock_qty !== null && $stock_qty > 0 && $stock_qty <= 4) {
-            echo '<span class="wgsm-badge-limited"><span class="wgsm-dot"></span> Stoc limitat</span>';
+    $product_id = $product->get_id();
+    $stock_qty = $product->get_stock_quantity();
+    $is_in_stock = $product->is_in_stock();
+    $backorders_allowed = $product->backorders_allowed();
+    
+    // Verifică dacă ACF este activ
+    $acf_active = function_exists('get_field');
+    $locatie_stoc = $acf_active ? get_field('locatie_stoc', $product_id) : '';
+    
+    // SVG Icons - Line Art Style
+    $icon_green = '<svg class="stock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
+    $icon_yellow = '<svg class="stock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
+    $icon_red = '<svg class="stock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
+    $icon_truck = '<svg class="delivery-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.757l-.176-1.066"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+    $icon_box = '<svg class="delivery-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+    
+    // LOGICA COMPLETĂ STOC VIRTUAL
+    $badge_class = '';
+    $badge_icon = '';
+    $badge_text = '';
+    $delivery_info = array();
+    
+    // Scenariul 1: Stoc > 0 ȘI locatie_stoc = "magazin_webgsm"
+    if ($stock_qty > 0 && $locatie_stoc === 'magazin_webgsm') {
+        $badge_class = 'wgsm-badge-stock';
+        $badge_icon = $icon_green;
+        $badge_text = 'În Stoc';
+        $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Ridicare azi / livrare 2-4h');
+        $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 24h');
+    }
+    // Scenariul 2: Stoc = 0 ȘI locatie_stoc = "depozit_central"
+    elseif ($stock_qty == 0 && $locatie_stoc === 'depozit_central') {
+        $badge_class = 'wgsm-badge-stock';
+        $badge_icon = $icon_green;
+        $badge_text = 'În Stoc Depozit';
+        $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Livrare azi sau mâine');
+        $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 24h');
+    }
+    // Scenariul 3: Stoc = 0 ȘI locatie_stoc = "furnizor_extern"
+    elseif ($stock_qty == 0 && $locatie_stoc === 'furnizor_extern') {
+        $badge_class = 'wgsm-badge-limited';
+        $badge_icon = $icon_yellow;
+        $badge_text = 'Disponibil';
+        $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Livrare 24-48h');
+        $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 48-72h');
+    }
+    // Scenariul 4: Stoc = 0 ȘI locatie_stoc = "magazin_webgsm" (sau gol)
+    elseif ($stock_qty == 0 && ($locatie_stoc === 'magazin_webgsm' || empty($locatie_stoc))) {
+        $badge_class = 'wgsm-badge-limited';
+        $badge_icon = $icon_yellow;
+        $badge_text = 'Disponibil la Comandă';
+        $delivery_info[] = array('icon' => $icon_box, 'text' => 'Livrare estimată: 3-5 zile');
+    }
+    // Scenariul 5: Stoc = 0 ȘI backorder = OFF
+    elseif ($stock_qty == 0 && !$backorders_allowed && !$is_in_stock) {
+        $badge_class = 'wgsm-badge-outofstock';
+        $badge_icon = $icon_red;
+        $badge_text = 'Stoc Epuizat';
+        $delivery_info[] = array('icon' => '', 'text' => 'Momentan indisponibil');
+    }
+    // Fallback: Logica WooCommerce standard (dacă ACF nu e activ sau alte cazuri)
+    else {
+        if ($is_in_stock) {
+            if ($stock_qty !== null && $stock_qty > 0 && $stock_qty <= 4) {
+                $badge_class = 'wgsm-badge-limited';
+                $badge_icon = $icon_yellow;
+                $badge_text = 'Stoc limitat';
+            } else {
+                $badge_class = 'wgsm-badge-stock';
+                $badge_icon = $icon_green;
+                $badge_text = 'În stoc';
+            }
         } else {
-            echo '<span class="wgsm-badge-stock"><span class="wgsm-dot"></span> În stoc</span>';
+            $badge_class = 'wgsm-badge-outofstock';
+            $badge_icon = $icon_red;
+            $badge_text = 'Stoc epuizat';
         }
-    } else {
-        echo '<span class="wgsm-badge-outofstock"><span class="wgsm-dot"></span> Stoc epuizat</span>';
+    }
+    
+    // Afișează badge-ul și informațiile de livrare
+    if (!empty($badge_class) && !empty($badge_text)) {
+        ?>
+        <div class="webgsm-stock-badge">
+            <div class="webgsm-badge-header">
+                <?php echo $badge_icon; ?>
+                <span class="badge-text"><?php echo esc_html($badge_text); ?></span>
+            </div>
+            <?php if (!empty($delivery_info)) : ?>
+                <div class="webgsm-delivery-info">
+                    <?php foreach ($delivery_info as $info) : ?>
+                        <div class="delivery-line">
+                            <?php if (!empty($info['icon'])) : ?>
+                                <span class="delivery-icon-wrapper"><?php echo $info['icon']; ?></span>
+                            <?php endif; ?>
+                            <span class="delivery-text"><?php echo esc_html($info['text']); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
     }
 }
 

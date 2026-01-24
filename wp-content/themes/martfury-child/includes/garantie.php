@@ -46,7 +46,21 @@ add_action('init', function() {
 });
 
 // Ia perioada de garanție a unui produs (în luni)
+// Sincronizat cu ACF - citește din ACF dacă există, altfel din meta field
 function get_garantie_produs($product_id) {
+    // Verifică dacă ACF este activ și dacă există câmpul garantie_luni
+    if (function_exists('get_field')) {
+        $garantie_acf = get_field('garantie_luni', $product_id);
+        if ($garantie_acf !== false && $garantie_acf !== null && $garantie_acf !== '') {
+            // Dacă este "lifetime", returnează un număr foarte mare (999 luni = ~83 ani)
+            if ($garantie_acf === 'lifetime' || $garantie_acf === 'lifetime') {
+                return 999;
+            }
+            return intval($garantie_acf);
+        }
+    }
+    
+    // Fallback la meta field WooCommerce
     $garantie = get_post_meta($product_id, '_perioada_garantie', true);
     return $garantie ? intval($garantie) : 12; // Default 12 luni
 }
@@ -501,23 +515,38 @@ add_filter('woocommerce_product_data_tabs', function($tabs) {
 });
 
 add_action('woocommerce_product_data_panels', function() {
+    global $post;
+    $product_id = $post->ID;
+    
     echo '<div id="garantie_product_data" class="panel woocommerce_options_panel">';
     
-    woocommerce_wp_select(array(
-        'id' => '_perioada_garantie',
-        'label' => 'Perioada garantie',
-        'description' => 'Selecteaza perioada de garantie pentru acest produs',
-        'desc_tip' => true,
-        'options' => array(
-            '0' => 'Fara garantie',
-            '1' => '1 lună',
-            '3' => '3 luni',
-            '6' => '6 luni',
-            '12' => '12 luni (1 an)',
-            '24' => '24 luni (2 ani)',
-            '36' => '36 luni (3 ani)'
-        )
-    ));
+    // Verifică dacă ACF este activ și dacă există câmpul garantie_luni
+    $acf_active = function_exists('get_field');
+    $garantie_acf = $acf_active ? get_field('garantie_luni', $product_id) : false;
+    
+    if ($acf_active && $garantie_acf !== false && $garantie_acf !== null) {
+        // Dacă există valoare în ACF, afișează informație
+        $garantie_display = ($garantie_acf === 'lifetime' || $garantie_acf === 'lifetime') ? 'Lifetime' : $garantie_acf . ' luni';
+        echo '<div class="notice notice-info inline" style="margin: 10px 0;"><p><strong>Garanție setată în ACF:</strong> ' . esc_html($garantie_display) . '</p>';
+        echo '<p><em>Modifică garanția în tab-ul "Specificații Tehnice" (câmpul ACF "Garanție (luni)").</em></p></div>';
+    } else {
+        // Dacă nu există în ACF, folosește meta field WooCommerce
+        woocommerce_wp_select(array(
+            'id' => '_perioada_garantie',
+            'label' => 'Perioada garantie',
+            'description' => 'Selecteaza perioada de garantie pentru acest produs (dacă nu este setată în ACF)',
+            'desc_tip' => true,
+            'options' => array(
+                '0' => 'Fara garantie',
+                '1' => '1 lună',
+                '3' => '3 luni',
+                '6' => '6 luni',
+                '12' => '12 luni (1 an)',
+                '24' => '24 luni (2 ani)',
+                '36' => '36 luni (3 ani)'
+            )
+        ));
+    }
     
     echo '<p class="form-field"><strong>Sugestii pentru piese GSM:</strong><br>';
     echo '• LCD/Display: 12 luni<br>';
