@@ -106,6 +106,14 @@ if (is_admin()) {
     require_once get_stylesheet_directory() . '/includes/admin-tools.php';
 }
 
+// Previne eroarea ACF "nonce failed verification" la salvare (pagina editare deschisă mult timp)
+add_filter('nonce_life', function($seconds) {
+    if (is_admin() && !defined('DOING_AJAX')) {
+        return 24 * HOUR_IN_SECONDS; // 24h în admin, ca ACF/WooCommerce să nu expire nonce-ul
+    }
+    return $seconds;
+});
+
 // ============================================
 // ÎNCARCĂ NORMAL - Fișiere cu hook-uri globale sau multiple contexte
 // ============================================
@@ -123,6 +131,7 @@ require_once get_stylesheet_directory() . '/includes/setup-categories.php';
 require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
 require_once get_stylesheet_directory() . '/includes/setup-acf-fields.php';
 require_once get_stylesheet_directory() . '/includes/product-specs-tab.php';
+require_once get_stylesheet_directory() . '/includes/product-inventory-gestiune.php';
 
 // ============================================
 // WebGSM B2B Teaser - "De la..." cu REGULI CORECTE B2B

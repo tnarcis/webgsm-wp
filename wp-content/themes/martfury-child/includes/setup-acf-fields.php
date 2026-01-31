@@ -167,6 +167,25 @@ acf_add_local_field_group(array(
             'ajax' => 0,
             'placeholder' => '',
         ),
+        array(
+            'key' => 'field_caracteristici_tehnice',
+            'label' => 'Caracteristici Tehnice Adiționale',
+            'name' => 'caracteristici_tehnice',
+            'type' => 'textarea',
+            'instructions' => 'Una per linie, format: Nume | Valoare. Exemple: "Tensiune alimentare | 11.4 V", "Capacitate | 6680 mAh", "Rezoluție | 12 MP". Se afișează în tab-ul Specificații Tehnice.',
+            'required' => 0,
+            'conditional_logic' => 0,
+            'wrapper' => array(
+                'width' => '',
+                'class' => '',
+                'id' => '',
+            ),
+            'default_value' => '',
+            'placeholder' => "Tensiune alimentare | 11.4 V\nCapacitate | 6680 mAh\nCuloare | Negru",
+            'maxlength' => '',
+            'rows' => 6,
+            'new_lines' => '',
+        ),
     ),
     'location' => array(
         array(
@@ -188,116 +207,7 @@ acf_add_local_field_group(array(
 ));
 
 /**
- * GRUP 2: Date Gestiune
- * Vizibil DOAR în admin, NU pe frontend
+ * Date Gestiune: integrate în tab Inventory (product-inventory-gestiune.php).
+ * EAN/GTIN = _global_unique_id (WC) + sincronizat în gtin_ean.
+ * SKU Furnizor, Furnizor Activ, Preț Achiziție sunt în Inventory; Preț = _pret_achizitie (B2B).
  */
-acf_add_local_field_group(array(
-    'key' => 'group_date_gestiune',
-    'title' => 'Date Gestiune',
-    'fields' => array(
-        array(
-            'key' => 'field_gtin_ean',
-            'label' => 'EAN/GTIN',
-            'name' => 'gtin_ean',
-            'type' => 'text',
-            'instructions' => 'Codul EAN de la furnizor pentru Google Shopping/SEO.',
-            'required' => 0,
-            'conditional_logic' => 0,
-            'wrapper' => array(
-                'width' => '',
-                'class' => '',
-                'id' => '',
-            ),
-            'default_value' => '',
-            'placeholder' => '0660982711228',
-            'prepend' => '',
-            'append' => '',
-            'maxlength' => '',
-        ),
-        array(
-            'key' => 'field_sku_furnizor',
-            'label' => 'SKU Furnizor',
-            'name' => 'sku_furnizor',
-            'type' => 'text',
-            'instructions' => 'Codul produsului la furnizor (pentru comenzi).',
-            'required' => 0,
-            'conditional_logic' => 0,
-            'wrapper' => array(
-                'width' => '',
-                'class' => '',
-                'id' => '',
-            ),
-            'default_value' => '',
-            'placeholder' => 'MSTX-12345',
-            'prepend' => '',
-            'append' => '',
-            'maxlength' => '',
-        ),
-        array(
-            'key' => 'field_furnizor_activ',
-            'label' => 'Furnizor Activ',
-            'name' => 'furnizor_activ',
-            'type' => 'select',
-            'instructions' => 'De la cine cumperi acest produs.',
-            'required' => 0,
-            'conditional_logic' => 0,
-            'wrapper' => array(
-                'width' => '',
-                'class' => '',
-                'id' => '',
-            ),
-            'choices' => array(
-                'mobilesentrix' => 'Mobilesentrix',
-                'mpsmobile' => 'MPSmobile',
-                'mobileparts' => 'Mobileparts',
-                'stoc_propriu' => 'Stoc Propriu',
-                'local_tm' => 'Local Timișoara',
-            ),
-            'default_value' => 'stoc_propriu',
-            'allow_null' => 0,
-            'multiple' => 0,
-            'ui' => 0,
-            'return_format' => 'value',
-            'ajax' => 0,
-            'placeholder' => '',
-        ),
-        array(
-            'key' => 'field_pret_achizitie',
-            'label' => 'Preț Achiziție (EUR)',
-            'name' => 'pret_achizitie',
-            'type' => 'number',
-            'instructions' => 'Prețul de achiziție pentru calcul marjă.',
-            'required' => 0,
-            'conditional_logic' => 0,
-            'wrapper' => array(
-                'width' => '',
-                'class' => '',
-                'id' => '',
-            ),
-            'default_value' => '',
-            'placeholder' => '45.00',
-            'prepend' => '',
-            'append' => 'EUR',
-            'min' => 0,
-            'max' => '',
-            'step' => 0.01,
-        ),
-    ),
-    'location' => array(
-        array(
-            array(
-                'param' => 'post_type',
-                'operator' => '==',
-                'value' => 'product',
-            ),
-        ),
-    ),
-    'menu_order' => 0,
-    'position' => 'side',
-    'style' => 'default',
-    'label_placement' => 'top',
-    'instruction_placement' => 'label',
-    'hide_on_screen' => '',
-    'active' => true,
-    'description' => 'Date gestiune - vizibile doar în admin',
-));
