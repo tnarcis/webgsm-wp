@@ -1,5 +1,7 @@
 # 🔍 INDEX - Găsire Rapidă Modificări
 
+<!-- Index pentru tema martfury-child (WebGSM). Actualizat la modificări majore: includes/, modules/, plugins custom. -->
+
 > **Pentru alt agent / dezvoltator**: Caută aici IMEDIAT ce cauți!
 
 ---
