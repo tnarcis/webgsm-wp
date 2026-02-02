@@ -236,19 +236,19 @@ function webgsm_specs_tab_content() {
         }
     }
 
-    // IC Transferabil (ACF)
+    // IC Transferabil (ACF) – afișat doar când e ON; când e OFF nu apare în tab
     if (function_exists('get_field')) {
         $ic_movable = get_field('ic_movable', $product_id);
-        if ($ic_movable !== false && $ic_movable !== null) {
-            $specs[] = array('label' => 'IC Transferabil', 'value' => $ic_movable ? 'Da ✓' : 'Nu ✗');
+        if ($ic_movable) {
+            $specs[] = array('label' => 'IC Transferabil', 'value' => 'Da ✓');
         }
     }
 
-    // TrueTone (ACF)
+    // TrueTone (ACF) – afișat doar când e ON; când e OFF nu apare în tab
     if (function_exists('get_field')) {
         $truetone = get_field('truetone_support', $product_id);
-        if ($truetone !== false && $truetone !== null) {
-            $specs[] = array('label' => 'TrueTone', 'value' => $truetone ? 'Suportat ✓' : 'Nu ✗');
+        if ($truetone) {
+            $specs[] = array('label' => 'TrueTone', 'value' => 'Suportat ✓');
         }
     }
 

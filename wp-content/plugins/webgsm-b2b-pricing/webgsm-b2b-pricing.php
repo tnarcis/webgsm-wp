@@ -1066,6 +1066,7 @@ class WebGSM_B2B_Pricing {
         // Product meta fields
         add_action('woocommerce_product_options_pricing', array($this, 'add_product_pricing_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_product_pricing_fields'));
+        add_action('admin_footer', array($this, 'sync_pret_achizitie_fields_script'));
         
         // Category meta fields
         add_action('product_cat_add_form_fields', array($this, 'add_category_fields'));
@@ -1817,12 +1818,11 @@ class WebGSM_B2B_Pricing {
         }
         
         // ========================================
-        // HARD LIMIT FINAL - NICIODATĂ sub preț minim!
+        // HARD LIMIT FINAL – NICIODATĂ sub preț achiziție + marjă (indiferent de discount/tier)
+        // get_pret_minim() returnează întotdeauna >= cost + marjă%; aici forțăm respectarea.
         // ========================================
         if ($pret_minim > 0 && $pret_final < $pret_minim) {
             $pret_final = $pret_minim;
-            
-            // LOG pentru debugging (opțional)
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log("[WebGSM B2B] Preț corectat la minim pentru produs #{$product_id}: {$pret_final}");
             }
@@ -1831,22 +1831,29 @@ class WebGSM_B2B_Pricing {
         return round($pret_final, 2);
     }
     
+    /**
+     * Preț minim de vânzare: NICIODATĂ sub preț achiziție + marjă setată.
+     * Dacă există _pret_minim_vanzare (hard limit per produs), se folosește doar dacă e >= cost+marjă.
+     */
     public function get_pret_minim($product) {
         $product_id = $product->get_id();
-        $pret_minim = get_post_meta($product_id, '_pret_minim_vanzare', true);
-        
-        if (!empty($pret_minim) && $pret_minim > 0) {
-            return (float) $pret_minim;
-        }
-        
         $pret_achizitie = get_post_meta($product_id, '_pret_achizitie', true);
-        $marja_minima = get_option('webgsm_b2b_marja_minima', 5);
-        
-        if (!empty($pret_achizitie) && $pret_achizitie > 0) {
-            return (float) $pret_achizitie * (1 + $marja_minima / 100);
+        $marja_minima = (float) get_option('webgsm_b2b_marja_minima', 5);
+
+        // Floor obligatoriu: preț achiziție + marjă (%) – indiferent de discount/tier
+        $floor_cost_marja = 0;
+        if (!empty($pret_achizitie) && (float) $pret_achizitie > 0) {
+            $floor_cost_marja = (float) $pret_achizitie * (1 + $marja_minima / 100);
         }
-        
-        return 0;
+
+        $pret_minim_setat = get_post_meta($product_id, '_pret_minim_vanzare', true);
+        if (!empty($pret_minim_setat) && (float) $pret_minim_setat > 0) {
+            $explicit = (float) $pret_minim_setat;
+            // Nu permitem niciodată sub cost+marjă: folosim max(floor, explicit)
+            return $floor_cost_marja > 0 ? max($floor_cost_marja, $explicit) : $explicit;
+        }
+
+        return $floor_cost_marja;
     }
     
     public function get_discount_pj($product, $return_source = false) {
@@ -1934,18 +1941,35 @@ class WebGSM_B2B_Pricing {
     // =========================================
     
     public function add_product_pricing_fields() {
+        global $post;
+        $post_id = $post ? $post->ID : 0;
+        $pret_ron = $post_id ? get_post_meta($post_id, '_pret_achizitie', true) : '';
+
         echo '<div class="options_group webgsm-b2b-fields">';
         echo '<h4 style="padding-left: 12px; margin-top: 15px; color: #2563eb; border-top: 1px solid #e5e7eb; padding-top: 15px;"><span class="dashicons dashicons-building" style="margin-right: 5px;"></span>Prețuri B2B</h4>';
-        
-        woocommerce_wp_text_input(array('id' => '_pret_achizitie', 'label' => 'Preț achiziție (cost)', 'desc_tip' => true, 'description' => 'Prețul de achiziție al produsului.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
+
+        // Preț achiziție – editabil, sincronizat cu Inventory → Date Gestiune (același _pret_achizitie)
+        woocommerce_wp_text_input(array(
+            'id'                => '_pret_achizitie',
+            'value'             => $pret_ron,
+            'label'             => 'Preț achiziție',
+            'desc_tip'          => true,
+            'description'       => 'Cost achiziție (preț minim, profit). Același câmp ca în Inventory → Date Gestiune.',
+            'type'              => 'number',
+            'custom_attributes' => array('step' => '0.01', 'min' => '0'),
+        ));
+
         woocommerce_wp_text_input(array('id' => '_pret_minim_vanzare', 'label' => 'Preț minim vânzare', 'desc_tip' => true, 'description' => 'HARD LIMIT: Niciun discount nu va coborî prețul sub această valoare.', 'type' => 'number', 'custom_attributes' => array('step' => '0.01', 'min' => '0')));
         woocommerce_wp_text_input(array('id' => '_discount_pj', 'label' => 'Discount PJ (%)', 'desc_tip' => true, 'description' => '🎯 PRIORITATE 1: Discount specific pentru ACEST produs. Lasă gol pentru a moșteni din categorie (prioritate 2) sau din setări globale (prioritate 3). Discount-ul tier se ADAUGĂ peste acesta.', 'type' => 'number', 'custom_attributes' => array('step' => '0.1', 'min' => '0', 'max' => '100'), 'placeholder' => 'Din categorie'));
-        
+
         echo '</div>';
     }
     
     public function save_product_pricing_fields($post_id) {
-        if (isset($_POST['_pret_achizitie'])) update_post_meta($post_id, '_pret_achizitie', sanitize_text_field($_POST['_pret_achizitie']));
+        if (isset($_POST['_pret_achizitie'])) {
+            $val = sanitize_text_field(wp_unslash($_POST['_pret_achizitie']));
+            update_post_meta($post_id, '_pret_achizitie', $val !== '' ? wc_format_decimal($val) : '');
+        }
         if (isset($_POST['_pret_minim_vanzare'])) update_post_meta($post_id, '_pret_minim_vanzare', sanitize_text_field($_POST['_pret_minim_vanzare']));
         if (isset($_POST['_discount_pj'])) {
             $discount = sanitize_text_field($_POST['_discount_pj']);
@@ -1953,6 +1977,22 @@ class WebGSM_B2B_Pricing {
             update_post_meta($post_id, '_discount_pj', $discount);
         }
         $this->clear_all_price_cache();
+    }
+
+    /** Sincronizează cele două câmpuri Preț achiziție (Inventory + B2B) la schimbare, ca la submit să aibă aceeași valoare. */
+    public function sync_pret_achizitie_fields_script() {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || $screen->id !== 'product') return;
+        ?>
+        <script type="text/javascript">
+        jQuery(function($) {
+            $(document.body).on('input change', 'input[name="_pret_achizitie"]', function() {
+                var v = $(this).val();
+                $('input[name="_pret_achizitie"]').not(this).val(v);
+            });
+        });
+        </script>
+        <?php
     }
     
     // =========================================

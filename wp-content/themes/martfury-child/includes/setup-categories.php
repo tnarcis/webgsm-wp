@@ -1,170 +1,124 @@
 <?php
 /**
  * WebGSM - Setup Categories
- * Creează categoriile de produse WooCommerce la prima accesare
- * 
+ * Creează categoriile de produse WooCommerce aliniate cu logica scriptului Python (scraping).
+ * 3 categorii părinte: Piese, Unelte, Accesorii.
+ *
  * @package WebGSM
  * @subpackage Martfury-Child
  * @since 1.0.0
  */
 
-if (!defined('ABSPATH')) exit; // Exit dacă accesat direct
+if (!defined('ABSPATH')) exit;
 
-/**
- * Verifică dacă categoriile au fost deja create
- * NOTĂ: Pentru a forța rularea din nou, șterge opțiunea:
- * delete_option('webgsm_categories_installed');
- */
 if (get_option('webgsm_categories_installed')) {
-    return; // Nu rulează din nou
+    return;
 }
 
 /**
- * Funcție pentru crearea categoriilor
+ * Returnează structura categoriilor (nume, slug, parent_slug).
+ * Ierarhia corespunde cu get_woo_category() din scriptul Python.
+ */
+function webgsm_get_category_structure() {
+    $brands = array('iPhone', 'Samsung', 'Huawei', 'Xiaomi', 'Google', 'OnePlus', 'Oppo', 'Motorola');
+    $piese_sub = array(
+        'Ecrane', 'Baterii', 'Mufe Incarcare', 'Camere', 'Flexuri', 'Difuzoare',
+        'Butoane', 'Sticla', 'Carcase', 'Vibratoare', 'Sertare SIM', 'Alte Piese'
+    );
+
+    $cats = array();
+
+    // ═══ TOP: Piese, Unelte, Accesorii ═══
+    $cats[] = array('name' => 'Piese', 'slug' => 'piese', 'parent' => 0);
+    $cats[] = array('name' => 'Unelte', 'slug' => 'unelte', 'parent' => 0);
+    $cats[] = array('name' => 'Accesorii', 'slug' => 'accesorii', 'parent' => 0);
+
+    // ═══ Unelte > subcategorii ═══
+    $unelte_sub = array(
+        'Surubelnite' => 'surubelnite',
+        'Pensete' => 'pensete',
+        'Deschizatoare' => 'deschizatoare',
+        'Suporturi PCB' => 'suporturi-pcb',
+        'Lupe si Microscoape' => 'lupe-si-microscoape',
+        'Statii si Echipamente' => 'statii-si-echipamente',
+        'Testere' => 'testere',
+        'Consumabile' => 'consumabile',
+    );
+    foreach ($unelte_sub as $name => $slug) {
+        $cats[] = array('name' => $name, 'slug' => $slug, 'parent' => 'unelte');
+    }
+
+    // ═══ Accesorii > subcategorii ═══
+    $accesorii_sub = array(
+        'Huse' => 'huse',
+        'Folii Protectie' => 'folii-protectie',
+        'Cabluri' => 'cabluri',
+        'Incarcatoare' => 'incarcatoare',
+        'Suporturi Auto' => 'suporturi-auto',
+    );
+    foreach ($accesorii_sub as $name => $slug) {
+        $cats[] = array('name' => $name, 'slug' => $slug, 'parent' => 'accesorii');
+    }
+
+    // ═══ Piese > Piese {Brand} ═══
+    $brand_slugs = array(
+        'iPhone' => 'piese-iphone',
+        'Samsung' => 'piese-samsung',
+        'Huawei' => 'piese-huawei',
+        'Xiaomi' => 'piese-xiaomi',
+        'Google' => 'piese-google',
+        'OnePlus' => 'piese-oneplus',
+        'Oppo' => 'piese-oppo',
+        'Motorola' => 'piese-motorola',
+    );
+    foreach ($brands as $brand) {
+        $pslug = $brand_slugs[$brand];
+        $cats[] = array('name' => "Piese {$brand}", 'slug' => $pslug, 'parent' => 'piese');
+        foreach ($piese_sub as $sub) {
+            $sub_name = $sub . ' ' . $brand;
+            $sub_slug = str_replace(' ', '-', strtolower(remove_accents_simple($sub))) . '-' . strtolower($brand);
+            $sub_slug = preg_replace('/[^a-z0-9\-]/', '-', $sub_slug);
+            $sub_slug = preg_replace('/\-+/', '-', trim($sub_slug, '-'));
+            $cats[] = array('name' => $sub_name, 'slug' => $sub_slug, 'parent' => $pslug);
+        }
+    }
+
+    return $cats;
+}
+
+function remove_accents_simple($s) {
+    $map = array('ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't', 'ş' => 's', 'ţ' => 't');
+    return strtr(mb_strtolower($s, 'UTF-8'), $map);
+}
+
+/**
+ * Creează categoriile în WooCommerce.
  */
 function webgsm_setup_product_categories() {
-    // Verifică dacă WooCommerce este activ
     if (!class_exists('WooCommerce')) {
         return;
     }
-    
+
+    $categories = webgsm_get_category_structure();
+    $parent_cache = array();
     $categories_created = 0;
     $errors = array();
-    
-    // Structura categoriilor
-    $categories = array(
-        // Ecrane
-        array(
-            'name' => 'Ecrane',
-            'slug' => 'ecrane',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'iPhone',
-            'slug' => 'ecrane-iphone',
-            'parent' => 'ecrane'
-        ),
-        array(
-            'name' => 'Samsung',
-            'slug' => 'ecrane-samsung',
-            'parent' => 'ecrane'
-        ),
-        
-        // Baterii
-        array(
-            'name' => 'Baterii',
-            'slug' => 'baterii',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'iPhone',
-            'slug' => 'baterii-iphone',
-            'parent' => 'baterii'
-        ),
-        array(
-            'name' => 'Samsung',
-            'slug' => 'baterii-samsung',
-            'parent' => 'baterii'
-        ),
-        
-        // Camere
-        array(
-            'name' => 'Camere',
-            'slug' => 'camere',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'iPhone',
-            'slug' => 'camere-iphone',
-            'parent' => 'camere'
-        ),
-        array(
-            'name' => 'Samsung',
-            'slug' => 'camere-samsung',
-            'parent' => 'camere'
-        ),
-        
-        // Flex-uri
-        array(
-            'name' => 'Flex-uri',
-            'slug' => 'flex-uri',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'iPhone',
-            'slug' => 'flex-uri-iphone',
-            'parent' => 'flex-uri'
-        ),
-        array(
-            'name' => 'Samsung',
-            'slug' => 'flex-uri-samsung',
-            'parent' => 'flex-uri'
-        ),
-        
-        // Carcase
-        array(
-            'name' => 'Carcase',
-            'slug' => 'carcase',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'iPhone',
-            'slug' => 'carcase-iphone',
-            'parent' => 'carcase'
-        ),
-        array(
-            'name' => 'Samsung',
-            'slug' => 'carcase-samsung',
-            'parent' => 'carcase'
-        ),
-        
-        // Accesorii Service
-        array(
-            'name' => 'Accesorii Service',
-            'slug' => 'accesorii-service',
-            'parent' => 0
-        ),
-        array(
-            'name' => 'Adezivi',
-            'slug' => 'adezivi',
-            'parent' => 'accesorii-service'
-        ),
-        array(
-            'name' => 'Șuruburi',
-            'slug' => 'suruburi',
-            'parent' => 'accesorii-service'
-        ),
-        array(
-            'name' => 'Unelte',
-            'slug' => 'unelte',
-            'parent' => 'accesorii-service'
-        ),
-        array(
-            'name' => 'Mesh-uri',
-            'slug' => 'mesh-uri',
-            'parent' => 'accesorii-service'
-        ),
-    );
-    
-    // Cache pentru parent IDs (pentru a evita query-uri multiple)
-    $parent_cache = array();
-    
-    // Creează categoriile
+
     foreach ($categories as $category) {
         $name = $category['name'];
         $slug = $category['slug'];
         $parent_slug = $category['parent'];
-        
-        // Verifică dacă categoria există deja
-        $existing_term = term_exists($slug, 'product_cat');
-        if ($existing_term) {
-            continue; // Categoria există deja, trecem la următoarea
+
+        if (term_exists($slug, 'product_cat')) {
+            $term = get_term_by('slug', $slug, 'product_cat');
+            if ($term) {
+                $parent_cache[$slug] = $term->term_id;
+            }
+            continue;
         }
-        
-        // Determină parent ID
+
         $parent_id = 0;
         if ($parent_slug !== 0) {
-            // Caută parent-ul în cache sau în DB
             if (isset($parent_cache[$parent_slug])) {
                 $parent_id = $parent_cache[$parent_slug];
             } else {
@@ -173,97 +127,58 @@ function webgsm_setup_product_categories() {
                     $parent_id = $parent_term->term_id;
                     $parent_cache[$parent_slug] = $parent_id;
                 } else {
-                    $errors[] = sprintf('Parent "%s" nu a fost găsit pentru "%s"', $parent_slug, $name);
-                    continue; // Skip dacă parent-ul nu există
+                    $errors[] = sprintf('Parent "%s" nu există pentru "%s"', $parent_slug, $name);
+                    continue;
                 }
             }
         }
-        
-        // Creează categoria
+
         $result = wp_insert_term(
             $name,
             'product_cat',
-            array(
-                'slug' => $slug,
-                'parent' => $parent_id
-            )
+            array('slug' => $slug, 'parent' => $parent_id)
         );
-        
+
         if (is_wp_error($result)) {
-            $errors[] = sprintf('Eroare la crearea categoriei "%s": %s', $name, $result->get_error_message());
+            $errors[] = sprintf('Eroare "%s": %s', $name, $result->get_error_message());
         } else {
             $categories_created++;
-            // Adaugă în cache pentru a fi folosit ca parent pentru child-uri
             $parent_cache[$slug] = $result['term_id'];
         }
     }
-    
-    // Setează opțiunea ca să nu ruleze din nou
+
     update_option('webgsm_categories_installed', true);
-    
-    // Salvează rezultatele pentru admin notice
     update_option('webgsm_categories_setup_result', array(
         'created' => $categories_created,
         'errors' => $errors,
         'timestamp' => current_time('mysql')
     ));
-    
-    return array(
-        'created' => $categories_created,
-        'errors' => $errors
-    );
+
+    return array('created' => $categories_created, 'errors' => $errors);
 }
 
-/**
- * Rulează setup-ul la init (doar o dată)
- * 
- * NOTĂ: Pentru a forța rularea din nou (după ștergerea categoriilor):
- * 1. Șterge opțiunea: delete_option('webgsm_categories_installed');
- * 2. Sau adaugă în wp-config.php temporar: define('WEBGSM_FORCE_CATEGORIES_SETUP', true);
- */
 add_action('init', function() {
-    // Verifică dacă categoriile au fost deja create (dacă nu e forțat)
     if (!defined('WEBGSM_FORCE_CATEGORIES_SETUP') && get_option('webgsm_categories_installed')) {
         return;
     }
-    
-    // Rulează setup-ul
     webgsm_setup_product_categories();
 }, 10);
 
-/**
- * Afișează admin notice cu rezultatul
- */
 add_action('admin_notices', function() {
-    // Verifică dacă există rezultat
     $result = get_option('webgsm_categories_setup_result');
-    if (!$result) {
-        return;
-    }
-    
-    // Șterge rezultatul după afișare (pentru a nu afișa mereu)
+    if (!$result) return;
     delete_option('webgsm_categories_setup_result');
-    
     $created = isset($result['created']) ? $result['created'] : 0;
     $errors = isset($result['errors']) ? $result['errors'] : array();
-    
     if ($created > 0 || !empty($errors)) {
         $class = !empty($errors) ? 'notice notice-warning' : 'notice notice-success is-dismissible';
-        ?>
-        <div class="<?php echo esc_attr($class); ?>">
-            <p><strong>WebGSM - Setup Categorii:</strong></p>
-            <?php if ($created > 0) : ?>
-                <p>✅ <strong><?php echo $created; ?></strong> categorii create cu succes.</p>
-            <?php endif; ?>
-            <?php if (!empty($errors)) : ?>
-                <p>⚠️ <strong>Erori:</strong></p>
-                <ul style="margin-left: 20px;">
-                    <?php foreach ($errors as $error) : ?>
-                        <li><?php echo esc_html($error); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-        <?php
+        echo '<div class="' . esc_attr($class) . '"><p><strong>WebGSM - Setup Categorii:</strong></p>';
+        if ($created > 0) echo '<p>✅ <strong>' . (int) $created . '</strong> categorii create.</p>';
+        if (!empty($errors)) {
+            echo '<p>⚠️ Erori:</p><ul style="margin-left:20px;">';
+            foreach ($errors as $e) echo '<li>' . esc_html($e) . '</li>';
+            echo '</ul>';
+        }
+        echo '</div>';
     }
 });
