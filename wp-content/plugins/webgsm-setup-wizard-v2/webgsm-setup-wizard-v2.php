@@ -502,7 +502,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
                             🔄 Reset Flags
                         </button>
                         <button class="webgsm-btn webgsm-btn-danger" id="btn-cleanup">
-                            🗑️ Șterge Tot (Categorii + Atribute)
+                            🗑️ Șterge Tot (Categorii + Subcategorii + Tags + Atribute + Meniu)
                         </button>
                     </div>
                 </div>
@@ -556,7 +556,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
             });
             
             $('#btn-cleanup').on('click', function() {
-                if (confirm('⚠️ ATENȚIE: Asta va ȘTERGE toate categoriile și atributele create! Continui?')) {
+                if (confirm('⚠️ ATENȚIE: Se vor ȘTERGE TOATE categoriile (inclusiv subcategorii), tags, atribute și meniul! Continui?')) {
                     if (confirm('Ești absolut sigur? Această acțiune este ireversibilă!')) {
                         doAjax('webgsm_v2_cleanup', 'btn-cleanup', 'status-filters');
                     }
@@ -870,7 +870,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
     }
     
     // ===========================================
-    // AJAX: Cleanup (șterge tot)
+    // AJAX: Cleanup (șterge tot: categorii + subcategorii + tags + atribute + meniu)
     // ===========================================
     public function ajax_cleanup() {
         check_ajax_referer('webgsm_v2', 'nonce');
@@ -878,31 +878,52 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         global $wpdb;
         
-        // Șterge categoriile create (recursiv: nivel 3 → 2 → 1)
-        foreach ($this->categories as $parent_data) {
-            $term = get_term_by('slug', $parent_data['slug'], 'product_cat');
-            if ($term) {
-                $this->delete_category_and_children($term->term_id);
+        // 1) Șterge TOATE categoriile de produse (inclusiv subcategoriile rămase) – de la frunze la rădăcină
+        $deleted_cats = 0;
+        do {
+            $terms = get_terms(['taxonomy' => 'product_cat', 'hide_empty' => false, 'fields' => 'all']);
+            if (empty($terms)) break;
+            $ids = wp_list_pluck($terms, 'term_id');
+            $to_delete = [];
+            foreach ($terms as $t) {
+                $has_child_in_list = false;
+                foreach ($terms as $t2) {
+                    if ((int) $t2->parent === (int) $t->term_id) {
+                        $has_child_in_list = true;
+                        break;
+                    }
+                }
+                if (!$has_child_in_list) $to_delete[] = $t->term_id;
             }
+            foreach ($to_delete as $tid) {
+                if (!is_wp_error(wp_delete_term($tid, 'product_cat'))) $deleted_cats++;
+            }
+        } while (!empty($terms));
+        
+        // 2) Șterge TOATE tag-urile de produse
+        $tag_terms = get_terms(['taxonomy' => 'product_tag', 'hide_empty' => false, 'fields' => 'ids']);
+        foreach ($tag_terms as $tid) {
+            wp_delete_term($tid, 'product_tag');
         }
         
-        // Șterge atributele
-        foreach ($this->attributes as $attr_data) {
-            $wpdb->delete($wpdb->prefix . 'woocommerce_attribute_taxonomies', ['attribute_name' => $attr_data['slug']]);
+        // 3) Șterge TOATE atributele WooCommerce (gol total)
+        $attribute_taxonomies = wc_get_attribute_taxonomies();
+        foreach ($attribute_taxonomies as $attr) {
+            $wpdb->delete($wpdb->prefix . 'woocommerce_attribute_taxonomies', ['attribute_id' => $attr->attribute_id]);
         }
         delete_transient('wc_attribute_taxonomies');
         
-        // Șterge meniul
+        // 4) Șterge meniul WebGSM (să fie meniul gol)
         $menu = wp_get_nav_menu_object('WebGSM Main Menu');
         if ($menu) wp_delete_nav_menu($menu->term_id);
         
-        // Reset flags
+        // 5) Reset flags wizard
         delete_option('webgsm_v2_categories');
         delete_option('webgsm_v2_attributes');
         delete_option('webgsm_v2_menu');
         delete_option('webgsm_v2_filters');
         
-        wp_send_json_success(['message' => 'Tot a fost șters! Poți începe din nou.']);
+        wp_send_json_success(['message' => 'Tot șters: categorii (inclusiv subcategorii), tags, atribute, meniu. Poți începe din nou.']);
     }
 }
 
