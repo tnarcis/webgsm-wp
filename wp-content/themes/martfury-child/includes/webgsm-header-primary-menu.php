@@ -67,7 +67,8 @@ add_filter('nav_menu_css_class', 'webgsm_primary_menu_item_classes', 10, 4);
 function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {
     if ($depth !== 0) return $classes;
     $loc = isset($args->theme_location) ? $args->theme_location : '';
-    if ($loc && $loc !== 'primary' && $loc !== 'primary-menu' && $loc !== 'shop-department') return $classes;
+    $allowed = ['primary', 'primary-menu', 'shop-department', 'shop_department', 'mobile'];
+    if ($loc && !in_array($loc, $allowed, true)) return $classes;
     $map = [
         'piese'       => 'webgsm-nav-piese',
         'unelte'     => 'webgsm-nav-unelte',
@@ -91,7 +92,8 @@ add_filter('nav_menu_item_title', 'webgsm_primary_menu_led_icon_in_title', 10, 4
 function webgsm_primary_menu_led_icon_in_title($title, $item, $args, $depth) {
     if ($depth !== 0) return $title;
     $loc = isset($args->theme_location) ? $args->theme_location : '';
-    if ($loc && $loc !== 'primary' && $loc !== 'primary-menu' && $loc !== 'shop-department') return $title;
+    $allowed = ['primary', 'primary-menu', 'shop-department', 'shop_department', 'mobile'];
+    if ($loc && !in_array($loc, $allowed, true)) return $title;
     // fa = Font Awesome 4 (Martfury); fas = FA5 – folosim fa pentru compatibilitate
     $map = [
         'piese'       => ['icon' => 'fa fa-cog',           'color' => 'led-cyan'],
@@ -211,6 +213,61 @@ function webgsm_primary_menu_styles() {
         background: rgba(59, 130, 246, 0.08) !important;
         box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
     }
+
+    /* ========== Meniu mobil lateral (hamburger / primary-mobile-nav) – același design LED Glow ========== */
+    .primary-mobile-nav ul.menu li > a {
+        display: inline-flex !important;
+        align-items: center !important;
+        transition: all 0.3s ease !important;
+    }
+    .primary-mobile-nav .led-icon i {
+        color: #444 !important;
+        font-weight: 300 !important;
+        margin-right: 10px !important;
+        transition: color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        filter: drop-shadow(0 0 0 transparent) !important;
+    }
+    .primary-mobile-nav ul.menu > li > a .led-icon { margin-right: 0; }
+    .primary-mobile-nav ul.menu > li > a .led-icon i { margin-right: 0 !important; }
+    .primary-mobile-nav li:hover .led-icon i,
+    .primary-mobile-nav li.active .led-icon i {
+        filter: drop-shadow(0 0 2px currentColor) !important;
+        transform: scale(1.1) !important;
+    }
+    .primary-mobile-nav li:hover .led-cyan i,
+    .primary-mobile-nav .webgsm-nav-piese:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-piese.active .led-icon i { color: #00b8d4 !important; filter: drop-shadow(0 0 2px rgba(0, 184, 212, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-orange i,
+    .primary-mobile-nav .webgsm-nav-unelte:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon i { color: #ff8c00 !important; filter: drop-shadow(0 0 2px rgba(255, 140, 0, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-magenta i,
+    .primary-mobile-nav .webgsm-nav-accesorii:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon i { color: #e040fb !important; filter: drop-shadow(0 0 2px rgba(224, 64, 251, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-blue i,
+    .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon i { color: #2196f3 !important; filter: drop-shadow(0 0 2px rgba(33, 150, 243, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-green i,
+    .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon i { color: #4caf50 !important; filter: drop-shadow(0 0 2px rgba(76, 175, 80, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i { color: #00b8d4 !important; filter: drop-shadow(0 0 2px rgba(0, 184, 212, 0.5)) !important; }
+    .primary-mobile-nav li:hover > a,
+    .primary-mobile-nav li.active > a {
+        font-weight: 700 !important;
+        letter-spacing: 0.02em !important;
+    }
+    .primary-mobile-nav ul.menu > li > a {
+        padding: 14px 16px !important;
+        gap: 10px !important;
+        border-radius: 8px !important;
+    }
+    .primary-mobile-nav ul.menu > li:hover > a,
+    .primary-mobile-nav ul.menu > li.active > a {
+        background: rgba(59, 130, 246, 0.08) !important;
+        color: #1d4ed8 !important;
+        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+    }
+    /* Submeniu mobil – fără LED pe icon (doar pe itemii de nivel 0) */
+    .primary-mobile-nav ul.menu ul .led-icon i { color: inherit !important; filter: none !important; }
 
     @media (max-width: 991px) {
         .site-header.header-department-top .main-menu .primary-nav.nav > ul.menu > li > a { padding: 10px 12px !important; font-size: 13px !important; }
