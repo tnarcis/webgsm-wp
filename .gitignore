@@ -24,6 +24,7 @@ wp-content/plugins/*
 !wp-content/plugins/webgsm-b2b-pricing/
 !wp-content/plugins/webgsm-checkout-pro/
 !wp-content/plugins/webgsm-setup-wizardv-vd/
+!wp-content/plugins/webgsm-setup-wizard-v2/
 
 # MacOS junk
 .DS_Store
