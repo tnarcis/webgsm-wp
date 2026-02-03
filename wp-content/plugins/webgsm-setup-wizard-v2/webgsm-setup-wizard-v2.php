@@ -154,6 +154,27 @@ class WebGSM_Setup_Wizard_V2 {
             ]
         ],
         
+        /* Model Compatibil = compatibilitate (CSV: "Attribute 1 name" = "Model Compatibil" → slug pa_model-compatibil) */
+        'Model Compatibil' => [
+            'slug' => 'model-compatibil',
+            'terms' => [
+                'iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16 Plus', 'iPhone 16',
+                'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15',
+                'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14 Plus', 'iPhone 14',
+                'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13', 'iPhone 13 Mini',
+                'iPhone 12 Pro Max', 'iPhone 12 Pro', 'iPhone 12', 'iPhone 12 Mini',
+                'iPhone 11 Pro Max', 'iPhone 11 Pro', 'iPhone 11',
+                'iPhone XS Max', 'iPhone XS', 'iPhone XR', 'iPhone X',
+                'iPhone SE 2022', 'iPhone SE 2020', 'iPhone 8 Plus', 'iPhone 8', 'iPhone 7 Plus', 'iPhone 7',
+                'Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24', 'Galaxy S23 Ultra', 'Galaxy S23+', 'Galaxy S23',
+                'Galaxy S22 Ultra', 'Galaxy S22+', 'Galaxy S22', 'Galaxy S21 Ultra', 'Galaxy S21+', 'Galaxy S21',
+                'Galaxy A55', 'Galaxy A54', 'Galaxy A53', 'Galaxy A52', 'Galaxy A35', 'Galaxy A34',
+                'Galaxy Z Fold 6', 'Galaxy Z Fold 5', 'Galaxy Z Flip 6', 'Galaxy Z Flip 5',
+                'Redmi Note 12 Pro+', 'Redmi Note 12 Pro', 'Redmi Note 12', 'Xiaomi 14', 'Xiaomi 13',
+                'Pixel 8 Pro', 'Pixel 8', 'Pixel 7 Pro', 'Pixel 7',
+            ]
+        ],
+        
         'Calitate' => [
             'slug' => 'calitate',
             'terms' => [
@@ -289,6 +310,8 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('wp_ajax_webgsm_v2_create_attributes', [$this, 'ajax_create_attributes']);
         add_action('wp_ajax_webgsm_v2_create_menu', [$this, 'ajax_create_menu']);
         add_action('wp_ajax_webgsm_v2_setup_filters', [$this, 'ajax_setup_filters']);
+        add_action('wp_ajax_webgsm_v2_clear_filters', [$this, 'ajax_clear_filters']);
+        add_action('wp_ajax_webgsm_v2_clear_menu', [$this, 'ajax_clear_menu']);
         add_action('wp_ajax_webgsm_v2_reset', [$this, 'ajax_reset']);
         add_action('wp_ajax_webgsm_v2_cleanup', [$this, 'ajax_cleanup']);
     }
@@ -396,7 +419,7 @@ class WebGSM_Setup_Wizard_V2 {
                         <div class="webgsm-card-icon blue">📁</div>
                         <h3>1. Creare Categorii</h3>
                     </div>
-                    <p>Creează 5 categorii principale + ~50 subcategorii pentru piese, unelte, accesorii, dispozitive și servicii.</p>
+                    <p>Creează 5 categorii principale + ~50 subcategorii. <strong>Prima dată: Creează. După ce ai rulat: poți rula din nou (Actualizează).</strong></p>
                     <div class="webgsm-preview">Piese/
 ├── Piese iPhone → Ecrane, Baterii, Camere...
 ├── Piese Samsung → Ecrane, Baterii, Flexuri...
@@ -409,9 +432,10 @@ Dispozitive/
 ├── Telefoane Folosite, Tablete...
 Servicii/
 ├── Reparații, Training, Buy-back...</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-cats" <?php echo $cats_done ? 'disabled' : ''; ?>>
-                        <?php echo $cats_done ? '✅ Categorii create' : '📁 Creează Categorii'; ?>
+                    <button class="webgsm-btn webgsm-btn-primary" id="btn-cats">
+                        <?php echo $cats_done ? '🔄 Actualizează Categorii' : '📁 Creează Categorii'; ?>
                     </button>
+                    <span style="font-size: 12px; color: #64748b; display: block; margin-top: 4px;"><?php echo $cats_done ? 'Categorii există – poți rula din nou pentru actualizare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
                     <div class="webgsm-status" id="status-cats"></div>
                 </div>
                 
@@ -421,16 +445,17 @@ Servicii/
                         <div class="webgsm-card-icon green">🏷️</div>
                         <h3>2. Creare Atribute</h3>
                     </div>
-                    <p>Creează 6 atribute pentru filtrare: Model, Calitate, Brand Piesă, Tehnologie, Brand Telefon, Culoare.</p>
+                    <p>Creează atribute pentru filtrare. <strong>Prima dată: Creează. După ce ai rulat: poți rula din nou (Actualizează).</strong></p>
                     <div class="webgsm-preview">Model: iPhone 16 Pro Max ... Galaxy S24 Ultra...
 Calitate: Original, Premium OEM, Aftermarket...
 Brand Piesă: JK Incell, GX OLED, Ampsentrix...
 Tehnologie: Soft OLED, Hard OLED, Incell...
 Brand Telefon: Apple, Samsung, Huawei...
 Culoare: Negru, Alb, Auriu...</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-attrs" <?php echo $attrs_done ? 'disabled' : ''; ?>>
-                        <?php echo $attrs_done ? '✅ Atribute create' : '🏷️ Creează Atribute'; ?>
+                    <button class="webgsm-btn webgsm-btn-primary" id="btn-attrs">
+                        <?php echo $attrs_done ? '🔄 Actualizează Atribute' : '🏷️ Creează Atribute'; ?>
                     </button>
+                    <span style="font-size: 12px; color: #64748b; display: block; margin-top: 4px;"><?php echo $attrs_done ? 'Atribute există – poți rula din nou pentru actualizare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
                     <div class="webgsm-status" id="status-attrs"></div>
                 </div>
                 
@@ -440,15 +465,18 @@ Culoare: Negru, Alb, Auriu...</div>
                         <div class="webgsm-card-icon purple">🍔</div>
                         <h3>3. Creare Meniu</h3>
                     </div>
-                    <p>Creează meniul principal cu 5 tab-uri și îl asociază la locațiile temei Martfury.</p>
+                    <p>Creează meniul principal cu 5 tab-uri. Poți <strong>Șterge doar Meniu</strong> apoi <strong>Actualizează Meniu</strong> fără să atingi categorii/atribute.</p>
                     <div class="webgsm-preview">┌─────────┬─────────┬─────────────┬───────────┬──────────┐
 │  Piese  │ Unelte  │  Accesorii  │ Dispozitive│ Servicii │
 └─────────┴─────────┴─────────────┴───────────┴──────────┘
 Piese → 3 nivele: Piese iPhone > Ecrane, Baterii...
 Unelte / Accesorii → Dropdown cu categorii
 Dispozitive / Servicii → Dropdown simplu</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-menu" <?php echo $menu_done ? 'disabled' : ''; ?>>
-                        <?php echo $menu_done ? '✅ Meniu creat' : '🍔 Creează Meniu'; ?>
+                    <button class="webgsm-btn webgsm-btn-primary" id="btn-menu">
+                        <?php echo $menu_done ? '🔄 Actualizează Meniu' : '🍔 Creează Meniu'; ?>
+                    </button>
+                    <button class="webgsm-btn" style="background: #94a3b8; color: #fff;" id="btn-clear-menu" title="Șterge doar meniul WebGSM (categorii și atribute rămân)">
+                        🧹 Șterge doar Meniu
                     </button>
                     <div class="webgsm-status" id="status-menu"></div>
                 </div>
@@ -459,16 +487,38 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         <div class="webgsm-card-icon orange">🔍</div>
                         <h3>4. Configurare Filtre</h3>
                     </div>
-                    <p>Adaugă widget-uri de filtrare în sidebar: Model, Calitate, Brand, Tehnologie, Preț.</p>
-                    <div class="webgsm-preview">SIDEBAR SHOP:
-├── 🔍 Filtru Model (iPhone 14, S24...)
-├── 🔍 Filtru Calitate (OEM, Aftermarket...)
-├── 🔍 Filtru Brand Piesă (JK, GX...)
-├── 🔍 Filtru Tehnologie (OLED, LCD...)
-└── 💰 Filtru Preț (slider)</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-filters" <?php echo $filters_done ? 'disabled' : ''; ?>>
-                        <?php echo $filters_done ? '✅ Filtre configurate' : '🔍 Configurează Filtre'; ?>
-                    </button>
+                    <p><strong>Bifează</strong> filtrele pe care le vrei, <strong>debifează</strong> pe cele pe care nu le vrei, sau <strong>Șterge doar Filtre</strong> ca să le scoți pe toate. Apoi <strong>Aplică Filtre</strong>. Produsele nu își pierd maparea.</p>
+                    <?php
+                    $available_filters = [
+                        'model-compatibil' => 'Compatibilitate (Model compatibil)',
+                        'model' => 'Model',
+                        'calitate' => 'Calitate',
+                        'brand-piesa' => 'Brand Piesă',
+                        'tehnologie' => 'Tehnologie',
+                    ];
+                    $saved_filter_attrs = get_option('webgsm_v2_filter_attributes', ['model-compatibil', 'model', 'calitate', 'brand-piesa', 'tehnologie', 'price']);
+                    $current_filters_list = $this->get_current_sidebar_filters_list();
+                    ?>
+                    <div class="webgsm-filter-config" style="margin: 12px 0; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-weight: 600; margin-bottom: 8px;">☑ Ce filtre să apară (bifează / debifează):</div>
+                        <?php foreach ($available_filters as $slug => $label) : ?>
+                        <label style="display: block; margin: 4px 0;"><input type="checkbox" class="webgsm-filter-attr" value="<?php echo esc_attr($slug); ?>" <?php echo in_array($slug, $saved_filter_attrs, true) ? 'checked' : ''; ?> /> <?php echo esc_html($label); ?></label>
+                        <?php endforeach; ?>
+                        <label style="display: block; margin: 4px 0;"><input type="checkbox" class="webgsm-filter-attr" value="price" id="webgsm-filter-price" <?php echo in_array('price', $saved_filter_attrs, true) ? 'checked' : ''; ?> /> 💰 Preț</label>
+                    </div>
+                    <?php if (!empty($current_filters_list)) : ?>
+                    <div class="webgsm-current-filters" style="margin: 8px 0; font-size: 12px; color: #64748b;">
+                        <strong>Filtre active acum în sidebar:</strong> <?php echo esc_html($current_filters_list); ?>
+                    </div>
+                    <?php endif; ?>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="webgsm-btn webgsm-btn-primary" id="btn-filters">
+                            <?php echo $filters_done ? '🔄 Aplică Filtre (cu selecția de mai sus)' : '🔍 Configurează Filtre'; ?>
+                        </button>
+                        <button class="webgsm-btn" style="background: #94a3b8; color: #fff;" id="btn-clear-filters" title="Șterge doar widget-urile de filtre din sidebar">
+                            🧹 Șterge doar Filtre
+                        </button>
+                    </div>
                     <div class="webgsm-status" id="status-filters"></div>
                 </div>
                 
@@ -497,8 +547,9 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         </li>
                     </ul>
                     
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px;">
-                        <button class="webgsm-btn" style="background: #f59e0b; color: white;" id="btn-reset">
+                    <p style="margin-top: 12px; font-size: 12px; color: #64748b;"><strong>Șterge Tot</strong> = șterge categorii, atribute, tags, meniu – produsele rămân dar își pierd asignările. Pentru doar actualizare: la Categorii/Atribute apasă Actualizează; la Meniu folosește Șterge doar Meniu + Actualizează; la Filtre bifezi/debifezi și Aplică sau Șterge doar Filtre.</p>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="webgsm-btn" style="background: #f59e0b; color: white;" id="btn-reset" title="Resetează doar flag-urile (Categorii/Atribute/Meniu/Filtre) – butoanele vor arăta din nou «Creează» unde nu ai rulat">
                             🔄 Reset Flags
                         </button>
                         <button class="webgsm-btn webgsm-btn-danger" id="btn-cleanup">
@@ -529,7 +580,12 @@ Dispozitive / Servicii → Dropdown simplu</div>
                     success: function(response) {
                         if (response.success) {
                             $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
-                            $btn.html('✅ Gata!').addClass('webgsm-btn-success');
+                            var id = $btn.attr('id');
+                            if (id === 'btn-filters') $btn.html('🔄 Actualizează Filtre').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-cats') $btn.html('🔄 Actualizează Categorii').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-attrs') $btn.html('🔄 Actualizează Atribute').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-menu') $btn.html('🔄 Actualizează Meniu').addClass('webgsm-btn-success').prop('disabled', false);
+                            else $btn.html('✅ Gata!').addClass('webgsm-btn-success');
                         } else {
                             $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
                             $btn.prop('disabled', false).html(originalText);
@@ -545,7 +601,74 @@ Dispozitive / Servicii → Dropdown simplu</div>
             $('#btn-cats').on('click', function() { doAjax('webgsm_v2_create_categories', 'btn-cats', 'status-cats'); });
             $('#btn-attrs').on('click', function() { doAjax('webgsm_v2_create_attributes', 'btn-attrs', 'status-attrs'); });
             $('#btn-menu').on('click', function() { doAjax('webgsm_v2_create_menu', 'btn-menu', 'status-menu'); });
-            $('#btn-filters').on('click', function() { doAjax('webgsm_v2_setup_filters', 'btn-filters', 'status-filters'); });
+            $('#btn-filters').on('click', function() {
+                var attrs = [];
+                $('.webgsm-filter-attr:checked').each(function() { attrs.push($(this).val()); });
+                if (attrs.length === 0) { $('#status-filters').addClass('show error').text('Bifează cel puțin un filtru.'); return; }
+                var $btn = $('#btn-filters');
+                var $status = $('#status-filters');
+                var originalText = $btn.html();
+                $btn.prop('disabled', true).html('<span class="spinner">⏳</span> Se procesează...');
+                $status.removeClass('success error').addClass('loading show').text('Se procesează...');
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: { action: 'webgsm_v2_setup_filters', nonce: '<?php echo wp_create_nonce('webgsm_v2'); ?>', filter_attrs: attrs },
+                    success: function(response) {
+                        if (response.success) {
+                            $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
+                            $btn.html('🔄 Aplică Filtre (cu selecția de mai sus)').addClass('webgsm-btn-success').prop('disabled', false);
+                        } else {
+                            $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
+                            $btn.prop('disabled', false).html(originalText);
+                        }
+                    },
+                    error: function() {
+                        $status.removeClass('loading').addClass('error').text('❌ Eroare de conexiune');
+                        $btn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+            $('#btn-clear-menu').on('click', function() {
+                if (confirm('Ștergi doar meniul WebGSM? Categorii, atribute și filtre rămân neschimbate.')) {
+                    var $btn = $('#btn-clear-menu');
+                    var $status = $('#status-menu');
+                    $btn.prop('disabled', true).html('<span class="spinner">⏳</span>');
+                    $status.removeClass('success error').addClass('loading show').text('Se procesează...');
+                    $.post(ajaxurl, { action: 'webgsm_v2_clear_menu', nonce: '<?php echo wp_create_nonce('webgsm_v2'); ?>' }, function(response) {
+                        if (response.success) {
+                            $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
+                            setTimeout(function() { location.reload(); }, 800);
+                        } else {
+                            $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
+                            $btn.prop('disabled', false).html('🧹 Șterge doar Meniu');
+                        }
+                    }).fail(function() {
+                        $status.removeClass('loading').addClass('error').text('❌ Eroare de conexiune');
+                        $btn.prop('disabled', false).html('🧹 Șterge doar Meniu');
+                    });
+                }
+            });
+            $('#btn-clear-filters').on('click', function() {
+                if (confirm('Ștergi doar widget-urile de filtre din sidebar? Categorii, atribute și produse rămân neschimbate.')) {
+                    var $btn = $('#btn-clear-filters');
+                    var $status = $('#status-filters');
+                    $btn.prop('disabled', true).html('<span class="spinner">⏳</span>');
+                    $status.removeClass('success error').addClass('loading show').text('Se procesează...');
+                    $.post(ajaxurl, { action: 'webgsm_v2_clear_filters', nonce: '<?php echo wp_create_nonce('webgsm_v2'); ?>' }, function(response) {
+                        if (response.success) {
+                            $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
+                            setTimeout(function() { location.reload(); }, 800);
+                        } else {
+                            $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
+                            $btn.prop('disabled', false).html('🧹 Șterge doar Filtre');
+                        }
+                    }).fail(function() {
+                        $status.removeClass('loading').addClass('error').text('❌ Eroare de conexiune');
+                        $btn.prop('disabled', false).html('🧹 Șterge doar Filtre');
+                    });
+                }
+            });
             
             $('#btn-reset').on('click', function() {
                 if (confirm('Reset flags? Vei putea rula din nou toți pașii.')) {
@@ -798,63 +921,129 @@ Dispozitive / Servicii → Dropdown simplu</div>
         wp_send_json_success(['message' => "Meniu creat cu {$items_count} itemi!"]);
     }
     
+    /** Listează filtrele active în sidebar (pentru afișare vizuală). */
+    private function get_current_sidebar_filters_list() {
+        $sidebars = get_option('sidebars_widgets', []);
+        $shop_sidebar = null;
+        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
+            if (isset($sidebars[$s]) && !empty($sidebars[$s])) { $shop_sidebar = $s; break; }
+        }
+        if (!$shop_sidebar) return '';
+        $labels = [];
+        $attr_labels = [
+            'model-compatibil' => 'Compatibilitate',
+            'model' => 'Model',
+            'calitate' => 'Calitate',
+            'brand-piesa' => 'Brand Piesă',
+            'tehnologie' => 'Tehnologie',
+        ];
+        foreach ($sidebars[$shop_sidebar] as $id) {
+            if (strpos($id, 'woocommerce_layered_nav-') === 0) {
+                $num = (int) str_replace('woocommerce_layered_nav-', '', $id);
+                $opts = get_option('widget_woocommerce_layered_nav', []);
+                $title = isset($opts[$num]['title']) ? $opts[$num]['title'] : (isset($opts[$num]['attribute']) ? ($attr_labels[$opts[$num]['attribute']] ?? $opts[$num]['attribute']) : $id);
+                $labels[] = $title;
+            } elseif (strpos($id, 'woocommerce_price_filter-') === 0) {
+                $labels[] = 'Preț';
+            }
+        }
+        return implode(', ', $labels);
+    }
+    
     // ===========================================
-    // AJAX: Setup Filtre
+    // AJAX: Setup Filtre (folosește lista bifată în UI sau opțiunea salvată)
     // ===========================================
     public function ajax_setup_filters() {
         check_ajax_referer('webgsm_v2', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
         
-        $sidebars = get_option('sidebars_widgets', []);
+        $filter_attrs = isset($_POST['filter_attrs']) && is_array($_POST['filter_attrs']) ? array_map('sanitize_text_field', $_POST['filter_attrs']) : get_option('webgsm_v2_filter_attributes', ['model-compatibil', 'model', 'calitate', 'brand-piesa', 'tehnologie', 'price']);
+        if (empty($filter_attrs)) {
+            wp_send_json_error(['message' => 'Bifează cel puțin un filtru.']);
+        }
+        update_option('webgsm_v2_filter_attributes', $filter_attrs);
         
-        // Găsește sidebar-ul shop
+        $sidebars = get_option('sidebars_widgets', []);
+        $shop_sidebar = null;
+        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
+            if (isset($sidebars[$s])) { $shop_sidebar = $s; break; }
+        }
+        if (!$shop_sidebar) {
+            $shop_sidebar = 'catalog-sidebar';
+            $sidebars[$shop_sidebar] = [];
+        }
+        $sidebars[$shop_sidebar] = [];
+        
+        $attr_labels = [
+            'model-compatibil' => 'Compatibilitate',
+            'model' => 'Model',
+            'calitate' => 'Calitate',
+            'brand-piesa' => 'Brand Piesă',
+            'tehnologie' => 'Tehnologie',
+        ];
+        $widget_id = 1;
+        
+        foreach ($filter_attrs as $slug) {
+            if ($slug === 'price') continue;
+            $widget_data = get_option('widget_woocommerce_layered_nav', []);
+            $widget_data[$widget_id] = [
+                'title' => $attr_labels[$slug] ?? ucfirst($slug),
+                'attribute' => $slug,
+                'display_type' => 'list',
+                'query_type' => 'or'
+            ];
+            update_option('widget_woocommerce_layered_nav', $widget_data);
+            $sidebars[$shop_sidebar][] = 'woocommerce_layered_nav-' . $widget_id;
+            $widget_id++;
+        }
+        
+        if (in_array('price', $filter_attrs, true)) {
+            $price_widget = get_option('widget_woocommerce_price_filter', []);
+            $price_widget[1] = ['title' => 'Preț'];
+            update_option('widget_woocommerce_price_filter', $price_widget);
+            $sidebars[$shop_sidebar][] = 'woocommerce_price_filter-1';
+        }
+        
+        update_option('sidebars_widgets', $sidebars);
+        update_option('webgsm_v2_filters', true);
+        wp_send_json_success(['message' => 'Filtre configurate în sidebar! (conform selecției bifate)']);
+    }
+    
+    // ===========================================
+    // AJAX: Șterge doar Filtre (widget-uri din sidebar) – nu ating categorii, atribute, produse
+    // ===========================================
+    public function ajax_clear_filters() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        
+        $sidebars = get_option('sidebars_widgets', []);
         $shop_sidebar = null;
         foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
             if (isset($sidebars[$s])) { $shop_sidebar = $s; break; }
         }
         
-        if (!$shop_sidebar) {
-            $shop_sidebar = 'catalog-sidebar';
-            $sidebars[$shop_sidebar] = [];
+        if ($shop_sidebar && !empty($sidebars[$shop_sidebar])) {
+            $sidebars[$shop_sidebar] = array_filter($sidebars[$shop_sidebar], function ($id) {
+                return strpos($id, 'woocommerce_layered_nav-') !== 0 && strpos($id, 'woocommerce_price_filter-') !== 0;
+            });
+            $sidebars[$shop_sidebar] = array_values($sidebars[$shop_sidebar]);
+            update_option('sidebars_widgets', $sidebars);
         }
         
-        // Curăță și adaugă widget-uri noi
-        $sidebars[$shop_sidebar] = [];
-        
-        $attrs_to_filter = ['model', 'calitate', 'brand-piesa', 'tehnologie'];
-        $widget_id = 1;
-        
-        foreach ($attrs_to_filter as $attr_slug) {
-            $attr_labels = [
-                'model' => 'Model',
-                'calitate' => 'Calitate', 
-                'brand-piesa' => 'Brand Piesă',
-                'tehnologie' => 'Tehnologie'
-            ];
-            
-            $widget_data = get_option('widget_woocommerce_layered_nav', []);
-            $widget_data[$widget_id] = [
-                'title' => $attr_labels[$attr_slug] ?? ucfirst($attr_slug),
-                'attribute' => $attr_slug,
-                'display_type' => 'list',
-                'query_type' => 'or'
-            ];
-            update_option('widget_woocommerce_layered_nav', $widget_data);
-            
-            $sidebars[$shop_sidebar][] = 'woocommerce_layered_nav-' . $widget_id;
-            $widget_id++;
-        }
-        
-        // Adaugă filtru preț
-        $price_widget = get_option('widget_woocommerce_price_filter', []);
-        $price_widget[1] = ['title' => 'Preț'];
-        update_option('widget_woocommerce_price_filter', $price_widget);
-        $sidebars[$shop_sidebar][] = 'woocommerce_price_filter-1';
-        
-        update_option('sidebars_widgets', $sidebars);
-        update_option('webgsm_v2_filters', true);
-        
-        wp_send_json_success(['message' => "Filtre configurate în sidebar!"]);
+        delete_option('webgsm_v2_filters');
+        wp_send_json_success(['message' => 'Filtre șterse din sidebar. Categorii, atribute și produse sunt neschimbate. Poți rula «Configurează Filtre» din nou.']);
+    }
+    
+    // ===========================================
+    // AJAX: Șterge doar Meniu (nu ating categorii, atribute, filtre, produse)
+    // ===========================================
+    public function ajax_clear_menu() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        $menu = wp_get_nav_menu_object('WebGSM Main Menu');
+        if ($menu) wp_delete_nav_menu($menu->term_id);
+        delete_option('webgsm_v2_menu');
+        wp_send_json_success(['message' => 'Meniu WebGSM șters. Categorii, atribute și filtre sunt neschimbate. Poți rula «Creează Meniu» din nou.']);
     }
     
     // ===========================================
