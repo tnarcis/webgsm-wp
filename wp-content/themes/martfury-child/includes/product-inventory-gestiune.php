@@ -300,3 +300,30 @@ function webgsm_render_source_column($column, $post_id) {
         echo '—';
     }
 }
+
+// ============================================
+// Admin: lățimi coloane lista produse (evită suprapunerea Sursă / SKU pe live)
+// ============================================
+add_action('admin_head-edit.php', 'webgsm_admin_product_list_column_styles');
+function webgsm_admin_product_list_column_styles() {
+    $screen = get_current_screen();
+    if (!$screen || $screen->post_type !== 'product') {
+        return;
+    }
+    ?>
+    <style id="webgsm-product-list-columns">
+    /* Lista produse – coloane alocate, fără suprapunere */
+    body.edit-php.post-type-product .wp-list-table { table-layout: auto; }
+    body.edit-php.post-type-product .wp-list-table .column-cb { width: 2.2em; min-width: 2.2em; }
+    body.edit-php.post-type-product .wp-list-table .column-thumb { width: 52px; min-width: 52px; max-width: 52px; }
+    body.edit-php.post-type-product .wp-list-table .column-name { min-width: 140px; max-width: 22%; }
+    body.edit-php.post-type-product .wp-list-table .column-webgsm_source { width: 52px; min-width: 52px; max-width: 52px; text-align: center; white-space: nowrap; }
+    body.edit-php.post-type-product .wp-list-table .column-sku { min-width: 80px; max-width: 120px; }
+    body.edit-php.post-type-product .wp-list-table .column-global_unique_id { min-width: 90px; max-width: 140px; }
+    body.edit-php.post-type-product .wp-list-table .column-price { width: 80px; min-width: 80px; max-width: 100px; }
+    body.edit-php.post-type-product .wp-list-table .column-is_in_stock { width: 70px; min-width: 70px; max-width: 80px; }
+    body.edit-php.post-type-product .wp-list-table .column-product_cat { min-width: 90px; max-width: 18%; }
+    body.edit-php.post-type-product .wp-list-table .column-date { width: 100px; min-width: 100px; max-width: 110px; }
+    </style>
+    <?php
+}

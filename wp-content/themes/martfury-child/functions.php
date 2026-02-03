@@ -7,6 +7,14 @@ add_action('wp_enqueue_scripts', function() {
 // PRIORITATE: Încarcă header-account-menu.php ÎNAINTE de tema părinte
 require_once get_stylesheet_directory() . '/includes/header-account-menu.php';
 
+// Evită "Undefined array key taxonomy-product_brand" în WC Admin Brands (coloana există doar dacă taxonomia e înregistrată)
+add_filter('manage_product_posts_columns', function($columns) {
+    if (is_array($columns) && !isset($columns['taxonomy-product_brand'])) {
+        $columns['taxonomy-product_brand'] = _x('Brands', 'taxonomy singular name', 'woocommerce');
+    }
+    return $columns;
+}, 5);
+
 // Remove eleganticons preload - loaded via CSS instead
 add_action('wp_head', function() {
     echo '<script>
@@ -126,6 +134,7 @@ require_once get_stylesheet_directory() . '/includes/n8n-webhooks.php';
 require_once get_stylesheet_directory() . '/includes/facturare-pj.php';
 require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
+require_once get_stylesheet_directory() . '/includes/webgsm-header-primary-menu.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
 require_once get_stylesheet_directory() . '/includes/setup-categories.php';
 require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
