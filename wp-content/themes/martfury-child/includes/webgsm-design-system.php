@@ -809,6 +809,41 @@ button.button {
         -webkit-text-size-adjust: 100% !important;
     }
 }
+
+/* ============================================
+   FIX MOBIL: butoane produs (Adaugă în coș, Favorite, Compară) vizibile mereu după filtrare
+   Tema afișează butoanele doar la hover; pe touch nu există hover, deci rămân invizibile până la tap.
+   Forțăm vizibilitate pe mobil / dispozitive fără hover.
+   ============================================ */
+@media (max-width: 768px), (hover: none) {
+    .woocommerce ul.products li.product .product-inner .product-footer,
+    .woocommerce ul.products li.product .product-inner .product-actions,
+    .woocommerce ul.products li.product .product-inner .product-summary,
+    .woocommerce ul.products li.product .product-inner [class*="footer"],
+    .woocommerce ul.products li.product .product-inner [class*="action"] {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+    .woocommerce ul.products li.product .product-inner .add_to_cart_button,
+    .woocommerce ul.products li.product .product-inner .button,
+    .woocommerce ul.products li.product .product-inner a.button,
+    .woocommerce ul.products li.product .add_to_cart_button,
+    .woocommerce ul.products li.product .button,
+    .woocommerce ul.products li.product a.button,
+    ul.products li.product .product-inner .add_to_cart_button,
+    ul.products li.product .product-inner .button,
+    ul.products li.product .product-inner .yith-wcwl-add-to-wishlist,
+    ul.products li.product .product-inner .compare-button,
+    ul.products li.product .product-inner a.compare {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: inline-flex !important;
+        pointer-events: auto !important;
+        transform: none !important;
+    }
+}
 </style>
 <?php
 }
