@@ -304,6 +304,7 @@ class WebGSM_Setup_Wizard_V2 {
     public function __construct() {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'admin_styles']);
+        add_action('wp_enqueue_scripts', [$this, 'shop_sidebar_filter_styles'], 20);
         
         // AJAX handlers
         add_action('wp_ajax_webgsm_v2_create_categories', [$this, 'ajax_create_categories']);
@@ -326,6 +327,39 @@ class WebGSM_Setup_Wizard_V2 {
             'dashicons-admin-tools',
             29
         );
+    }
+    
+    /** Pe shop/categorii: sidebar-ul de filtre devine scrollabil când sunt multe filtre. */
+    public function shop_sidebar_filter_styles() {
+        if (!function_exists('is_shop') || (!is_shop() && !is_product_category() && !is_product_taxonomy())) {
+            return;
+        }
+        $css = '
+            .catalog-sidebar,
+            .shop-sidebar,
+            .sidebar-shop,
+            .woocommerce-sidebar {
+                max-height: 85vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+            .catalog-sidebar .widget_woocommerce_layered_nav ul,
+            .shop-sidebar .widget_woocommerce_layered_nav ul,
+            .sidebar-shop .widget_woocommerce_layered_nav ul,
+            .woocommerce-sidebar .widget_woocommerce_layered_nav ul,
+            .catalog-sidebar .widget_woocommerce_product_categories ul,
+            .shop-sidebar .widget_woocommerce_product_categories ul,
+            .sidebar-shop .widget_woocommerce_product_categories ul,
+            .woocommerce-sidebar .widget_woocommerce_product_categories ul {
+                max-height: 220px;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+        ';
+        wp_register_style('webgsm-wizard-sidebar', false);
+        wp_enqueue_style('webgsm-wizard-sidebar');
+        wp_add_inline_style('webgsm-wizard-sidebar', $css);
     }
     
     public function admin_styles($hook) {
@@ -535,7 +569,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $attrs_done ? 'done' : 'pending'; ?>"><?php echo $attrs_done ? '✓' : '○'; ?></span>
-                            <span>Atribute pentru filtrare (6 atribute, ~150 termeni)</span>
+                            <span>Atribute pentru filtrare (Model, Compatibilitate, Calitate, Brand, Tehnologie, etc.)</span>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $menu_done ? 'done' : 'pending'; ?>"><?php echo $menu_done ? '✓' : '○'; ?></span>
@@ -938,7 +972,9 @@ Dispozitive / Servicii → Dropdown simplu</div>
             'tehnologie' => 'Tehnologie',
         ];
         foreach ($sidebars[$shop_sidebar] as $id) {
-            if (strpos($id, 'woocommerce_layered_nav-') === 0) {
+            if (strpos($id, 'woocommerce_product_categories-') === 0) {
+                $labels[] = 'Categorii';
+            } elseif (strpos($id, 'woocommerce_layered_nav-') === 0) {
                 $num = (int) str_replace('woocommerce_layered_nav-', '', $id);
                 $opts = get_option('widget_woocommerce_layered_nav', []);
                 $title = isset($opts[$num]['title']) ? $opts[$num]['title'] : (isset($opts[$num]['attribute']) ? ($attr_labels[$opts[$num]['attribute']] ?? $opts[$num]['attribute']) : $id);
@@ -973,6 +1009,19 @@ Dispozitive / Servicii → Dropdown simplu</div>
             $sidebars[$shop_sidebar] = [];
         }
         $sidebars[$shop_sidebar] = [];
+        
+        // Widget „Filtrează după categorie” – folosește structura existentă (Piese > Piese iPhone > Ecrane, Baterii…)
+        $cat_widget = get_option('widget_woocommerce_product_categories', []);
+        $cat_id = 1;
+        $cat_widget[$cat_id] = [
+            'title' => 'Categorii',
+            'orderby' => 'name',
+            'dropdown' => 0,
+            'count' => 0,
+            'hierarchical' => 1,
+        ];
+        update_option('widget_woocommerce_product_categories', $cat_widget);
+        $sidebars[$shop_sidebar][] = 'woocommerce_product_categories-' . $cat_id;
         
         $attr_labels = [
             'model-compatibil' => 'Compatibilitate',
@@ -1024,7 +1073,9 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         if ($shop_sidebar && !empty($sidebars[$shop_sidebar])) {
             $sidebars[$shop_sidebar] = array_filter($sidebars[$shop_sidebar], function ($id) {
-                return strpos($id, 'woocommerce_layered_nav-') !== 0 && strpos($id, 'woocommerce_price_filter-') !== 0;
+                return strpos($id, 'woocommerce_layered_nav-') !== 0
+                    && strpos($id, 'woocommerce_price_filter-') !== 0
+                    && strpos($id, 'woocommerce_product_categories-') !== 0;
             });
             $sidebars[$shop_sidebar] = array_values($sidebars[$shop_sidebar]);
             update_option('sidebars_widgets', $sidebars);
