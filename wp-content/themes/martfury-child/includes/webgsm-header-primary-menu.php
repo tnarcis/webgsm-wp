@@ -220,6 +220,28 @@ function webgsm_primary_menu_styles() {
         align-items: center !important;
         transition: all 0.3s ease !important;
     }
+    /* Spațiu pentru +/- ca să nu se suprapună cu textul (categorii principale și subcategorii) */
+    .primary-mobile-nav ul.menu li.menu-item-has-children > a {
+        padding-right: 48px !important;
+        position: relative !important;
+    }
+    .primary-mobile-nav ul.menu li.menu-item-has-children .toggle-menu-children {
+        right: 12px !important;
+        left: auto !important;
+        width: 28px !important;
+        height: 28px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 2 !important;
+        pointer-events: auto !important;
+    }
+    .primary-mobile-nav ul.menu ul li.menu-item-has-children > a {
+        padding-right: 44px !important;
+    }
+    .primary-mobile-nav ul.menu ul li.menu-item-has-children .toggle-menu-children {
+        right: 10px !important;
+    }
     .primary-mobile-nav .led-icon i {
         color: #444 !important;
         font-weight: 300 !important;
@@ -259,6 +281,15 @@ function webgsm_primary_menu_styles() {
         padding: 14px 16px !important;
         gap: 10px !important;
         border-radius: 8px !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+    }
+    /* Conținutul linkului (icon + text) nu depășește zona rezervată pentru +/- */
+    .primary-mobile-nav ul.menu li.menu-item-has-children > a {
+        max-width: 100% !important;
+    }
+    .primary-mobile-nav ul.menu li.menu-item-has-children > a .led-icon {
+        flex-shrink: 0 !important;
     }
     .primary-mobile-nav ul.menu > li:hover > a,
     .primary-mobile-nav ul.menu > li.active > a {
