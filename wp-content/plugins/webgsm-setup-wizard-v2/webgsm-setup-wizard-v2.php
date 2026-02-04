@@ -438,6 +438,7 @@ class WebGSM_Setup_Wizard_V2 {
         
         // AJAX handlers
         add_action('wp_ajax_webgsm_v2_create_categories', [$this, 'ajax_create_categories']);
+        add_action('wp_ajax_webgsm_v2_save_brand_piesa_extra', [$this, 'ajax_save_brand_piesa_extra']);
         add_action('wp_ajax_webgsm_v2_create_attributes', [$this, 'ajax_create_attributes']);
         add_action('wp_ajax_webgsm_v2_create_menu', [$this, 'ajax_create_menu']);
         add_action('wp_ajax_webgsm_v2_setup_filters', [$this, 'ajax_setup_filters']);
@@ -735,9 +736,20 @@ Servicii/
                         <h3>2. Creare Atribute</h3>
                     </div>
                     <p>Creează atribute pentru filtrare. <strong>Prima dată: Creează. După ce ai rulat: poți rula din nou (Actualizează).</strong></p>
+                    <?php
+                    $brand_piesa_extra_raw = get_option('webgsm_v2_brand_piesa_extra_terms', []);
+                    $brand_piesa_extra = is_array($brand_piesa_extra_raw) ? implode("\n", $brand_piesa_extra_raw) : (string) $brand_piesa_extra_raw;
+                    ?>
+                    <div class="webgsm-brand-piesa-extra" style="margin:12px 0;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                        <strong>Brand Piesă – termeni suplimentari (unul per linie)</strong>
+                        <p style="margin:4px 0 8px;font-size:12px;color:#64748b;">Adaugă aici branduri care nu sunt în lista implicită. Se salvează și se includ la „Creează/Actualizează Atribute”.</p>
+                        <textarea id="webgsm-brand-piesa-extra" rows="4" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;"><?php echo esc_textarea($brand_piesa_extra); ?></textarea>
+                        <button type="button" class="webgsm-btn" style="margin-top:8px;background:#0ea5e9;color:#fff;" id="btn-save-brand-piesa">Salvează termeni Brand Piesă</button>
+                        <span id="status-brand-piesa" style="margin-left:8px;font-size:12px;"></span>
+                    </div>
                     <div class="webgsm-preview">Model: iPhone 16 Pro Max ... Galaxy S24 Ultra...
 Calitate: Original, Premium OEM, Aftermarket...
-Brand Piesă: JK Incell, GX OLED, Ampsentrix...
+Brand Piesă: JK Incell, GX OLED, Ampsentrix... + termenii tăi
 Tehnologie: Soft OLED, Hard OLED, Incell...
 Brand Telefon: Apple, Samsung, Huawei...
 Culoare: Negru, Alb, Auriu...</div>
@@ -888,6 +900,24 @@ Dispozitive / Servicii → Dropdown simplu</div>
             }
             
             $('#btn-cats').on('click', function() { doAjax('webgsm_v2_create_categories', 'btn-cats', 'status-cats'); });
+            $('#btn-save-brand-piesa').on('click', function() {
+                var $btn = $('#btn-save-brand-piesa');
+                var $status = $('#status-brand-piesa');
+                $status.removeClass('success error').text('');
+                $.post(ajaxurl, {
+                    action: 'webgsm_v2_save_brand_piesa_extra',
+                    nonce: '<?php echo wp_create_nonce('webgsm_v2'); ?>',
+                    terms: $('#webgsm-brand-piesa-extra').val()
+                }, function(response) {
+                    if (response.success) {
+                        $status.addClass('success').css('color','#059669').text('✅ ' + response.data.message);
+                    } else {
+                        $status.addClass('error').css('color','#dc2626').text('❌ ' + (response.data && response.data.message ? response.data.message : 'Eroare'));
+                    }
+                }).fail(function() {
+                    $status.addClass('error').css('color','#dc2626').text('❌ Eroare de conexiune');
+                });
+            });
             $('#btn-attrs').on('click', function() { doAjax('webgsm_v2_create_attributes', 'btn-attrs', 'status-attrs'); });
             $('#btn-menu').on('click', function() { doAjax('webgsm_v2_create_menu', 'btn-menu', 'status-menu'); });
             $('#btn-filters').on('click', function() {
@@ -1048,6 +1078,27 @@ Dispozitive / Servicii → Dropdown simplu</div>
     }
     
     // ===========================================
+    // AJAX: Salvare termeni suplimentari Brand Piesă
+    // ===========================================
+    public function ajax_save_brand_piesa_extra() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        $raw = isset($_POST['terms']) ? wp_unslash($_POST['terms']) : '';
+        $lines = array_filter(array_map('trim', explode("\n", str_replace("\r", "\n", $raw))));
+        $lines = array_unique($lines);
+        update_option('webgsm_v2_brand_piesa_extra_terms', $lines);
+        wp_send_json_success(['message' => 'Termeni Brand Piesă salvați (' . count($lines) . '). Rulează Actualizează Atribute ca să fie creați în WooCommerce.']);
+    }
+    
+    /** Returnează lista de termeni pentru Brand Piesă (din $this->attributes + termeni salvați manual). */
+    private function get_brand_piesa_terms() {
+        $base = isset($this->attributes['Brand Piesă']['terms']) ? $this->attributes['Brand Piesă']['terms'] : [];
+        $extra = get_option('webgsm_v2_brand_piesa_extra_terms', []);
+        if (!is_array($extra)) $extra = $extra ? array_filter(array_map('trim', explode("\n", $extra))) : [];
+        return array_values(array_unique(array_merge($base, $extra)));
+    }
+    
+    // ===========================================
     // AJAX: Creare Atribute
     // ===========================================
     public function ajax_create_attributes() {
@@ -1060,6 +1111,10 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         foreach ($this->attributes as $attr_name => $attr_data) {
             $attr_slug = $attr_data['slug'];
+            $terms = $attr_data['terms'];
+            if ($attr_slug === 'brand-piesa') {
+                $terms = $this->get_brand_piesa_terms();
+            }
             
             // Verifică dacă atributul există
             $exists = $wpdb->get_var($wpdb->prepare(
@@ -1091,7 +1146,9 @@ Dispozitive / Servicii → Dropdown simplu</div>
             }
             
             // Creează termenii
-            foreach ($attr_data['terms'] as $term_name) {
+            foreach ($terms as $term_name) {
+                $term_name = is_string($term_name) ? trim($term_name) : '';
+                if ($term_name === '') continue;
                 $term_slug = sanitize_title($term_name);
                 if (!term_exists($term_slug, $taxonomy)) {
                     $result = wp_insert_term($term_name, $taxonomy, ['slug' => $term_slug]);
