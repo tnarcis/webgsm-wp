@@ -395,6 +395,8 @@ function webgsm_dashboard_welcome_with_badge() {
         }
     }
     
+    // Icon line-art reprezentativ pentru site reparații (același pentru toți)
+    $icon_reparatii = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
     ?>
     <div class="webgsm-dashboard-welcome" style="
         display: flex;
@@ -404,34 +406,29 @@ function webgsm_dashboard_welcome_with_badge() {
         gap: 16px;
         padding: 20px 24px;
         margin-bottom: 24px;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 40%, #bfdbfe 100%);
+        border: 1px solid #93c5fd;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
     ">
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
             <div style="
-                width: 48px;
-                height: 48px;
+                width: 52px;
+                height: 52px;
                 background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                border-radius: 50%;
+                border-radius: 14px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: #fff;
-                font-size: 20px;
-                font-weight: 600;
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
             ">
-                <?php echo strtoupper(substr($display_name, 0, 1)); ?>
+                <?php echo $icon_reparatii; ?>
             </div>
             <div>
-                <p style="margin: 0; font-size: 14px; color: #64748b;">Bine ai venit,</p>
-                <h2 style="margin: 0; font-size: 20px; color: #1f2937; font-weight: 600;">
+                <p style="margin: 0; font-size: 14px; color: #2563eb; font-weight: 500;">Bine ai venit,</p>
+                <h2 style="margin: 0; font-size: 20px; color: #1e40af; font-weight: 700;">
                     <?php echo esc_html($display_name); ?>
-                    <?php if ($badge_html): ?>
-                        <span style="margin-left: 8px;"><?php echo $badge_html; ?></span>
-                    <?php endif; ?>
                 </h2>
             </div>
         </div>
