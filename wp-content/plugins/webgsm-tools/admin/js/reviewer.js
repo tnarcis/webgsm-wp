@@ -11,6 +11,8 @@
     var newAttributes = {};
     var newTags = [];
     var config = window.webgsmReviewer || {};
+    var currentImages = [];
+    var currentImageIndex = 0;
 
     $(document).ready(function() {
         initUpload();
@@ -23,11 +25,11 @@
         var $uploadArea = $('#upload-area');
         var $fileInput = $('#csv-file');
 
-        $('#browse-file').on('click', function(e) {
+        $('#browse-file, #upload-area').on('click', function(e) {
             e.preventDefault();
-            $fileInput.click();
+            e.stopPropagation();
+            $fileInput.trigger('click');
         });
-        $uploadArea.on('click', function() { $fileInput.click(); });
         $uploadArea.on('dragover', function(e) {
             e.preventDefault();
             $(this).addClass('dragover');
@@ -132,6 +134,19 @@
         $('#stat-error').text(error);
     }
 
+    function getSEOStatus(product) {
+        var title = product['meta:rank_math_title'] || '';
+        var desc = product['meta:rank_math_description'] || '';
+        var keyword = product['meta:rank_math_focus_keyword'] || '';
+        var score = 0;
+        if (title && title.length >= 30 && title.length <= 60) score++;
+        if (desc && desc.length >= 120 && desc.length <= 160) score++;
+        if (keyword) score++;
+        if (score === 3) return '<span class="seo-good">✅</span>';
+        if (score >= 1) return '<span class="seo-ok">⚠️</span>';
+        return '<span class="seo-bad">❌</span>';
+    }
+
     function renderProducts(filter) {
         filter = filter || 'all';
         var $tbody = $('#products-tbody');
@@ -139,19 +154,27 @@
         var statusIcon = { 'ok': '✅', 'warning': '⚠️', 'error': '❌' };
         products.forEach(function(product, index) {
             if (filter !== 'all' && product._validation.status !== filter) return;
-            var imgUrl = (product['Images'] || '').split(',')[0].trim() || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23ddd" width="50" height="50"/></svg>';
+            var seoStatus = getSEOStatus(product);
+            var imgUrl = (product['Images'] || '').split(',')[0].trim() || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23ddd" width="50" height="50"/><text x="25" y="30" text-anchor="middle" fill="%23999" font-size="10">No img</text></svg>';
+            var sku = product['SKU'] || '';
+            var skuCell = sku ? sku : '<span class="missing">Lipsă</span>';
             var row = '<tr class="row-' + product._validation.status + '" data-index="' + index + '">' +
                 '<td>' + (index + 1) + '</td>' +
-                '<td><img src="' + imgUrl + '" alt=""></td>' +
-                '<td title="' + (product['Name'] || '').replace(/"/g, '&quot;') + '">' + truncate(product['Name'] || '', 40) + '</td>' +
+                '<td><img src="' + imgUrl + '" alt="" class="thumb-img"></td>' +
+                '<td class="sku-cell" title="' + (sku || '').replace(/"/g, '&quot;') + '">' + skuCell + '</td>' +
+                '<td class="name-cell" title="' + (product['Name'] || '').replace(/"/g, '&quot;') + '">' + truncate(product['Name'] || '', 30) + '</td>' +
                 '<td class="category-cell">' + formatCategory(product['Categories']) + '</td>' +
-                '<td>' + (product['Attribute 1 value(s)'] || '-') + '</td>' +
+                '<td class="model-cell">' + truncate(product['Attribute 1 value(s)'] || '-', 15) + '</td>' +
                 '<td>' + (product['Attribute 2 value(s)'] || '-') + '</td>' +
-                '<td>' + (product['Regular price'] || '-') + ' RON</td>' +
+                '<td>' + truncate(product['Attribute 3 value(s)'] || '-', 10) + '</td>' +
+                '<td class="price-cell">' + (product['Regular price'] || '-') + '</td>' +
+                '<td>' + (product['Stock'] || '0') + '</td>' +
+                '<td class="seo-cell">' + seoStatus + '</td>' +
                 '<td class="status-' + product._validation.status + '">' + statusIcon[product._validation.status] + '</td>' +
                 '<td><button type="button" class="btn-edit" title="Editează">✏️</button></td></tr>';
             var $row = $(row);
-            $row.find('.btn-edit').on('click', function() { openEditor(index); });
+            $row.find('.btn-edit').on('click', function(e) { e.stopPropagation(); openEditor(index); });
+            $row.on('dblclick', function() { openEditor(index); });
             $tbody.append($row);
         });
     }
@@ -175,19 +198,63 @@
         });
     }
 
+    function showImage(index) {
+        if (currentImages.length === 0) {
+            $('#editor-image').attr('src', '');
+            $('#img-counter').text('0/0');
+            return;
+        }
+        currentImageIndex = Math.max(0, Math.min(index, currentImages.length - 1));
+        $('#editor-image').attr('src', currentImages[currentImageIndex]);
+        $('#img-counter').text((currentImageIndex + 1) + '/' + currentImages.length);
+    }
+
     function openEditor(index) {
         currentEditIndex = index;
         var product = products[index];
+
+        $('.tab-btn').removeClass('active').first().addClass('active');
+        $('.tab-content').removeClass('active').first().addClass('active');
+
+        $('#editor-sku').val(product['SKU'] || '');
+        $('#editor-ean').val(product['meta:gtin_ean'] || '');
         $('#editor-name').val(product['Name'] || '');
+        $('#editor-price').val(product['Regular price'] || '');
+        $('#editor-stock').val(product['Stock'] || '100');
+        $('#editor-short-desc').val(product['Short description'] || '');
         $('#editor-tags').val(product['Tags'] || '');
-        $('#editor-seo-title').val(product['meta:rank_math_title'] || '');
-        $('#editor-seo-desc').val(product['meta:rank_math_description'] || '');
-        $('#editor-seo-keyword').val(product['meta:rank_math_focus_keyword'] || '');
         populateCategoryDropdown(product['Categories']);
+
+        var images = (product['Images'] || '').split(',').map(function(i) { return i.trim(); }).filter(Boolean);
+        currentImages = images;
+        currentImageIndex = 0;
+        showImage(0);
+
         populateAttributeDropdowns(product);
-        var imageUrl = (product['Images'] || '').split(',')[0].trim();
-        $('#editor-image').attr('src', imageUrl || '');
-        updateCharCounts();
+        $('#editor-tech').val(product['Attribute 4 value(s)'] || '');
+        $('#editor-color').val(product['Attribute 5 value(s)'] || '');
+        $('#editor-phone-brand').val(product['Attribute 6 value(s)'] || '');
+
+        $('#editor-seo-title').val(product['meta:rank_math_title'] || '').trigger('input');
+        $('#editor-seo-desc').val(product['meta:rank_math_description'] || '').trigger('input');
+        $('#editor-seo-keyword').val(product['meta:rank_math_focus_keyword'] || '');
+        var slug = product['Slug'] || (product['Name'] || '').toLowerCase()
+            .replace(/[ăâ]/g, 'a').replace(/[îì]/g, 'i')
+            .replace(/[șş]/g, 's').replace(/[țţ]/g, 't')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 60);
+        $('#editor-slug').val(slug || '').trigger('input');
+
+        $('#editor-meta-gtin').val(product['meta:gtin_ean'] || '');
+        $('#editor-meta-sku-furnizor').val(product['meta:sku_furnizor'] || '');
+        $('#editor-meta-furnizor').val(product['meta:furnizor_activ'] || '');
+        $('#editor-meta-cost').val(product['meta:pret_achizitie'] || '');
+        $('#editor-meta-location').val(product['meta:locatie_stoc'] || 'indisponibil');
+        $('#editor-meta-warranty').val(product['meta:garantie_luni'] || '12');
+        $('#editor-meta-source-url').val(product['meta:source_url'] || '').trigger('change');
+        $('#editor-meta-ic-movable').prop('checked', product['meta:ic_movable'] === '1' || product['meta:ic_movable'] === 'true');
+        $('#editor-meta-truetone').prop('checked', product['meta:truetone_support'] === '1' || product['meta:truetone_support'] === 'true');
+        $('#editor-meta-compatibility').val(product['meta:coduri_compatibilitate'] || '');
+
         $('#editor-modal').fadeIn(200);
     }
 
@@ -231,7 +298,7 @@
                     $model.append($('<option></option>').val(m).text(m));
                 }
             });
-            $model.val(currentModel.split(',').map(function(x) { return x.trim(); }));
+            $model.val(currentModel.split(',').map(function(x) { return x.trim(); }).filter(Boolean));
         }
         var $quality = $('#editor-quality');
         $quality.empty().append($('<option></option>').val('').text('-- Selectează --'));
@@ -253,6 +320,25 @@
         $brand.val(currentBrand);
     }
 
+    function updateCharCount(field, current, max) {
+        var $count = $('#' + field + '-count');
+        var $indicator = $('#' + field + '-indicator');
+        $count.text(current + '/' + max);
+        $count.removeClass('warning error');
+        $indicator.removeClass('good ok bad');
+        if (current === 0) {
+            $indicator.addClass('bad');
+        } else if (current < max * 0.7) {
+            $count.addClass('warning');
+            $indicator.addClass('ok');
+        } else if (current <= max) {
+            $indicator.addClass('good');
+        } else {
+            $count.addClass('error');
+            $indicator.addClass('bad');
+        }
+    }
+
     function initModal() {
         $('.modal-close, #editor-modal').on('click', function(e) {
             if (e.target === this) $('#editor-modal').fadeOut(200);
@@ -271,49 +357,143 @@
                 products.splice(currentEditIndex, 1);
                 $('#editor-modal').fadeOut(200);
                 updateStats();
-                renderProducts();
+                renderProducts($('.filter-btn.active').data('filter') || 'all');
                 updateReport();
             }
         });
-        $('#editor-seo-title, #editor-seo-desc').on('input', updateCharCounts);
+
+        $('.tab-btn').on('click', function() {
+            var tabId = $(this).data('tab');
+            $('.tab-btn').removeClass('active');
+            $(this).addClass('active');
+            $('.tab-content').removeClass('active');
+            $('#tab-' + tabId).addClass('active');
+        });
+
+        $('#editor-seo-title').on('input', function() {
+            $('#preview-seo-title').text($(this).val() || 'Titlu produs - WebGSM');
+            updateCharCount('title', $(this).val().length, 60);
+        });
+        $('#editor-seo-desc').on('input', function() {
+            $('#preview-seo-desc').text($(this).val() || 'Descrierea meta va apărea aici...');
+            updateCharCount('desc', $(this).val().length, 160);
+        });
+        $('#editor-slug').on('input', function() {
+            $('#preview-seo-slug').text($(this).val() || 'slug-produs');
+        });
+
+        $('#btn-regen-slug').on('click', function() {
+            var name = $('#editor-name').val();
+            var slug = name.toLowerCase()
+                .replace(/[ăâ]/g, 'a').replace(/[îì]/g, 'i')
+                .replace(/[șş]/g, 's').replace(/[țţ]/g, 't')
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 60);
+            $('#editor-slug').val(slug).trigger('input');
+        });
+
+        $('#editor-meta-source-url').on('change input', function() {
+            var url = $(this).val();
+            if (url) $('#link-source-url').attr('href', url).show(); else $('#link-source-url').hide();
+        });
+
+        $('#btn-prev-img').on('click', function() { showImage(currentImageIndex - 1); });
+        $('#btn-next-img').on('click', function() { showImage(currentImageIndex + 1); });
+
         $('#btn-regen-title').on('click', function() {
             var name = $('#editor-name').val();
-            $('#editor-seo-title').val(name.length > 60 ? name.substring(0, 57) + '...' : name);
-            updateCharCounts();
+            $('#editor-seo-title').val(name.length > 60 ? name.substring(0, 57) + '...' : name).trigger('input');
         });
         $('#btn-regen-desc').on('click', function() {
             var name = $('#editor-name').val();
             var desc = name;
             if (desc.length < 130) desc += ' Comandă acum cu livrare rapidă!';
             if (desc.length > 160) desc = desc.substring(0, 157) + '...';
-            $('#editor-seo-desc').val(desc);
-            updateCharCounts();
+            $('#editor-seo-desc').val(desc).trigger('input');
         });
+
+        $('#btn-new-category').on('click', function(e) {
+            e.preventDefault();
+            var newCat = prompt('Introdu calea completă a categoriei noi:\n\nExemplu: Piese > Piese iPhone > Cipuri Reparare\n\nCategoria părinte trebuie să existe deja.');
+            if (newCat && newCat.trim()) {
+                var $select = $('#editor-category');
+                if ($select.find('option[value="' + newCat.replace(/"/g, '&quot;') + '"]').length === 0) {
+                    $select.append($('<option></option>').val(newCat).text(newCat + ' (NOU)'));
+                }
+                $select.val(newCat);
+                if (newCategories.indexOf(newCat) === -1) newCategories.push(newCat);
+                $('#category-hint').text('⚠️ Categorie nouă - trebuie creată în WooCommerce înainte de import').addClass('warning');
+            }
+        });
+
+        $('#btn-new-brand').on('click', function(e) {
+            e.preventDefault();
+            var newBrand = prompt('Introdu numele brandului nou:\n\nExemplu: I2C, Qianli, MEGA-IDEA');
+            if (newBrand && newBrand.trim()) {
+                var $select = $('#editor-brand');
+                if ($select.find('option[value="' + newBrand.replace(/"/g, '&quot;') + '"]').length === 0) {
+                    $select.append($('<option></option>').val(newBrand).text(newBrand + ' (NOU)'));
+                }
+                $select.val(newBrand);
+                if (!newAttributes['pa_brand-piesa']) newAttributes['pa_brand-piesa'] = [];
+                if (newAttributes['pa_brand-piesa'].indexOf(newBrand) === -1) newAttributes['pa_brand-piesa'].push(newBrand);
+            }
+        });
+
+        $('#btn-new-model').on('click', function(e) {
+            e.preventDefault();
+            var newModel = prompt('Introdu modelul nou:\n\nExemplu: iPhone 15 Pro Max, Galaxy S24 Ultra');
+            if (newModel && newModel.trim()) {
+                var $select = $('#editor-model');
+                if ($select.find('option[value="' + newModel.replace(/"/g, '&quot;') + '"]').length === 0) {
+                    $select.append($('<option></option>').val(newModel).text(newModel));
+                }
+                var currentVals = $select.val() || [];
+                currentVals.push(newModel);
+                $select.val(currentVals);
+            }
+        });
+    }
+
+    function showNotice(message, type) {
+        type = type || 'info';
+        var $notice = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
+        $('.webgsm-tools h1').after($notice);
+        setTimeout(function() { $notice.fadeOut(function() { $notice.remove(); }); }, 3000);
     }
 
     function saveProduct() {
         var product = products[currentEditIndex];
+        product['SKU'] = $('#editor-sku').val();
         product['Name'] = $('#editor-name').val();
         product['Categories'] = $('#editor-category').val();
+        product['Regular price'] = $('#editor-price').val();
+        product['Stock'] = $('#editor-stock').val();
+        product['Short description'] = $('#editor-short-desc').val();
         product['Tags'] = $('#editor-tags').val();
         product['Attribute 1 value(s)'] = ($('#editor-model').val() || []).join(', ');
         product['Attribute 2 value(s)'] = $('#editor-quality').val();
         product['Attribute 3 value(s)'] = $('#editor-brand').val();
+        product['Attribute 4 value(s)'] = $('#editor-tech').val();
+        product['Attribute 5 value(s)'] = $('#editor-color').val();
+        product['Attribute 6 value(s)'] = $('#editor-phone-brand').val();
         product['meta:rank_math_title'] = $('#editor-seo-title').val();
         product['meta:rank_math_description'] = $('#editor-seo-desc').val();
         product['meta:rank_math_focus_keyword'] = $('#editor-seo-keyword').val();
+        var slugVal = $('#editor-slug').val();
+        if (slugVal) product['Slug'] = slugVal;
+        product['meta:gtin_ean'] = $('#editor-meta-gtin').val();
+        product['meta:pret_achizitie'] = $('#editor-meta-cost').val();
+        product['meta:locatie_stoc'] = $('#editor-meta-location').val();
+        product['meta:garantie_luni'] = $('#editor-meta-warranty').val();
+        product['meta:ic_movable'] = $('#editor-meta-ic-movable').is(':checked') ? '1' : '0';
+        product['meta:truetone_support'] = $('#editor-meta-truetone').is(':checked') ? '1' : '0';
+        product['meta:coduri_compatibilitate'] = $('#editor-meta-compatibility').val();
         product._validation = validateProduct(product);
         updateStats();
-        renderProducts($('.filter-btn.active').data('filter'));
+        renderProducts($('.filter-btn.active').data('filter') || 'all');
         updateReport();
+        showNotice('Produs salvat!', 'success');
         $('#editor-modal').fadeOut(200);
-    }
-
-    function updateCharCounts() {
-        var titleLen = $('#editor-seo-title').val().length;
-        var descLen = $('#editor-seo-desc').val().length;
-        $('#title-count').text(titleLen + '/60').removeClass('warning error').addClass(titleLen > 60 ? 'error' : (titleLen > 50 ? 'warning' : ''));
-        $('#desc-count').text(descLen + '/160').removeClass('warning error').addClass(descLen > 160 ? 'error' : (descLen > 140 ? 'warning' : ''));
     }
 
     function updateReport() {
