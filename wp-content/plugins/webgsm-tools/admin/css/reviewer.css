@@ -1,0 +1,106 @@
+/* WebGSM Tools - Reviewer */
+.webgsm-tools { max-width: 1400px; margin: 20px auto; }
+.webgsm-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+.webgsm-card h2 { margin-top: 0; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+
+.upload-area {
+    border: 2px dashed #ccd0d4;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.upload-area:hover, .upload-area.dragover { border-color: #2271b1; background: #f0f6fc; }
+.upload-area .dashicons { font-size: 48px; width: 48px; height: 48px; color: #ccd0d4; }
+.upload-area.dragover .dashicons { color: #2271b1; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+.stat-box { padding: 20px; border-radius: 8px; text-align: center; }
+.stat-box .stat-number { display: block; font-size: 36px; font-weight: 600; line-height: 1; }
+.stat-box .stat-label { display: block; margin-top: 5px; color: #666; }
+.stat-total { background: #f0f0f1; }
+.stat-ok { background: #d4edda; color: #155724; }
+.stat-warning { background: #fff3cd; color: #856404; }
+.stat-error { background: #f8d7da; color: #721c24; }
+
+.filter-bar { display: flex; gap: 10px; }
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #ccd0d4;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.filter-btn:hover { background: #f0f0f1; }
+.filter-btn.active { background: #2271b1; color: #fff; border-color: #2271b1; }
+
+.table-responsive { overflow-x: auto; }
+#products-table img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+#products-table .status-ok { color: #155724; }
+#products-table .status-warning { color: #856404; }
+#products-table .status-error { color: #721c24; }
+#products-table tr.row-error { background: #fff5f5; }
+#products-table tr.row-warning { background: #fffbf0; }
+#products-table .category-invalid { color: #721c24; background: #f8d7da; padding: 2px 6px; border-radius: 3px; }
+#products-table .btn-edit { padding: 4px 8px; font-size: 16px; cursor: pointer; }
+
+.webgsm-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); z-index: 100000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: #fff; width: 90%; max-width: 1200px; max-height: 90vh;
+    border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;
+}
+.modal-header {
+    padding: 15px 20px; background: #f0f0f1;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #ccd0d4;
+}
+.modal-header h3 { margin: 0; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.modal-footer {
+    padding: 15px 20px; background: #f0f0f1; border-top: 1px solid #ccd0d4;
+    display: flex; justify-content: flex-end; gap: 10px;
+}
+.editor-grid { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
+.editor-preview img { width: 100%; border-radius: 8px; border: 1px solid #ccd0d4; }
+.editor-fields .field-group { margin-bottom: 15px; }
+.editor-fields label { display: block; font-weight: 600; margin-bottom: 5px; }
+.editor-fields .regular-text { width: 100%; }
+.editor-fields .field-hint { font-size: 12px; color: #666; margin-top: 3px; }
+.editor-fields .field-hint.error { color: #721c24; }
+.editor-fields .field-hint.success { color: #155724; }
+.btn-small { padding: 2px 8px; font-size: 12px; margin-top: 5px; }
+.char-count { font-weight: normal; color: #666; font-size: 12px; }
+.char-count.warning { color: #856404; }
+.char-count.error { color: #721c24; }
+
+.report-box {
+    background: #f9f9f9; border: 1px solid #ccd0d4; border-radius: 4px;
+    padding: 15px; margin-bottom: 15px;
+}
+.report-box h3 { margin-top: 0; }
+.report-box ul { margin: 10px 0; padding-left: 20px; }
+.report-box code { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
+.export-buttons { display: flex; gap: 15px; margin-bottom: 20px; }
+.instructions-preview { background: #f9f9f9; padding: 15px; border-radius: 4px; }
+.instructions-preview ol { margin: 10px 0; padding-left: 20px; }
+
+@media (max-width: 1200px) {
+    .editor-grid { grid-template-columns: 1fr; }
+    .editor-preview { max-width: 300px; margin: 0 auto; }
+}
+@media (max-width: 782px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}

@@ -1,4 +1,5 @@
 ---
+# Deploy: la webgsm-tools nu se uploadează folderul data/ și fișierele *.md (rămân doar în repo)
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
@@ -10,8 +11,12 @@ deployment:
     - /bin/cp -Rf wp-content/plugins/webgsm-b2b-pricing $DEPLOYPATH/plugins/
     - /bin/cp -Rf wp-content/plugins/webgsm-checkout-pro $DEPLOYPATH/plugins/
     - /bin/cp -Rf wp-content/plugins/webgsm-setup-wizard-v2 $DEPLOYPATH/plugins/
+    # webgsm-tools: exclude data/ și *.md (doar în repo, nu pe site)
+    - /bin/mkdir -p $DEPLOYPATH/plugins/webgsm-tools
+    - rsync -a --exclude='*.md' --exclude='data' wp-content/plugins/webgsm-tools/ $DEPLOYPATH/plugins/webgsm-tools/ 2>/dev/null || /bin/cp -Rf wp-content/plugins/webgsm-tools/* $DEPLOYPATH/plugins/webgsm-tools/
     
     - /bin/chmod -R 755 $DEPLOYPATH/themes/martfury-child
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-b2b-pricing
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-checkout-pro
     - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-setup-wizard-v2
+    - /bin/chmod -R 755 $DEPLOYPATH/plugins/webgsm-tools

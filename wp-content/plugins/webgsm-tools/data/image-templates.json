@@ -1,0 +1,26 @@
+{
+  "ecran-iphone": {
+    "name": "Ecran iPhone",
+    "badges": [
+      { "type": "model", "position": "top-left", "style": "dark" },
+      { "type": "tech", "position": "bottom-left", "style": "green" },
+      { "type": "brand", "position": "top-right", "style": "logo" },
+      { "type": "features", "position": "bottom-right", "style": "icons" }
+    ]
+  },
+  "baterie": {
+    "name": "Baterie",
+    "badges": [
+      { "type": "model", "position": "top-left", "style": "dark" },
+      { "type": "brand", "position": "top-right", "style": "logo" },
+      { "type": "capacity", "position": "bottom-center", "style": "highlight" }
+    ]
+  },
+  "unealta": {
+    "name": "Unealtă",
+    "badges": [
+      { "type": "brand", "position": "top-right", "style": "logo" },
+      { "type": "watermark", "position": "bottom-right", "style": "subtle" }
+    ]
+  }
+}

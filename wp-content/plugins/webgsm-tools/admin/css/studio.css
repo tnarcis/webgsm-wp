@@ -1,0 +1,10 @@
+/* WebGSM Tools - Image Studio */
+.webgsm-tools { max-width: 1200px; margin: 20px auto; }
+.webgsm-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+#studio-canvas { border: 1px solid #ccd0d4; border-radius: 4px; max-width: 100%; }
