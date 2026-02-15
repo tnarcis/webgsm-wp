@@ -109,62 +109,9 @@ class WebGSM_Checkout_Pro {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('webgsm_nonce'),
             'is_logged_in' => is_user_logged_in(),
-            'debug' => !empty($_GET['webgsm_debug']),
         ]);
-        if (!empty($_GET['webgsm_debug'])) {
-            add_action('wp_footer', [$this, 'inject_debug_tools'], 5);
-        }
     }
 
-    /** Debug pe mobile: Eruda (consolă) + măsurare footer. Se încarcă după ce pagina e gata ca să nu strice checkout-ul. */
-    public function inject_debug_tools() {
-        if (!is_checkout()) return;
-        ?>
-        <script>
-        (function(){
-            function initDebug() {
-                var q = document.querySelector.bind(document);
-                function runWhenPopupOpen() {
-                    var footer = q('.webgsm-popup .popup-footer');
-                    if (!footer) return;
-                    var r = footer.getBoundingClientRect();
-                    var vh = window.innerHeight;
-                    var visible = r.top < vh && r.bottom > 0;
-                    var msg = 'Footer: top=' + Math.round(r.top) + ' bottom=' + Math.round(r.bottom) + ' innerHeight=' + vh + ' visible=' + visible;
-                    console.log('[WebGSM debug] ' + msg);
-                    var banner = document.getElementById('webgsm-debug-banner');
-                    if (!banner) {
-                        banner = document.createElement('div');
-                        banner.id = 'webgsm-debug-banner';
-                        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1e293b;color:#fbbf24;padding:8px 12px;font-size:12px;font-family:monospace;z-index:999998;word-break:break-all;pointer-events:none;';
-                        document.body.appendChild(banner);
-                    }
-                    banner.textContent = msg;
-                }
-                window.webgsmDebugMeasureFooter = runWhenPopupOpen;
-                var observer = new MutationObserver(function() {
-                    if (q('.webgsm-popup .popup-content') && q('.webgsm-popup').offsetParent !== null) {
-                        setTimeout(runWhenPopupOpen, 300);
-                        setTimeout(runWhenPopupOpen, 800);
-                    }
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
-                /* Eruda – încărcare async ca să nu blocheze checkout-ul */
-                var s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/eruda@3.0.1/eruda.min.js';
-                s.onload = function() { if (typeof eruda !== 'undefined') eruda.init(); };
-                document.body.appendChild(s);
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initDebug);
-            } else {
-                setTimeout(initDebug, 0);
-            }
-        })();
-        </script>
-        <?php
-    }
-    
     public function remove_default_checkout() {
         remove_action('woocommerce_checkout_order_review', 'woocommerce_order_review', 10);
     }
