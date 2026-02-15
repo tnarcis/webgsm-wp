@@ -1,117 +1,125 @@
-# Backend WebGSM – receptie webhook WooCommerce
+# Backend WebGSM — Endpoint webhook WooCommerce
 
-Plugin-ul **WebGSM Woo Sync** (pe WordPress) trimite POST la schimbarea statusului comenzii. Acest document descrie ce trebuie implementat pe **backend-ul WebGSM** (API-ul vostru) pentru a primi și procesa webhook-ul. Partea de **facturare SmartBill** o aveți deja; aici este doar receptia + stoc + idempotency.
+Documentație pentru implementarea endpoint-ului care primește notificările de la plugin-ul **WebGSM Woo Sync** (WooCommerce). Plugin-ul trimite POST la schimbarea statusului comenzii; backend-ul verifică semnătura, înregistrează payload-ul și procesează async (stoc, eventual factură).
 
 ---
 
 ## 1. Endpoint
 
-- **URL:** configurat în plugin (ex. `https://api.webgsm.ro/webhook/woo/order`).
-- **Metodă:** POST.
+- **URL:** `POST /webhook/woo/order` (sau prefix ales: `/api/webhook/woo/order`).
 - **Content-Type:** `application/json`.
-- **Body:** JSON (structura mai jos).
+- **Body:** JSON (format în secțiunea 3).
 
 ---
 
-## 2. Autentificare
+## 2. Verificarea semnăturii (HMAC)
 
-Plugin-ul trimite header:
+Plugin-ul trimite header-ul:
 
-```
-X-WebGSM-Signature: <HMAC-SHA256 hex al body-ului raw, cu secretul partajat>
-```
-
-**Verificare pe backend (pseudo-cod):**
-
-```
-secret = env.WEBGSM_WEBHOOK_SECRET  // același secret ca în setările plugin
-body_raw = request.raw_body        // exact bytes primiti (nu JSON parsat re-serializat)
-expected = HMAC-SHA256(body_raw, secret).hex()
-received = request.headers["X-WebGSM-Signature"]
-if (expected !== received) return 401
+```http
+X-WebGSM-Signature: <hex(HMAC-SHA256(raw_body, secret))>
 ```
 
-- Dacă semnătura nu se potrivește: răspunde **401 Unauthorized**.
-- Secretul trebuie stocat în siguranță (env var) și același value setat și în plugin (Setări → WebGSM Woo Sync).
+**Reguli backend:**
+
+1. **Citește body-ul raw** înainte de a-l parsa ca JSON (pentru HMAC trebuie exact octeții trimiși). Nu folosi body-ul deja parsat.
+2. **Secret partajat:** același string stocat și în plugin (Setări → WebGSM Woo Sync) și în config-ul backend-ului (variabilă de mediu, ex. `WEBHOOK_WOO_SECRET`).
+3. **Calcul semnătură așteptată:**
+   - `signature_expected = HMAC-SHA256(raw_body, secret)`
+   - Codificare: **hex** (lowercase sau uppercase, atât timp cât comparația e consistentă). Plugin-ul trimite de obicei hex.
+4. **Comparație:** comparație **constant-time** între `X-WebGSM-Signature` (trimis) și `signature_expected` (hex). Evită `==` simplu pentru a reduce risk de timing attacks.
+5. **Dacă semnătura nu e validă:** răspuns **401 Unauthorized**; nu procesa body-ul.
+
+**Pseudocod:**
+
+```
+raw_body = request.raw_body   // bytes, nemodificat
+header_sig = request.headers["X-WebGSM-Signature"]
+expected  = hex(hmac_sha256(raw_body, WEBHOOK_WOO_SECRET))
+if not constant_time_compare(header_sig, expected):
+    return 401
+```
 
 ---
 
-## 3. Format payload (order.status_changed)
+## 3. Format payload și câmpuri folosite
 
-```json
-{
-  "event": "order.status_changed",
-  "timestamp": "2026-02-09T12:00:00Z",
-  "order_id": 12345,
-  "order_number": "12345",
-  "status_old": "processing",
-  "status_new": "completed",
-  "order": {
-    "id": 12345,
-    "billing": {
-      "first_name": "...",
-      "last_name": "...",
-      "company": "",
-      "address_1": "...",
-      "city": "...",
-      "postcode": "...",
-      "country": "RO",
-      "email": "...",
-      "phone": "...",
-      "cui": ""
-    },
-    "line_items": [
-      {
-        "product_id": 99,
-        "sku": "100001",
-        "ean": "5941234567890",
-        "name": "Ecran Samsung ...",
-        "quantity": 2,
-        "price": "150.00",
-        "total": "300.00"
-      }
-    ],
-    "total": "350.00",
-    "currency": "RON",
-    "date_created": "2026-02-09T10:00:00",
-    "payment_method": "stripe",
-    "payment_method_title": "Card"
-  }
-}
-```
+Payload-ul este JSON (după validarea HMAC poți parsa `raw_body`).
 
-- **order_id** + **status_new** sunt suficiente pentru idempotency (vezi mai jos).
-- **line_items[].sku** = SKU intern (Supabase); **line_items[].ean** = EAN din meta Woo (pentru SmartBill, dacă factura o emiteți voi).
+**Eveniment:** `event === "order.status_changed"`.
+
+**Câmpuri obligatorii:**
+
+| Câmp | Tip | Folosire |
+|------|-----|----------|
+| `order_id` | number | ID comandă Woo; folosit în idempotency. |
+| `status_old` | string | Status anterior (opțional pentru logică). |
+| `status_new` | string | **completed** / **cancelled** / **refunded** — determină acțiunea. |
+| `order` | object | Detalii comandă. |
+| `order.billing` | object | first_name, last_name, company, address_1, city, postcode, country, email, phone, cui. |
+| `order.line_items` | array | Fiecare element: `sku` (obligatoriu), `ean` (opțional), `quantity`, `price`, `total`, `name`, `product_id`. |
+| `order.total` | string | Total comandă. |
+| `order.date_created` | string | ISO date. |
+| `order.currency` | string | ex. RON. |
+
+**Idempotency:** același `order_id` + `status_new` nu trebuie procesat de două ori. Cheie recomandată: `woo_order_{order_id}_{status_new}` (ex. `woo_order_12345_completed`).
 
 ---
 
-## 4. Comportament recomandat
+## 4. Idempotency
 
-1. **Răspuns rapid:** După validare semnătură și parsare JSON, răspunde **200 OK** în &lt; 2 s. Procesarea grea (stoc, factură) să fie **asincronă** (worker / coadă / cron).
-
-2. **Idempotency:** Folosiți `order_id` (și eventual `order_id + status_new`) ca cheie. Dacă primiți același eveniment de două ori (retry din plugin), nu scădeți stocul de două ori și nu emiteți două facturi.
-
-3. **status_new:**
-   - **completed** → scădere stoc (mișcare vânzare) + puneți în coadă „creare factură SmartBill” (dacă factura o face backend-ul; altfel factura rămâne din Woo cum aveți acum).
-   - **cancelled** / **refunded** → reintrare în stoc (retur / anulare); nu emiteți factură.
-
-4. **Erori:** La 4xx/5xx plugin-ul face retry (backoff 5s, 15s) și loghează. Backend-ul la eroare internă poate răspunde 500; plugin-ul va încerca din nou.
+- **Cheie:** `idempotency_key = "woo_order_" + order_id + "_" + status_new` (toate string).
+- **Mecanism:**
+  - Înainte de orice procesare: înregistrare în `webhook_log` (sau tabel echivalent) cu `idempotency_key`, `raw_payload` (JSON), `processed = false`, `source = 'woocommerce'`, `event_type = 'order.status_changed'`.
+  - Dacă **UNIQUE constraint** pe `idempotency_key` e încălcat (înregistrare deja există), consideră evenimentul deja primit → răspunde **200 OK** fără să reprocesezi.
+  - Dacă inserarea reușește → răspunde **200 OK** și lasă procesarea pentru worker-ul async.
 
 ---
 
-## 5. Ce NU face acest document
+## 5. Răspuns și procesare asincronă
 
-- **Facturare SmartBill:** O aveți implementată în WordPress (Setări SmartBill, `facturi.php`). Backend-ul poate, opțional, emite factura la `completed` folosind datele din webhook (billing, line_items cu EAN); altfel fluxul actual (factură din Woo) rămâne neschimbat.
-- **GDPR:** Prelucrarea datelor din webhook (billing, email, telefon) trebuie aliniată la GDPR și legislația Ro/UE; review înainte de go-live.
+- **Răspuns:** după validare HMAC, validare JSON și înregistrare idempotency (insert sau detect duplicate): întoarce **200 OK** în **sub ~2 secunde**. Nu aștepta pe scăderea stocului sau pe factură.
+- **Procesare:** un **worker** (cron, queue, background job) citește din `webhook_log` înregistrările cu `processed = false`, pentru fiecare:
+  - **status_new === "completed":**
+    - Creează/actualizează `shop_order` și `order_line` (din `order`, billing, line_items).
+    - **Scade stocul** în DB: pentru fiecare linie, match pe `sku` (product_id din DB), înregistrare mișcare `vanzare` și actualizare `stock`. Dacă nu există produs cu acel SKU, log eroare și continuă sau marchează failed.
+    - Opțional: pune în coadă (outbox) eveniment „creare factură SmartBill” cu datele comenzii (client, linii cu sku/ean, total). Integrarea SmartBill o aveți deja; acest doc nu o implementează.
+  - **status_new === "cancelled" sau "refunded":**
+    - **Reintrare în stoc:** pentru liniile comenzii (identificate prin order_id deja salvat sau din payload), anulează vânzarea: mișcare de tip retur / anulare (sau mișcare inversă) astfel încât cantitățile să revină în `stock`. Folosești același `order_id` și `line_items` (sku + quantity) ca la completed.
+  - După procesare (succes sau eșec): actualizează `webhook_log.processed = true`, `processed_at = now()`, eventual `error` dacă a eșuat.
 
 ---
 
-## 6. Rezumat
+## 6. Erori și retry
 
-| Pas | Acțiune |
-|-----|--------|
-| 1 | Verificați `X-WebGSM-Signature` (HMAC-SHA256 al body raw). 401 dacă nu e ok. |
-| 2 | Parseați JSON; verificați `event === "order.status_changed"`. |
-| 3 | Verificați idempotency (order_id + status_new deja procesat?). |
-| 4 | Răspundeți 200 OK rapid. |
-| 5 | Procesați async: la **completed** – scădere stoc (+ eventual factură); la **cancelled** / **refunded** – reintrare stoc. |
+- **400 Bad Request:** body invalid (nu e JSON sau lipsește `event` / `order_id` / `status_new` / `order.line_items`). Nu înregistra în webhook_log cu processed=true; plugin-ul poate retrimite.
+- **401 Unauthorized:** semnătură HMAC invalidă.
+- **200 OK:** eveniment acceptat (inserat sau deja cunoscut). Orice eroare ulterioară în worker se tratează intern (retry worker, alertă, etc.).
+
+Plugin-ul face retry la 5s și 15s la 4xx/5xx; de aceea răspunsul rapid 200 e important.
+
+---
+
+## 7. Tabel / structură (referință)
+
+Folosirea tabelelor existente din schema WebGSM:
+
+- **webhook_log:** `id`, `source` ('woocommerce'), `event_type` ('order.status_changed'), `idempotency_key` (UNIQUE), `raw_payload` (JSONB), `processed`, `processed_at`, `error`, `created_at`.
+- **shop_order:** `woo_order_id`, `order_number`, `client_id`, `status`, `total_ron`, `order_date`, etc.
+- **order_line:** `order_id`, `product_id`, `quantity`, `unit_price_ron`, `total_ron`.
+- **stock** / **stock_movement:** pentru scădere (vanzare) și reintrare (cancelled/refunded).
+
+Match produs din payload: `line_items[].sku` → `product.sku` → `product_id` pentru `order_line` și pentru mișcări de stoc.
+
+---
+
+## 8. Rezumat
+
+1. **POST** pe `/webhook/woo/order`, body JSON.
+2. **Verificare** `X-WebGSM-Signature`: HMAC-SHA256 pe **raw body**, hex, comparație constant-time cu secret partajat.
+3. **Parse** JSON; validează `event`, `order_id`, `status_new`, `order`, `order.line_items`.
+4. **Idempotency:** `idempotency_key = "woo_order_{order_id}_{status_new}"`; INSERT în `webhook_log`; la conflict (duplicate) → 200 fără reprocesare.
+5. **Răspuns 200** rapid.
+6. **Worker:** pentru `processed = false` — completed: stoc scăzut + eventual coadă factură SmartBill; cancelled/refunded: stoc readăugat.
+
+Integrarea SmartBill (generare factură la completed) rămâne în codul existent; acest document nu o descrie, doar menționează că poți pune evenimentul în outbox pentru ea.

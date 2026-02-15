@@ -9,59 +9,6 @@
 
 if (!defined('ABSPATH')) exit;
 
-// ========== DIAGNOSTIC: identificare structură meniu (doar pentru admin) ==========
-// Afișează în consolă și într-un box clasele din header ca să putem scrie selectori corecți.
-add_action('wp_footer', 'webgsm_menu_structure_diagnostic', 999);
-function webgsm_menu_structure_diagnostic() {
-    if (!current_user_can('manage_options')) return;
-    ?>
-    <script>
-    (function() {
-        var header = document.querySelector('.header') || document.querySelector('header') || document.querySelector('.site-header') || document.body;
-        var navs = header.querySelectorAll('nav, [role="navigation"], .navigation, .main-navigation, .primary-nav, .nav-menu');
-        var out = [];
-        navs.forEach(function(nav, i) {
-            var ul = nav.querySelector('ul:first-of-type') || nav.querySelector('ul');
-            if (!ul) return;
-            var path = [];
-            var selectors = [];
-            var el = ul;
-            while (el && el !== document.body) {
-                var c = el.className && typeof el.className === 'string' ? el.className.trim() : '';
-                var tag = el.tagName ? el.tagName.toLowerCase() : '';
-                var part = tag + (c ? '.' + c.split(/\s+/).filter(Boolean).slice(0, 4).join('.') : '');
-                path.unshift(part);
-                if (c) selectors.unshift(part.replace(/\s+/g, '.'));
-                el = el.parentElement;
-            }
-            out.push('=== Nav ' + (i+1) + ' ===');
-            out.push('Selector UL (copiază în CSS): ' + selectors.join(' > '));
-            out.push('Path: ' + path.join(' > '));
-            out.push('UL.className: ' + (ul.className || '(none)'));
-            var lis = ul.querySelectorAll(':scope > li');
-            out.push('Top-level LIs: ' + lis.length);
-            lis.forEach(function(li, j) {
-                out.push('  LI ' + (j+1) + ': ' + (li.className || '(none)'));
-                var a = li.querySelector(':scope > a');
-                if (a) out.push('    A: "' + (a.textContent || '').trim().substring(0, 25) + '"');
-            });
-            out.push('');
-        });
-        if (out.length) {
-            console.log('%c[WebGSM] Structura meniului header', 'background:#1e40af;color:#fff;padding:4px 8px;font-weight:bold;');
-            console.log(out.join('\n'));
-            var box = document.createElement('div');
-            box.id = 'webgsm-menu-diagnostic';
-            box.style.cssText = 'position:fixed;bottom:10px;right:10px;max-width:480px;max-height:320px;overflow:auto;background:#1e293b;color:#e2e8f0;font-family:monospace;font-size:11px;padding:12px;border-radius:8px;z-index:999999;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-            box.innerHTML = '<div style="margin-bottom:8px;font-weight:bold;color:#93c5fd;">[WebGSM] Structura meniului – trimite acest text</div><pre style="margin:0;white-space:pre-wrap;word-break:break-all;">' + out.join('\n') + '</pre><div style="margin-top:8px;font-size:10px;color:#94a3b8;">Click aici pentru închidere. Copiază "Selector UL" și trimite-l pentru fix full-width.</div>';
-            box.onclick = function() { this.remove(); };
-            document.body.appendChild(box);
-        }
-    })();
-    </script>
-    <?php
-}
-
 // Adaugă clase pe itemi (doar meniul primary, nivel 0)
 add_filter('nav_menu_css_class', 'webgsm_primary_menu_item_classes', 10, 4);
 function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {

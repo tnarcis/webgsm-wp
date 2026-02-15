@@ -24,6 +24,7 @@ function render_smartbill_settings_page() {
     // Salvare setări
     if(isset($_POST['save_smartbill_settings']) && wp_verify_nonce($_POST['smartbill_nonce'], 'save_smartbill')) {
         update_option('smartbill_api_active', isset($_POST['smartbill_api_active']) ? 1 : 0);
+        update_option('smartbill_auto_generate', isset($_POST['smartbill_auto_generate']) ? 1 : 0);
         update_option('smartbill_username', sanitize_email($_POST['smartbill_username']));
         update_option('smartbill_token', sanitize_text_field($_POST['smartbill_token']));
         update_option('smartbill_cif', sanitize_text_field($_POST['smartbill_cif']));
@@ -33,6 +34,7 @@ function render_smartbill_settings_page() {
     }
     
     $api_active = get_option('smartbill_api_active', 0);
+    $auto_generate = get_option('smartbill_auto_generate', 1);
     $username = get_option('smartbill_username', 'info@webgsm.ro');
     $token = get_option('smartbill_token', '003|5088be0e0850155eaa7713f3d324a63a');
     $cif = get_option('smartbill_cif', 'RO31902941');
@@ -55,9 +57,25 @@ function render_smartbill_settings_page() {
                         </label>
                         <p class="description" style="margin-top:10px;">
                             <?php if($api_active): ?>
-                                <span style="color:green; font-size:14px;">✓ API-ul este <strong>ACTIV</strong> - facturile se genereaza automat</span>
+                                <span style="color:green; font-size:14px;">✓ API-ul este <strong>ACTIV</strong></span>
                             <?php else: ?>
-                                <span style="color:orange; font-size:14px;">⏸ API-ul este <strong>OPRIT</strong> - facturile NU se genereaza (mod test)</span>
+                                <span style="color:orange; font-size:14px;">⏸ API-ul este <strong>OPRIT</strong> (mod test) – poți genera facturi manual din comenzi</span>
+                            <?php endif; ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Generează factură automat</th>
+                    <td>
+                        <label style="display:inline-block; padding:8px 16px; background:#f0f6fc; border-radius:5px;">
+                            <input type="checkbox" name="smartbill_auto_generate" value="1" <?php checked($auto_generate, 1); ?>>
+                            <strong>La plată online / la livrare (ramburs)</strong>
+                        </label>
+                        <p class="description" style="margin-top:8px;">
+                            <?php if($auto_generate): ?>
+                                <span style="color:green;">✓ Factura se generează automat la Processing (card) sau Completed (ramburs).</span>
+                            <?php else: ?>
+                                <span style="color:#666;">Factura nu se generează automat. Folosește butonul <strong>„Generează factură”</strong> în fiecare comandă (lista Comenzi sau pagina comenzii).</span>
                             <?php endif; ?>
                         </p>
                     </td>
@@ -99,11 +117,10 @@ function render_smartbill_settings_page() {
         <hr>
         <h3>📋 Informații</h3>
         <ul>
-            <li><strong>Factura PF:</strong> Se genereaza pe numele clientului</li>
-            <li><strong>Factura PJ:</strong> Se genereaza pe firma clientului (din Date Facturare)</li>
-            <li><strong>Plata online:</strong> Factura se genereaza la plata reusita</li>
-            <li><strong>Plata ramburs:</strong> Factura se genereaza la livrare (status Completed)</li>
-            <li><strong>SKU:</strong> Produsele fără SKU primesc automat cod WEBGSM-{ID}</li>
+            <li><strong>Generează automat (bifat):</strong> La plată online → factură la Processing; la ramburs → factură la Completed.</li>
+            <li><strong>Generează automat (nebifat):</strong> Factura nu se generează singură; folosești butonul <strong>„Generează factură”</strong> în Comenzi (listă sau pagina comenzii).</li>
+            <li><strong>Factura PF:</strong> Pe numele clientului; <strong>Factura PJ:</strong> Pe firma (din Date Facturare).</li>
+            <li><strong>SKU:</strong> Produsele fără SKU primesc cod WEBGSM-{ID}.</li>
         </ul>
         
         <div style="background:#fff3cd; padding:15px; border-left:4px solid #ffc107; margin:20px 0;">
@@ -443,8 +460,11 @@ function get_factura_pdf_smartbill($order_id) {
 // GENERARE AUTOMATĂ FACTURI
 // =============================================
 
-// Plată online (card) → la procesare
+// Plată online (card) → la procesare (doar dacă „Generează factură automat” e bifat)
 add_action('woocommerce_order_status_processing', function($order_id) {
+    if (!get_option('smartbill_auto_generate', 1)) {
+        return;
+    }
     $order = wc_get_order($order_id);
     $payment_method = $order->get_payment_method();
     
@@ -455,8 +475,11 @@ add_action('woocommerce_order_status_processing', function($order_id) {
     }
 });
 
-// Plată ramburs/offline → la finalizare
+// Plată ramburs/offline → la finalizare (doar dacă „Generează factură automat” e bifat)
 add_action('woocommerce_order_status_completed', function($order_id) {
+    if (!get_option('smartbill_auto_generate', 1)) {
+        return;
+    }
     $order = wc_get_order($order_id);
     $payment_method = $order->get_payment_method();
     
@@ -531,38 +554,60 @@ add_action('woocommerce_order_details_after_order_table', function($order) {
 });
 
 // =============================================
-// ADMIN - COLOANĂ FACTURĂ ÎN COMENZI
+// ADMIN - COLOANĂ FACTURĂ ÎN COMENZI (legacy + HPOS)
 // =============================================
 
-add_filter('manage_edit-shop_order_columns', function($columns) {
+function smartbill_add_factura_column($columns) {
     $new_columns = array();
+    $added = false;
     foreach($columns as $key => $value) {
         $new_columns[$key] = $value;
-        if($key === 'order_total') {
+        if($key === 'order_total' || $key === 'total') {
             $new_columns['factura'] = 'Factură';
+            $added = true;
         }
+    }
+    if(!$added) {
+        $new_columns['factura'] = 'Factură';
     }
     return $new_columns;
-});
+}
 
-add_action('manage_shop_order_posts_custom_column', function($column) {
+add_filter('manage_edit-shop_order_columns', 'smartbill_add_factura_column');
+add_filter('manage_woocommerce_page_wc-orders_columns', 'smartbill_add_factura_column');
+
+function smartbill_render_factura_column_legacy($column) {
     global $post;
-    
-    if($column === 'factura') {
-        $invoice_number = get_post_meta($post->ID, '_smartbill_invoice_number', true);
-        if($invoice_number) {
-            $series = get_post_meta($post->ID, '_smartbill_invoice_series', true);
-            echo '<a href="' . admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $post->ID) . '" target="_blank">' . $series . $invoice_number . '</a>';
+    if($column !== 'factura' || !$post) return;
+    $order = wc_get_order($post->ID);
+    if(!$order) return;
+    smartbill_render_factura_cell($order->get_id(), $order);
+}
+
+function smartbill_render_factura_column_hpos($column, $order) {
+    if($column !== 'factura' || !$order) return;
+    smartbill_render_factura_cell($order->get_id(), $order);
+}
+
+function smartbill_render_factura_cell($order_id, $order = null) {
+    if(!$order) $order = wc_get_order($order_id);
+    if(!$order) return;
+    $invoice_number = $order->get_meta('_smartbill_invoice_number');
+    if($invoice_number) {
+        $series = $order->get_meta('_smartbill_invoice_series');
+        echo '<a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order_id)) . '" target="_blank">' . esc_html($series . $invoice_number) . '</a>';
+    } else {
+        $api_active = get_option('smartbill_api_active', 0);
+        if($api_active) {
+            echo '<button type="button" class="button genereaza-factura" data-order="' . esc_attr($order_id) . '" title="Generează factură SmartBill">Generează</button>';
         } else {
-            $api_active = get_option('smartbill_api_active', 0);
-            if($api_active) {
-                echo '<button class="button genereaza-factura" data-order="' . $post->ID . '">Genereaza</button>';
-            } else {
-                echo '<span style="color:#999;">API oprit</span>';
-            }
+            echo '<span style="color:#999;">API oprit</span>';
         }
     }
-});
+}
+
+add_action('manage_shop_order_posts_custom_column', 'smartbill_render_factura_column_legacy');
+add_action('manage_woocommerce_page_wc-orders_custom_column', 'smartbill_render_factura_column_hpos', 10, 2);
 
 // AJAX pentru generare manuală factură din admin
 add_action('wp_ajax_genereaza_factura_manual', function() {
@@ -596,21 +641,24 @@ add_action('wp_ajax_genereaza_factura_manual', function() {
     }
 });
 
-// Script pentru butonul de generare manuală
+// Script pentru butonul de generare manuală (listă comenzi + pagina unei comenzi) — legacy și HPOS
 add_action('admin_footer', function() {
-    global $pagenow;
-    if($pagenow !== 'edit.php' || !isset($_GET['post_type']) || $_GET['post_type'] !== 'shop_order') {
+    global $pagenow, $post;
+    $is_order_list_legacy = ($pagenow === 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] === 'shop_order');
+    $is_order_list_hpos  = ($pagenow === 'admin.php' && isset($_GET['page']) && $_GET['page'] === 'wc-orders');
+    $is_order_edit = ($pagenow === 'post.php' && $post && get_post_type($post) === 'shop_order');
+    if (!$is_order_list_legacy && !$is_order_list_hpos && !$is_order_edit) {
         return;
     }
     ?>
     <script>
     jQuery(document).ready(function($) {
-        $('.genereaza-factura').on('click', function(e) {
+        $(document).on('click', '.genereaza-factura', function(e) {
             e.preventDefault();
             var btn = $(this);
             var orderId = btn.data('order');
             
-            btn.prop('disabled', true).text('Se genereaza...');
+            btn.prop('disabled', true).text('...');
             
             $.ajax({
                 url: ajaxurl,
@@ -621,14 +669,20 @@ add_action('admin_footer', function() {
                 },
                 success: function(response) {
                     if(response.success) {
-                        btn.replaceWith('<a href="' + ajaxurl + '?action=download_factura_pdf&order_id=' + orderId + '" target="_blank">' + response.data.series + response.data.number + '</a>');
+                        if (window.location.href.indexOf('post.php') !== -1) {
+                            window.location.reload();
+                        } else {
+                            var link = '<a href="' + ajaxurl + '?action=download_factura_pdf&order_id=' + orderId + '" target="_blank">' + response.data.series + response.data.number + '</a>';
+                            btn.replaceWith(link);
+                        }
                     } else {
-                        btn.prop('disabled', false).text('Eroare');
-                        alert('Eroare: ' + response.data);
+                        btn.prop('disabled', false).text('Generează');
+                        alert('Eroare: ' + (response.data || 'Nu s-a putut genera factura'));
                     }
                 },
                 error: function() {
-                    btn.prop('disabled', false).text('Eroare');
+                    btn.prop('disabled', false).text('Generează');
+                    alert('Eroare la comunicarea cu serverul.');
                 }
             });
         });
@@ -637,36 +691,72 @@ add_action('admin_footer', function() {
     <?php
 });
 
-// Meta box în pagina comenzii pentru factură
+// Stil buton „Generează” compact (~40% mărime)
+add_action('admin_head', function() {
+    global $pagenow, $post;
+    $is_orders = ($pagenow === 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] === 'shop_order')
+        || ($pagenow === 'admin.php' && isset($_GET['page']) && $_GET['page'] === 'wc-orders')
+        || ($pagenow === 'post.php' && $post && get_post_type($post) === 'shop_order');
+    if (!$is_orders) return;
+    echo '<style>
+    .genereaza-factura {
+        font-size: 11px !important;
+        padding: 5px 6px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+        background-color: #93c5fd !important;
+        border-color: #93c5fd !important;
+        color: #0f172a !important;
+    }
+    .genereaza-factura:hover {
+        background-color: #7dd3fc !important;
+        border-color: #7dd3fc !important;
+        color: #020617 !important;
+    }
+    </style>';
+});
+
+// Meta box în pagina comenzii pentru factură (legacy + HPOS)
 add_action('add_meta_boxes', function() {
+    $screen = 'shop_order';
+    if (class_exists('\Automattic\WooCommerce\Utilities\OrderUtil') && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() && function_exists('wc_get_page_screen_id')) {
+        $screen = wc_get_page_screen_id('shop-order');
+    }
     add_meta_box(
         'smartbill_factura',
         'Factură SmartBill',
         'render_smartbill_order_metabox',
-        'shop_order',
+        $screen,
         'side',
         'high'
     );
 });
 
-function render_smartbill_order_metabox($post) {
-    $invoice_number = get_post_meta($post->ID, '_smartbill_invoice_number', true);
-    $invoice_series = get_post_meta($post->ID, '_smartbill_invoice_series', true);
-    $invoice_date = get_post_meta($post->ID, '_smartbill_invoice_date', true);
+function render_smartbill_order_metabox($order_or_post) {
+    $order = is_a($order_or_post, 'WP_Post') ? wc_get_order($order_or_post->ID) : $order_or_post;
+    if (!$order) return;
+    $order_id = $order->get_id();
+
+    $invoice_number = $order->get_meta('_smartbill_invoice_number');
+    $invoice_series = $order->get_meta('_smartbill_invoice_series');
+    $invoice_date = $order->get_meta('_smartbill_invoice_date');
     $api_active = get_option('smartbill_api_active', 0);
-    
-    if($invoice_number) {
-        echo '<p><strong>Factură:</strong> ' . $invoice_series . $invoice_number . '</p>';
-        echo '<p><strong>Data:</strong> ' . date('d.m.Y', strtotime($invoice_date)) . '</p>';
-        echo '<p><a href="' . admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $post->ID) . '" class="button" target="_blank">📄 Descarca PDF</a></p>';
+
+    if ($invoice_number) {
+        echo '<p><strong>Factură:</strong> ' . esc_html($invoice_series . $invoice_number) . '</p>';
+        if ($invoice_date) {
+            echo '<p><strong>Data:</strong> ' . esc_html(date('d.m.Y', strtotime($invoice_date))) . '</p>';
+        }
+        echo '<p><a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order_id)) . '" class="button" target="_blank">📄 Descarcă PDF</a></p>';
     } else {
-        if($api_active) {
-            echo '<p>Factura nu a fost generata.</p>';
-            echo '<button class="button button-primary genereaza-factura" data-order="' . $post->ID . '">Genereaza factura</button>';
+        if ($api_active) {
+            echo '<p>Factura nu a fost generată.</p>';
+            echo '<button type="button" class="button button-primary genereaza-factura" data-order="' . esc_attr($order_id) . '">Generează</button>';
         } else {
-            echo '<p>Factura nu a fost generata.</p>';
+            echo '<p>Factura nu a fost generată.</p>';
             echo '<p style="color:orange;">⏸ API SmartBill dezactivat</p>';
-            echo '<p><a href="' . admin_url('admin.php?page=smartbill-settings') . '">Activeaza API</a></p>';
+            echo '<p><a href="' . esc_url(admin_url('admin.php?page=smartbill-settings')) . '">Activează API</a></p>';
         }
     }
 }

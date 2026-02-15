@@ -365,34 +365,48 @@ class WebGSM_Checkout_Pro {
 
     /**
      * Render hidden billing & shipping inputs inside the real checkout <form> so they're submitted.
+     * Pre-populate from WC checkout/customer so new users see the data they used at registration.
      */
     public function render_hidden_form_fields() {
-        // Billing hidden fields (populated from our UI)
-        echo '<input type="hidden" name="billing_company" id="billing_company" value="">';
-        echo '<input type="hidden" name="billing_cui" id="billing_cui" value="">';
-        echo '<input type="hidden" name="billing_j" id="billing_j" value="">';
-        echo '<input type="hidden" name="billing_iban" id="billing_iban" value="">';
-        echo '<input type="hidden" name="billing_bank" id="billing_bank" value="">';
-        echo '<input type="hidden" name="billing_cnp" id="billing_cnp" value="">';
-        echo '<input type="hidden" name="billing_first_name" id="billing_first_name" value="">';
-        echo '<input type="hidden" name="billing_last_name" id="billing_last_name" value="">';
-        echo '<input type="hidden" name="billing_address_1" id="billing_address_1" value="">';
-        echo '<input type="hidden" name="billing_city" id="billing_city" value="">';
-        echo '<input type="hidden" name="billing_state" id="billing_state" value="">';
-        echo '<input type="hidden" name="billing_postcode" id="billing_postcode" value="">';
-        echo '<input type="hidden" name="billing_phone" id="billing_phone" value="">';
-        echo '<input type="hidden" name="billing_email" id="billing_email" value="'.esc_attr(WC()->checkout->get_value('billing_email')).'">';
+        $user_id = get_current_user_id();
+        $get = function($key) use ($user_id) {
+            $v = WC()->checkout->get_value($key);
+            if ($v !== null && $v !== '') return $v;
+            if (!$user_id) return '';
+            $meta = get_user_meta($user_id, $key, true);
+            if ($meta !== false && $meta !== '') return $meta;
+            if ($key === 'billing_first_name') return get_user_meta($user_id, 'first_name', true) ?: '';
+            if ($key === 'billing_last_name') return get_user_meta($user_id, 'last_name', true) ?: '';
+            if ($key === 'billing_email') return get_userdata($user_id) ? get_userdata($user_id)->user_email : '';
+            return '';
+        };
+        $b = function($key) use ($get) { return esc_attr($get($key)); };
+        echo '<input type="hidden" name="billing_company" id="billing_company" value="'.$b('billing_company').'">';
+        echo '<input type="hidden" name="billing_cui" id="billing_cui" value="'.$b('billing_cui').'">';
+        echo '<input type="hidden" name="billing_j" id="billing_j" value="'.$b('billing_j').'">';
+        echo '<input type="hidden" name="billing_iban" id="billing_iban" value="'.$b('billing_iban').'">';
+        echo '<input type="hidden" name="billing_bank" id="billing_bank" value="'.$b('billing_bank').'">';
+        echo '<input type="hidden" name="billing_cnp" id="billing_cnp" value="'.$b('billing_cnp').'">';
+        echo '<input type="hidden" name="billing_first_name" id="billing_first_name" value="'.$b('billing_first_name').'">';
+        echo '<input type="hidden" name="billing_last_name" id="billing_last_name" value="'.$b('billing_last_name').'">';
+        echo '<input type="hidden" name="billing_address_1" id="billing_address_1" value="'.$b('billing_address_1').'">';
+        echo '<input type="hidden" name="billing_city" id="billing_city" value="'.$b('billing_city').'">';
+        echo '<input type="hidden" name="billing_state" id="billing_state" value="'.$b('billing_state').'">';
+        echo '<input type="hidden" name="billing_postcode" id="billing_postcode" value="'.$b('billing_postcode').'">';
+        echo '<input type="hidden" name="billing_phone" id="billing_phone" value="'.$b('billing_phone').'">';
+        echo '<input type="hidden" name="billing_email" id="billing_email" value="'.$b('billing_email').'">';
         echo '<input type="hidden" name="billing_country" id="billing_country" value="RO">';
 
-        // Shipping hidden fields (these are used when user chooses a saved address or unchecks same_as_billing)
+        // Shipping hidden fields (pre-fill from billing when same_as_billing)
+        $ship = function($key) use ($get) { return esc_attr($get(str_replace('shipping_', 'billing_', $key))); };
         echo '<input type="hidden" name="ship_to_different_address" id="ship_to_different_address" value="0">';
-        echo '<input type="hidden" name="shipping_first_name" id="shipping_first_name" value="">';
-        echo '<input type="hidden" name="shipping_last_name" id="shipping_last_name" value="">';
-        echo '<input type="hidden" name="shipping_phone" id="shipping_phone" value="">';
-        echo '<input type="hidden" name="shipping_address_1" id="shipping_address_1" value="">';
-        echo '<input type="hidden" name="shipping_city" id="shipping_city" value="">';
-        echo '<input type="hidden" name="shipping_state" id="shipping_state" value="">';
-        echo '<input type="hidden" name="shipping_postcode" id="shipping_postcode" value="">';
+        echo '<input type="hidden" name="shipping_first_name" id="shipping_first_name" value="'.$ship('shipping_first_name').'">';
+        echo '<input type="hidden" name="shipping_last_name" id="shipping_last_name" value="'.$ship('shipping_last_name').'">';
+        echo '<input type="hidden" name="shipping_phone" id="shipping_phone" value="'.$ship('shipping_phone').'">';
+        echo '<input type="hidden" name="shipping_address_1" id="shipping_address_1" value="'.$ship('shipping_address_1').'">';
+        echo '<input type="hidden" name="shipping_city" id="shipping_city" value="'.$ship('shipping_city').'">';
+        echo '<input type="hidden" name="shipping_state" id="shipping_state" value="'.$ship('shipping_state').'">';
+        echo '<input type="hidden" name="shipping_postcode" id="shipping_postcode" value="'.$ship('shipping_postcode').'">';
         echo '<input type="hidden" name="shipping_country" id="shipping_country" value="RO">';
     }
     

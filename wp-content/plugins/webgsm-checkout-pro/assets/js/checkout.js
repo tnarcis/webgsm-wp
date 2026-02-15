@@ -60,6 +60,8 @@
         
         // Populează din carduri la încărcare (fără popup!)
         silentInitFromCards();
+        // Pentru utilizatori noi: afișează datele din cont (pre-populate din PHP) când nu au persoane salvate
+        showAccountBillingIfEmpty();
 
         // Sincronizează shipping cu billing dacă "same as billing" e bifat (inițial)
         $('#same_as_billing').trigger('change');
@@ -220,6 +222,35 @@
         
         injectBillingData(data, 'pj');
         return true;
+    }
+
+    /** Afișează „Date din cont” când userul nu are persoane salvate dar hidden-urile au date (utilizator nou). */
+    function showAccountBillingIfEmpty() {
+        var hasPersons = $('input[name="selected_person"]').length > 0;
+        var hasCompanies = $('input[name="selected_company"]').length > 0;
+        var fn = ($('#billing_first_name').val() || '').trim();
+        var ln = ($('#billing_last_name').val() || '').trim();
+        var em = ($('#billing_email').val() || '').trim();
+        var hasAccountData = fn || ln || em;
+
+        $('#webgsm-account-billing-hint').remove();
+        if (hasPersons || hasCompanies) return;
+
+        if (hasAccountData && WebGSM.currentCustomerType === 'pf') {
+            var text = [fn, ln].filter(Boolean).join(' ');
+            if (em) text += (text ? ', ' : '') + em;
+            var $hint = $('<p id="webgsm-account-billing-hint" class="no-items" style="background:#ecfdf5;color:#065f46;padding:10px 12px;border-radius:6px;margin-bottom:10px;font-size:13px;"></p>');
+            $hint.text('Date facturare din cont: ' + (text || '—'));
+            $hint.prependTo('#pf_section .persons-list');
+        }
+        if (hasAccountData && WebGSM.currentCustomerType === 'pj') {
+            var comp = ($('#billing_company').val() || '').trim();
+            var cui = ($('#billing_cui').val() || '').trim();
+            var text = comp || cui || em || '—';
+            var $hint = $('<p id="webgsm-account-billing-hint" class="no-items" style="background:#ecfdf5;color:#065f46;padding:10px 12px;border-radius:6px;margin-bottom:10px;font-size:13px;"></p>');
+            $hint.text('Date facturare din cont: ' + text);
+            $hint.prependTo('#pj_section .companies-list');
+        }
     }
 
     // =========================================
@@ -1212,6 +1243,7 @@
         
         $(document).on('change', 'input[name="billing_customer_type"]', function() {
             var type = $(this).val();
+            WebGSM.currentCustomerType = type;
             log('Schimbare tip client: ' + type);
             
             toggleCustomerSections(type);
@@ -1224,7 +1256,7 @@
                 // Pentru PJ, adresa de livrare trebuie să fie aceeași cu adresa firmei
                 $('#same_as_billing').prop('checked', true).trigger('change');
             }
-            
+            showAccountBillingIfEmpty();
             $(document.body).trigger('update_checkout');
         });
         
