@@ -1316,6 +1316,9 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
         right: 0 !important;
         animation: slideUpPopup 0.25s ease-out !important;
         min-height: 0 !important;
+        /* iOS: înălțime dinamică când bara de adresă se ascunde */
+        max-height: -webkit-fill-available !important;
+        max-height: 85dvh !important;
     }
     
     @keyframes slideUpPopup {
@@ -1360,28 +1363,33 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
         justify-content: center !important;
     }
     
-    /* Body popup - scrollabil, lasă loc pentru footer */
+    /* Body popup - scrollabil; padding-bottom ca conținutul să nu fie sub footer-ul fix (iOS) */
     .webgsm-popup .popup-body {
         flex: 1 1 0 !important;
         min-height: 0 !important;
         overflow-y: auto !important;
+        overflow-x: hidden !important;
         padding: 16px !important;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
         -webkit-overflow-scrolling: touch !important;
+        -webkit-transform: translateZ(0) !important; /* layer pentru scroll fluid iOS */
     }
     
-    /* Footer popup - mereu vizibil jos (Salvează / Anulează) */
+    /* Footer FIX la baza ecranului pe mobile (fix pentru iOS Safari – sticky nu merge bine) */
     .webgsm-popup .popup-footer {
-        flex-shrink: 0 !important;
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         padding: 12px 16px !important;
-        padding-bottom: calc(12px + 100px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
         border-top: 1px solid #e5e7eb !important;
         background: #fff !important;
         display: flex !important;
         gap: 10px !important;
         box-shadow: 0 -4px 20px rgba(0,0,0,0.08) !important;
-        position: sticky !important;
-        bottom: 0 !important;
-        z-index: 10 !important;
+        z-index: 100 !important;
+        flex-shrink: 0 !important;
     }
     
     /* Butoane footer - compacte dar vizibile */
@@ -1463,16 +1471,18 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     .webgsm-popup .popup-content {
         height: 90vh !important;
         max-height: 90vh !important;
+        max-height: 90dvh !important;
         min-height: 0 !important;
-    }
-    
-    .webgsm-popup .popup-footer {
-        padding-bottom: calc(10px + 100px + env(safe-area-inset-bottom, 0px)) !important;
     }
     
     .webgsm-popup .popup-body {
         padding: 14px !important;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
         min-height: 0 !important;
+    }
+    
+    .webgsm-popup .popup-footer {
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
     }
     
     .webgsm-popup .popup-header {
