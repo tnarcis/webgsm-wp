@@ -1,5 +1,9 @@
 # Debug checkout pe iPhone (iOS)
 
+**Dacă cu `?webgsm_debug=1` pagina se încarcă ciudat sau nu vezi opțiunile (Adaugă adresă / Salvează):** încarcă mai întâi checkout-ul **fără** parametru, apoi adaugă `?webgsm_debug=1` la URL și reîmprospătează. Instrumentele de debug se încarcă după ce pagina e gata, ca să nu blocheze nimic.
+
+---
+
 ## 1. Mod debug în browser (fără Mac)
 
 Pe **iPhone**, deschide checkout-ul cu parametrul de debug în URL:
