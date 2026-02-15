@@ -574,6 +574,11 @@
         setTimeout(function() {
             $popup.find('input:visible:first').focus();
         }, 100);
+        // Debug: măsurare poziție footer (când ?webgsm_debug=1)
+        if (window.webgsm_checkout && window.webgsm_checkout.debug && typeof window.webgsmDebugMeasureFooter === 'function') {
+            setTimeout(window.webgsmDebugMeasureFooter, 200);
+            setTimeout(window.webgsmDebugMeasureFooter, 600);
+        }
     }
     
     function closePopup() {
