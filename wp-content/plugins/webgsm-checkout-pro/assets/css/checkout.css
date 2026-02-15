@@ -1541,13 +1541,32 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
 }
 
 /* =============================================
-   BARA TRIMITE COMANDA - Z-INDEX MAI MIC
+   BARA TRIMITE COMANDA ȘI MENIUL TEMEI - Z-INDEX
    ============================================= */
 
 @media (max-width: 768px) {
-    /* Popup trebuie să fie DEASUPRA barei trimite comanda */
-    .webgsm-popup {
-        z-index: 999999 !important;
+    /* Popup deasupra barei trimite comanda ȘI deasupra meniului fix al temei (mobil) */
+    .webgsm-popup,
+    .webgsm-popup.active,
+    #address_popup,
+    #company_popup,
+    #person_popup {
+        z-index: 9999999 !important;
+    }
+    
+    .webgsm-popup .popup-content,
+    .webgsm-popup .popup-overlay,
+    #address_popup .popup-content,
+    #company_popup .popup-content,
+    #person_popup .popup-content {
+        z-index: 9999999 !important;
+    }
+    
+    .webgsm-popup .popup-footer,
+    #address_popup .popup-footer,
+    #company_popup .popup-footer,
+    #person_popup .popup-footer {
+        z-index: 9999999 !important;
     }
     
     .webgsm-mobile-submit {
