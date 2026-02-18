@@ -15,11 +15,13 @@ $tier_retention = get_option('webgsm_b2b_tier_retention_months', 3);
 // Salvare setări
 if (isset($_POST['webgsm_b2b_save_settings']) && wp_verify_nonce($_POST['webgsm_b2b_nonce'], 'webgsm_b2b_save_settings')) {
     
-    update_option('webgsm_b2b_discount_implicit', sanitize_text_field($_POST['discount_implicit']));
-    update_option('webgsm_b2b_marja_minima', sanitize_text_field($_POST['marja_minima']));
+    update_option('webgsm_b2b_discount_implicit', isset($_POST['discount_implicit']) ? sanitize_text_field($_POST['discount_implicit']) : get_option('webgsm_b2b_discount_implicit', 5));
+    update_option('webgsm_b2b_marja_minima', isset($_POST['marja_minima']) ? sanitize_text_field($_POST['marja_minima']) : get_option('webgsm_b2b_marja_minima', 5));
     update_option('webgsm_b2b_show_badge', isset($_POST['show_badge']) ? 'yes' : 'no');
-    update_option('webgsm_b2b_badge_text', isset($_POST['badge_text']) ? sanitize_text_field($_POST['badge_text']) : get_option('webgsm_b2b_badge_text', 'Preț B2B'));
-    update_option('webgsm_b2b_tier_retention_months', intval($_POST['tier_retention']));
+    $badge_text_save = array_key_exists('badge_text', $_POST) ? sanitize_text_field($_POST['badge_text']) : get_option('webgsm_b2b_badge_text', 'Preț B2B');
+    if ($badge_text_save === '') $badge_text_save = 'Preț B2B';
+    update_option('webgsm_b2b_badge_text', $badge_text_save);
+    update_option('webgsm_b2b_tier_retention_months', isset($_POST['tier_retention']) ? intval($_POST['tier_retention']) : get_option('webgsm_b2b_tier_retention_months', 3));
     
     // Tiers - ACUM CU min_value (SUMĂ)
     $new_tiers = array();

@@ -1185,9 +1185,28 @@ class WebGSM_B2B_Pricing {
             $reasons[] = 'Tier necalculat (se actualizează după prima comandă completă).';
         }
         $reasons[] = 'Dacă totul e OK aici dar pe pagină nu vezi B2B, dezactivează cache-ul full-page (LiteSpeed / Cloudflare etc.) pentru utilizatori logați.';
-        echo '<div id="webgsm-b2b-debug" style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#e2e8f0;padding:12px 16px;font-size:12px;font-family:monospace;z-index:99999;max-height:200px;overflow:auto;border-top:2px solid #22c55e;">';
+        
+        // Valorile din DB pe care le folosește codul – ca să vezi diferența local vs live
+        $opt_implicit_raw = get_option('webgsm_b2b_discount_implicit', 'NOT_SET');
+        $tiers_config = get_option('webgsm_b2b_tiers', array());
+        $tier_extra = $tier && isset($tiers_config[$tier]['discount_extra']) ? $tiers_config[$tier]['discount_extra'] : '—';
+        
+        echo '<div id="webgsm-b2b-debug" style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#e2e8f0;padding:12px 16px;font-size:12px;font-family:monospace;z-index:99999;max-height:280px;overflow:auto;border-top:2px solid #22c55e;">';
         echo '<strong style="color:#22c55e;">[WebGSM B2B Debug]</strong> ';
         echo 'user_id=' . (int) $user_id . ' | is_pj=' . ($is_pj ? 'DA' : 'NU') . ' | tier=' . esc_html($tier ?: '—') . ' | _b2b_status=' . esc_html($b2b_status ?: '—') . ' | _is_pj=' . esc_html($is_pj_meta ?: '—') . ' | billing_cui=' . (strlen((string)$billing_cui) ? 'set' : '—') . ' | _tip_client=' . esc_html($tip_client ?: '—') . ' | roles=' . esc_html(implode(',', $roles)) . '<br>';
+        echo '<strong style="color:#93c5fd;">Setări (din DB):</strong> discount_implicit_option=' . esc_html(var_export($opt_implicit_raw, true)) . ' | tier_' . esc_html($tier ?: '') . '_extra=' . esc_html($tier_extra) . '<br>';
+        
+        // Pe pagina de produs: afișează cum se calculează discountul pentru produsul curent
+        global $product;
+        if ($is_pj && $product && is_a($product, 'WC_Product')) {
+            $pj_info = $this->get_discount_pj($product, true);
+            $discount_pj_val = is_array($pj_info) ? $pj_info['discount'] : $pj_info;
+            $source = is_array($pj_info) ? $pj_info['source'] : '—';
+            $tier_extra_float = $tier && isset($tiers_config[$tier]['discount_extra']) ? (float) $tiers_config[$tier]['discount_extra'] : 0;
+            $total_pct = $discount_pj_val + $tier_extra_float;
+            echo '<strong style="color:#93c5fd;">Acest produs (#' . (int) $product->get_id() . '):</strong> discount_pj=' . esc_html((string) $discount_pj_val) . '% (sursă: ' . esc_html($source) . ') + tier_extra=' . esc_html((string) $tier_extra_float) . '% → total=' . esc_html((string) $total_pct) . '%<br>';
+        }
+        
         echo '<span style="color:#fbbf24;">' . esc_html(implode(' ', $reasons)) . '</span>';
         echo '</div>';
     }
@@ -1889,7 +1908,8 @@ class WebGSM_B2B_Pricing {
         // ========================================
         if ($pret_minim > 0 && $pret_final < $pret_minim) {
             $pret_final = $pret_minim;
-            if (defined('WP_DEBUG') && WP_DEBUG) {
+            // Log doar în debug ca să nu umple log-ul pe live
+            if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
                 error_log("[WebGSM B2B] Preț corectat la minim pentru produs #{$product_id}: {$pret_final}");
             }
         }
