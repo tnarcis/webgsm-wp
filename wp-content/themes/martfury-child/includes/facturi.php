@@ -199,22 +199,17 @@ function webgsm_bulk_generate_skus() {
 }
 
 // =============================================
-// AUTO-GENERARE SKU pentru produse fără SKU
+// AUTO-GENERARE SKU — DEZACTIVATĂ (SKU vine din API / sync script)
 // =============================================
-add_action('save_post_product', 'webgsm_auto_generate_sku', 10, 1);
+// add_action('save_post_product', 'webgsm_auto_generate_sku', 10, 1); // nu mai rulăm la save
 function webgsm_auto_generate_sku($product_id) {
     $product = wc_get_product($product_id);
     if (!$product) return;
-    
-    // Verifică dacă produsul are SKU
     $current_sku = $product->get_sku();
-    
     if (empty($current_sku)) {
-        // Generează SKU automat: WEBGSM-{ID}
         $auto_sku = 'WEBGSM-' . $product_id;
         $product->set_sku($auto_sku);
         $product->save();
-        
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Auto-generated SKU for product #' . $product_id . ': ' . $auto_sku);
         }

@@ -40,36 +40,41 @@ class Webhook_Sender {
      * @param \WC_Order $order
      */
     public function on_order_status_changed($order_id, $old_status, $new_status, $order) {
-        $url = get_option(self::OPTION_URL, '');
-        $secret = get_option(self::OPTION_SECRET, '');
-        if (empty($url) || empty($secret)) {
-            $this->log('WebGSM Woo Sync: URL sau Secret lipsă în setări. Webhook netrimis.');
-            return;
-        }
+        try {
+            $url = get_option(self::OPTION_URL, '');
+            $secret = get_option(self::OPTION_SECRET, '');
+            if (empty($url) || empty($secret)) {
+                $this->log('WebGSM Woo Sync: URL sau Secret lipsă în setări. Webhook netrimis.');
+                return;
+            }
 
-        $send = false;
-        if ($new_status === 'completed' && get_option(self::OPTION_STATUS_COMPLETED, 1)) {
-            $send = true;
-        }
-        if ($new_status === 'cancelled' && get_option(self::OPTION_STATUS_CANCELLED, 1)) {
-            $send = true;
-        }
-        if ($new_status === 'refunded' && get_option(self::OPTION_STATUS_REFUNDED, 1)) {
-            $send = true;
-        }
-        if (!$send) {
-            return;
-        }
+            $send = false;
+            if ($new_status === 'completed' && get_option(self::OPTION_STATUS_COMPLETED, 1)) {
+                $send = true;
+            }
+            if ($new_status === 'cancelled' && get_option(self::OPTION_STATUS_CANCELLED, 1)) {
+                $send = true;
+            }
+            if ($new_status === 'refunded' && get_option(self::OPTION_STATUS_REFUNDED, 1)) {
+                $send = true;
+            }
+            if (!$send) {
+                return;
+            }
 
-        $payload = $this->build_order_payload($order_id, $old_status, $new_status, $order);
-        if (!$payload) {
-            return;
+            $payload = $this->build_order_payload($order_id, $old_status, $new_status, $order);
+            if (!$payload) {
+                return;
+            }
+
+            $body = wp_json_encode($payload);
+            $signature = $this->hmac_signature($body, $secret);
+
+            $this->send_request($url, $body, $signature, $order_id, $new_status);
+        } catch (\Throwable $e) {
+            $this->log(sprintf('WebGSM Woo Sync: eroare order_id=%s - %s', $order_id, $e->getMessage()));
+            error_log(sprintf('WebGSM Woo Sync: %s in %s:%d', $e->getMessage(), $e->getFile(), $e->getLine()));
         }
-
-        $body = wp_json_encode($payload);
-        $signature = $this->hmac_signature($body, $secret);
-
-        $this->send_request($url, $body, $signature, $order_id, $new_status);
     }
 
     /**
@@ -161,61 +166,71 @@ class Webhook_Sender {
     }
 
     /**
-     * Trimite request cu retry (backoff 5s, 15s).
+     * Trimite request cu retry (backoff 5s, 15s). Nu aruncă excepții — doar loghează; nu blochează WooCommerce.
      */
     private function send_request($url, $body, $signature, $order_id, $status_new) {
-        $log = get_option(self::OPTION_LOG, 0);
-        if ($log) {
-            $this->log(sprintf('WebGSM Woo Sync: trimitere order_id=%s status_new=%s', $order_id, $status_new));
-        }
-
-        $args = [
-            'method' => 'POST',
-            'timeout' => self::TIMEOUT,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-WebGSM-Signature' => $signature,
-            ],
-            'body' => $body,
-        ];
-
-        $attempt = 0;
-        $delays = [0] + self::RETRY_DELAYS;
-        $last_response = null;
-        $last_code = 0;
-
-        foreach ($delays as $delay) {
-            if ($delay > 0) {
-                sleep($delay);
+        try {
+            $log = get_option(self::OPTION_LOG, 0);
+            if ($log) {
+                $this->log(sprintf('WebGSM Woo Sync: trimitere order_id=%s status_new=%s', $order_id, $status_new));
             }
-            $attempt++;
-            $response = wp_remote_post($url, $args);
-            $code = wp_remote_retrieve_response_code($response);
-            $last_response = $response;
-            $last_code = $code;
 
-            if ($code >= 200 && $code < 300) {
-                if ($log) {
-                    $this->log(sprintf('WebGSM Woo Sync: succes order_id=%s (attempt %d)', $order_id, $attempt));
+            $args = [
+                'method' => 'POST',
+                'timeout' => self::TIMEOUT,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'X-WebGSM-Signature' => $signature,
+                ],
+                'body' => $body,
+            ];
+
+            $attempt = 0;
+            $delays = [0] + self::RETRY_DELAYS;
+            $last_code = 0;
+
+            foreach ($delays as $delay) {
+                if ($delay > 0) {
+                    sleep($delay);
                 }
-                return;
+                $attempt++;
+                $response = wp_remote_post($url, $args);
+
+                if (is_wp_error($response)) {
+                    $this->log(sprintf('WebGSM Woo Sync: order_id=%s attempt=%d WP_Error - %s', $order_id, $attempt, $response->get_error_message()));
+                    error_log(sprintf('WebGSM Woo Sync: order_id=%s %s', $order_id, $response->get_error_message()));
+                    continue;
+                }
+
+                $code = wp_remote_retrieve_response_code($response);
+                $last_code = $code;
+
+                if ($code >= 200 && $code < 300) {
+                    if ($log) {
+                        $this->log(sprintf('WebGSM Woo Sync: succes order_id=%s (attempt %d)', $order_id, $attempt));
+                    }
+                    return;
+                }
+
+                $body_res = wp_remote_retrieve_body($response);
+                $this->log(sprintf(
+                    'WebGSM Woo Sync: order_id=%s attempt=%d HTTP %s - %s',
+                    $order_id,
+                    $attempt,
+                    $code,
+                    wp_remote_retrieve_response_message($response)
+                ));
+                if (!empty($body_res)) {
+                    $this->log('WebGSM Woo Sync response body: ' . substr($body_res, 0, 500));
+                }
             }
 
-            $body_res = wp_remote_retrieve_body($response);
-            $this->log(sprintf(
-                'WebGSM Woo Sync: order_id=%s attempt=%d HTTP %s - %s',
-                $order_id,
-                $attempt,
-                $code,
-                wp_remote_retrieve_response_message($response)
-            ));
-            if (!empty($body_res)) {
-                $this->log('WebGSM Woo Sync response body: ' . substr($body_res, 0, 500));
+            if ($last_code >= 400 && $last_code < 600) {
+                error_log(sprintf('WebGSM Woo Sync: eșec final order_id=%s HTTP %s', $order_id, $last_code));
             }
-        }
-
-        if ($last_code >= 400 && $last_code < 600) {
-            error_log(sprintf('WebGSM Woo Sync: eșec final order_id=%s HTTP %s', $order_id, $last_code));
+        } catch (\Throwable $e) {
+            $this->log(sprintf('WebGSM Woo Sync: send_request eroare order_id=%s - %s', $order_id, $e->getMessage()));
+            error_log(sprintf('WebGSM Woo Sync send_request: %s in %s:%d', $e->getMessage(), $e->getFile(), $e->getLine()));
         }
     }
 
