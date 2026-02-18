@@ -1150,6 +1150,8 @@ class WebGSM_B2B_Pricing {
         header('Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0');
         header('Pragma: no-cache');
         header('Expires: 0');
+        // LiteSpeed Server: semnal să nu cache-uiască (preț B2B diferit per user)
+        @header('X-LiteSpeed-Cache-Control: no-cache', false);
     }
     
     /**
