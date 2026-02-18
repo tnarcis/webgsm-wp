@@ -1040,6 +1040,12 @@ class WebGSM_B2B_Pricing {
     
     private static $instance = null;
     
+    /** Cache per request – evită recalculări la fiecare produs din listă */
+    private static $req_is_pj = array();
+    private static $req_tier = array();
+    private static $req_discount_pj = array();
+    private static $req_pret_minim = array();
+    
     public static function instance() {
         if (is_null(self::$instance)) {
             self::$instance = new self();
@@ -1318,32 +1324,42 @@ class WebGSM_B2B_Pricing {
             return false;
         }
         
+        if (isset(self::$req_is_pj[$user_id])) {
+            return self::$req_is_pj[$user_id];
+        }
+        
         // Check if user is approved - pending users don't get B2B prices
         $b2b_status = get_user_meta($user_id, '_b2b_status', true);
         if ($b2b_status === 'pending') {
-            return false; // Pending users don't get B2B prices
+            self::$req_is_pj[$user_id] = false;
+            return false;
         }
         
         $is_pj = get_user_meta($user_id, '_is_pj', true);
         if ($is_pj === 'yes' || $is_pj === '1' || $is_pj === true) {
+            self::$req_is_pj[$user_id] = true;
             return true;
         }
         
         $user = get_userdata($user_id);
         if ($user && (in_array('b2b_customer', (array) $user->roles) || in_array('wholesale_customer', (array) $user->roles))) {
+            self::$req_is_pj[$user_id] = true;
             return true;
         }
         
         $cui = get_user_meta($user_id, 'billing_cui', true);
         if (!empty($cui)) {
+            self::$req_is_pj[$user_id] = true;
             return true;
         }
         
         $tip_client = get_user_meta($user_id, '_tip_client', true);
         if (strtolower($tip_client) === 'pj' || strtolower($tip_client) === 'juridica') {
+            self::$req_is_pj[$user_id] = true;
             return true;
         }
         
+        self::$req_is_pj[$user_id] = false;
         return false;
     }
     
@@ -1553,6 +1569,10 @@ class WebGSM_B2B_Pricing {
             return false;
         }
         
+        if (isset(self::$req_tier[$user_id])) {
+            return self::$req_tier[$user_id];
+        }
+        
         $tier = get_user_meta($user_id, '_pj_tier', true);
         
         if (empty($tier)) {
@@ -1561,6 +1581,7 @@ class WebGSM_B2B_Pricing {
             update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
         }
         
+        self::$req_tier[$user_id] = $tier;
         return $tier;
     }
     
@@ -1923,6 +1944,9 @@ class WebGSM_B2B_Pricing {
      */
     public function get_pret_minim($product) {
         $product_id = $product->get_id();
+        if (isset(self::$req_pret_minim[$product_id])) {
+            return self::$req_pret_minim[$product_id];
+        }
         $pret_achizitie = get_post_meta($product_id, '_pret_achizitie', true);
         $marja_minima = (float) get_option('webgsm_b2b_marja_minima', 5);
 
@@ -1935,23 +1959,29 @@ class WebGSM_B2B_Pricing {
         $pret_minim_setat = get_post_meta($product_id, '_pret_minim_vanzare', true);
         if (!empty($pret_minim_setat) && (float) $pret_minim_setat > 0) {
             $explicit = (float) $pret_minim_setat;
-            // Nu permitem niciodată sub cost+marjă: folosim max(floor, explicit)
-            return $floor_cost_marja > 0 ? max($floor_cost_marja, $explicit) : $explicit;
+            $result = $floor_cost_marja > 0 ? max($floor_cost_marja, $explicit) : $explicit;
+            self::$req_pret_minim[$product_id] = $result;
+            return $result;
         }
-
+        self::$req_pret_minim[$product_id] = $floor_cost_marja;
         return $floor_cost_marja;
     }
     
     public function get_discount_pj($product, $return_source = false) {
         $product_id = $product->get_id();
         
+        if (isset(self::$req_discount_pj[$product_id])) {
+            $c = self::$req_discount_pj[$product_id];
+            return $return_source ? $c : $c['discount'];
+        }
+        
         // Prioritate 1: discount pe produs – folosim doar dacă e setat și > 0 (0/gol = trecem la categorie/implicit)
         $discount_produs = get_post_meta($product_id, '_discount_pj', true);
         if ($discount_produs !== '' && $discount_produs !== false && $discount_produs !== null) {
             $val = (float) $discount_produs;
             if ($val > 0) {
-                if ($return_source) return array('discount' => $val, 'source' => 'produs');
-                return $val;
+                self::$req_discount_pj[$product_id] = array('discount' => $val, 'source' => 'produs');
+                return $return_source ? self::$req_discount_pj[$product_id] : $val;
             }
         }
         
@@ -1971,8 +2001,8 @@ class WebGSM_B2B_Pricing {
             }
         }
         if ($discount_categorie > 0) {
-            if ($return_source) return array('discount' => $discount_categorie, 'source' => 'categorie: ' . $cat_name);
-            return $discount_categorie;
+            self::$req_discount_pj[$product_id] = array('discount' => $discount_categorie, 'source' => 'categorie: ' . $cat_name);
+            return $return_source ? self::$req_discount_pj[$product_id] : $discount_categorie;
         }
         
         // Prioritate 3: discount implicit PJ (global) – pe live dacă opțiunea lipsește/gol, folosim 5%
@@ -1982,8 +2012,8 @@ class WebGSM_B2B_Pricing {
         } else {
             $discount_implicit = (float) $raw_implicit;
         }
-        if ($return_source) return array('discount' => $discount_implicit, 'source' => 'implicit');
-        return $discount_implicit;
+        self::$req_discount_pj[$product_id] = array('discount' => $discount_implicit, 'source' => 'implicit');
+        return $return_source ? self::$req_discount_pj[$product_id] : $discount_implicit;
     }
     
     // =========================================
