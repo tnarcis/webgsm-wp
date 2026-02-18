@@ -1081,7 +1081,7 @@ class WebGSM_B2B_Pricing {
         add_filter('woocommerce_product_variation_get_regular_price', array($this, 'apply_b2b_price'), 99, 2);
         
         // Price HTML display
-        add_filter('woocommerce_get_price_html', array($this, 'modify_price_html'), 99, 2);
+        add_filter('woocommerce_get_price_html', array($this, 'modify_price_html'), 9999, 2);
         
         // Display discount info în cart
         add_filter('woocommerce_cart_item_price', array($this, 'display_cart_item_tier_price'), 10, 3);
@@ -2139,21 +2139,16 @@ class WebGSM_B2B_Pricing {
             return $output;
         }
         
-        // FRONTEND: Design nou pentru prețuri B2B
+        // FRONTEND: Design nou pentru prețuri B2B (toate tier-urile, inclusiv Bronze fără discount extra)
         if (!$this->is_user_pj()) return $price_html;
         
         $product_id = $product->get_id();
         $original_price = (float) get_post_meta($product_id, '_regular_price', true);
         $b2b_price = (float) $product->get_price();
         
-        // Dacă nu e discount, returnează prețul normal
-        if ($b2b_price >= $original_price || $original_price <= 0) {
+        if ($original_price <= 0) {
             return $price_html;
         }
-        
-        // Calculează economia
-        $savings = $original_price - $b2b_price;
-        $savings_percent = round(($savings / $original_price) * 100, 1);
         
         // Obține tier-ul pentru border color; fallback bronze dacă lipsește (ex. pe live)
         $tier = $this->get_user_tier();
@@ -2167,21 +2162,6 @@ class WebGSM_B2B_Pricing {
             'platinum' => '#4a6073'
         );
         $border_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
-        
-        $output = '<div class="webgsm-b2b-price-display" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0;">';
-        
-        // 1. Preț RRC (original) - TĂIAT, gri, mic
-        $output .= '<div style="font-size: 12px; color: #9ca3af; text-decoration: line-through; text-decoration-thickness: 0.5px; font-weight: 400;">';
-        $output .= 'RRC: ' . wc_price($original_price);
-        $output .= '</div>';
-        
-        // 2. Preț B2B - VERDE, bold, mai mare + Badge subtil, discret
-        $output .= '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">';
-        $output .= '<span style="font-size: 20px; font-weight: 700; color: #15803d; line-height: 1.2;">' . wc_price($b2b_price) . '</span>';
-        $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; height: 18px; font-size: 9px; font-weight: 600; color: #475569; background: rgba(241, 245, 249, 0.9); border: 1px solid ' . esc_attr($border_color) . '; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 18px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; opacity: 0.9;">B2B</span>';
-        $output .= '</div>';
-        
-        // 3. Text "Discountul tau [Tier] :" - simplu, fără animație
         $tier_labels = array(
             'bronze' => 'Bronze',
             'silver' => 'Silver',
@@ -2190,6 +2170,24 @@ class WebGSM_B2B_Pricing {
         );
         $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
         
+        $savings = $original_price - $b2b_price;
+        $savings_percent = $original_price > 0 ? round(($savings / $original_price) * 100, 1) : 0;
+        
+        // Același layout pentru TOATE tier-urile (inclusiv Bronze): RRC tăiat, preț verde, icon B2B, discount albastru
+        $output = '<div class="webgsm-b2b-price-display" style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0;">';
+        
+        // 1. RRC tăiat (gri)
+        $output .= '<div style="font-size: 12px; color: #9ca3af; text-decoration: line-through; text-decoration-thickness: 0.5px; font-weight: 400;">';
+        $output .= 'RRC: ' . wc_price($original_price);
+        $output .= '</div>';
+        
+        // 2. Preț B2B VERDE + iconița B2B (toate tier-urile, inclusiv Bronze)
+        $output .= '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">';
+        $output .= '<span style="font-size: 20px; font-weight: 700; color: #15803d; line-height: 1.2;">' . wc_price($b2b_price) . '</span>';
+        $output .= '<span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; height: 18px; font-size: 9px; font-weight: 600; color: #475569; background: rgba(241, 245, 249, 0.9); border: 1px solid ' . esc_attr($border_color) . '; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 18px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; opacity: 0.9;">B2B</span>';
+        $output .= '</div>';
+        
+        // 3. Discountul tău [Tier]: economie lei (%) – albastru; la Bronze poate fi 0 lei (0%)
         $output .= '<div style="font-size: 12px; line-height: 1.4;">';
         $output .= '<span style="color: ' . esc_attr($border_color) . ';">Discountul tau ' . esc_html($tier_label) . ' :</span> ';
         $output .= '<span style="font-weight: 600; color: #15803d;">' . wc_price($savings) . '</span> ';
@@ -2214,18 +2212,15 @@ class WebGSM_B2B_Pricing {
         $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
         $discount_total = $discount_pj + $discount_tier;
         
-        // Badge mic și elegant pentru mini-cart (dacă există discount)
-        if ($discount_total > 0) {
-            $tier_borders = array(
-                'bronze' => '#d4a574',
-                'silver' => '#c0c0c0',
-                'gold' => '#d4af37',
-                'platinum' => '#4a6073'
-            );
-            $border_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
-            
-            $price_html .= ' <span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; height: 14px; font-size: 8px; font-weight: 600; color: #ffffff; background: #3b82f6; border: 1px solid ' . esc_attr($border_color) . '; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.4px; line-height: 1; vertical-align: middle; margin-left: 2px;">B2B</span>';
-        }
+        // Badge B2B pentru toate tier-urile (inclusiv Bronze fără discount)
+        $tier_borders = array(
+            'bronze' => '#d4a574',
+            'silver' => '#c0c0c0',
+            'gold' => '#d4af37',
+            'platinum' => '#4a6073'
+        );
+        $border_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
+        $price_html .= ' <span class="webgsm-b2b-badge tier-' . esc_attr($tier) . '" style="display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; height: 14px; font-size: 8px; font-weight: 600; color: #ffffff; background: #3b82f6; border: 1px solid ' . esc_attr($border_color) . '; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.4px; line-height: 1; vertical-align: middle; margin-left: 2px;">B2B</span>';
         
         return $price_html;
     }
