@@ -1925,33 +1925,43 @@ class WebGSM_B2B_Pricing {
     public function get_discount_pj($product, $return_source = false) {
         $product_id = $product->get_id();
         
+        // Prioritate 1: discount pe produs – folosim doar dacă e setat și > 0 (0/gol = trecem la categorie/implicit)
         $discount_produs = get_post_meta($product_id, '_discount_pj', true);
-        
         if ($discount_produs !== '' && $discount_produs !== false && $discount_produs !== null) {
-            if ($return_source) return array('discount' => (float) $discount_produs, 'source' => 'produs');
-            return (float) $discount_produs;
-        }
-        
-        $categories = $product->get_category_ids();
-        $discount_categorie = 0;
-        $cat_name = '';
-        
-        foreach ($categories as $cat_id) {
-            $cat_discount = get_term_meta($cat_id, '_discount_pj_categorie', true);
-            if (!empty($cat_discount) && $cat_discount > $discount_categorie) {
-                $discount_categorie = (float) $cat_discount;
-                $term = get_term($cat_id);
-                $cat_name = $term ? $term->name : '';
+            $val = (float) $discount_produs;
+            if ($val > 0) {
+                if ($return_source) return array('discount' => $val, 'source' => 'produs');
+                return $val;
             }
         }
         
+        // Prioritate 2: discount pe categorie – cel mai mare din categorii
+        $categories = $product->get_category_ids();
+        $discount_categorie = 0;
+        $cat_name = '';
+        foreach ($categories as $cat_id) {
+            $cat_discount = get_term_meta($cat_id, '_discount_pj_categorie', true);
+            if ($cat_discount !== '' && $cat_discount !== false && $cat_discount !== null) {
+                $val = (float) $cat_discount;
+                if ($val > $discount_categorie) {
+                    $discount_categorie = $val;
+                    $term = get_term($cat_id);
+                    $cat_name = $term ? $term->name : '';
+                }
+            }
+        }
         if ($discount_categorie > 0) {
             if ($return_source) return array('discount' => $discount_categorie, 'source' => 'categorie: ' . $cat_name);
             return $discount_categorie;
         }
         
-        // Default 5% ca pe local; pe live dacă opțiunea lipsește sau e 0, Bronze tot primește discount de bază
-        $discount_implicit = (float) get_option('webgsm_b2b_discount_implicit', 5);
+        // Prioritate 3: discount implicit PJ (global) – pe live dacă opțiunea lipsește/gol, folosim 5%
+        $raw_implicit = get_option('webgsm_b2b_discount_implicit', 5);
+        if ($raw_implicit === '' || $raw_implicit === false || $raw_implicit === null) {
+            $discount_implicit = 5.0;
+        } else {
+            $discount_implicit = (float) $raw_implicit;
+        }
         if ($return_source) return array('discount' => $discount_implicit, 'source' => 'implicit');
         return $discount_implicit;
     }
