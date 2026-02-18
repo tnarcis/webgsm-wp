@@ -18,7 +18,7 @@ if (isset($_POST['webgsm_b2b_save_settings']) && wp_verify_nonce($_POST['webgsm_
     update_option('webgsm_b2b_discount_implicit', sanitize_text_field($_POST['discount_implicit']));
     update_option('webgsm_b2b_marja_minima', sanitize_text_field($_POST['marja_minima']));
     update_option('webgsm_b2b_show_badge', isset($_POST['show_badge']) ? 'yes' : 'no');
-    update_option('webgsm_b2b_badge_text', sanitize_text_field($_POST['badge_text']));
+    update_option('webgsm_b2b_badge_text', isset($_POST['badge_text']) ? sanitize_text_field($_POST['badge_text']) : get_option('webgsm_b2b_badge_text', 'Preț B2B'));
     update_option('webgsm_b2b_tier_retention_months', intval($_POST['tier_retention']));
     
     // Tiers - ACUM CU min_value (SUMĂ)
