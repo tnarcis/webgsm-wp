@@ -238,11 +238,23 @@ function webgsm_hide_source_url_from_product_attributes($attributes, $product) {
 add_filter('woocommerce_rest_prepare_product_object', 'webgsm_remove_source_url_from_rest', 10, 3);
 function webgsm_remove_source_url_from_rest($response, $product, $request) {
     $hidden_keys = array('_source_url', 'source_url');
-    if (isset($response->data['meta_data'])) {
-        $response->data['meta_data'] = array_values(array_filter($response->data['meta_data'], function ($m) use ($hidden_keys) {
-            return isset($m['key']) && !in_array($m['key'], $hidden_keys, true);
-        }));
+    if (!isset($response->data['meta_data']) || !is_array($response->data['meta_data'])) {
+        return $response;
     }
+    $response->data['meta_data'] = array_values(array_filter($response->data['meta_data'], function ($m) use ($hidden_keys) {
+        $key = null;
+        if (is_array($m) && isset($m['key'])) {
+            $key = $m['key'];
+        } elseif (is_object($m)) {
+            if (isset($m->key)) {
+                $key = $m->key;
+            } elseif (method_exists($m, 'get_data')) {
+                $data = $m->get_data();
+                $key = isset($data['key']) ? $data['key'] : null;
+            }
+        }
+        return $key !== null && !in_array($key, $hidden_keys, true);
+    }));
     return $response;
 }
 
