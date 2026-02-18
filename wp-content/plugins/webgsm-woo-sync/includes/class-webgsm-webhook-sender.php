@@ -43,6 +43,7 @@ class Webhook_Sender {
         try {
             $url = get_option(self::OPTION_URL, '');
             $secret = get_option(self::OPTION_SECRET, '');
+            error_log('WEBHOOK TRIGGER: ' . $url);
             if (empty($url) || empty($secret)) {
                 $this->log('WebGSM Woo Sync: URL sau Secret lipsă în setări. Webhook netrimis.');
                 return;
