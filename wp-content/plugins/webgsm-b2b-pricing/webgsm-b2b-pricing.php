@@ -1125,6 +1125,69 @@ class WebGSM_B2B_Pricing {
         
         // AJAX Debug (TEMPORAR)
         add_action('wp_ajax_webgsm_debug_tier', array($this, 'ajax_debug_tier'));
+        
+        // Pe live: evită cache FPC pentru utilizatori logați (prețuri B2B / preț verde)
+        add_action('send_headers', array($this, 'no_cache_for_logged_in_users'), 1);
+        
+        // Diagnostic pe live: ?webgsm_b2b_debug=1 (doar pentru utilizatori logați)
+        add_action('wp_footer', array($this, 'maybe_show_b2b_debug'), 5);
+    }
+    
+    /**
+     * Trimite headere anti-cache când utilizatorul e logat, ca pe live (FPC/LiteSpeed etc.)
+     * să nu servească o pagină cache-uită fără preț B2B / preț verde.
+     */
+    public function no_cache_for_logged_in_users() {
+        if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+            return;
+        }
+        if (!is_user_logged_in()) {
+            return;
+        }
+        if (headers_sent()) {
+            return;
+        }
+        header('Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+    }
+    
+    /**
+     * Afișează diagnostic B2B în footer când URL conține webgsm_b2b_debug=1 (utilizator logat).
+     * Folosește pe live pentru a vedea de ce nu apar prețul verde / B2B.
+     */
+    public function maybe_show_b2b_debug() {
+        if (!isset($_GET['webgsm_b2b_debug']) || $_GET['webgsm_b2b_debug'] !== '1') {
+            return;
+        }
+        if (!is_user_logged_in()) {
+            return;
+        }
+        $user_id = get_current_user_id();
+        $b2b_status = get_user_meta($user_id, '_b2b_status', true);
+        $is_pj_meta = get_user_meta($user_id, '_is_pj', true);
+        $billing_cui = get_user_meta($user_id, 'billing_cui', true);
+        $tip_client = get_user_meta($user_id, '_tip_client', true);
+        $user = get_userdata($user_id);
+        $roles = $user ? (array) $user->roles : array();
+        $is_pj = $this->is_user_pj($user_id);
+        $tier = $this->get_user_tier();
+        $reasons = array();
+        if ($b2b_status === 'pending') {
+            $reasons[] = 'Cont B2B în așteptare (_b2b_status=pending) – trebuie aprobat.';
+        }
+        if (!$is_pj && empty($billing_cui) && $is_pj_meta !== 'yes' && $is_pj_meta !== '1' && strtolower($tip_client) !== 'pj' && strtolower($tip_client) !== 'juridica' && !in_array('b2b_customer', $roles) && !in_array('wholesale_customer', $roles)) {
+            $reasons[] = 'Utilizatorul nu e marcat ca PJ (lipsește CUI, _is_pj, _tip_client sau rol B2B).';
+        }
+        if ($is_pj && empty($tier)) {
+            $reasons[] = 'Tier necalculat (se actualizează după prima comandă completă).';
+        }
+        $reasons[] = 'Dacă totul e OK aici dar pe pagină nu vezi B2B, dezactivează cache-ul full-page (LiteSpeed / Cloudflare etc.) pentru utilizatori logați.';
+        echo '<div id="webgsm-b2b-debug" style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#e2e8f0;padding:12px 16px;font-size:12px;font-family:monospace;z-index:99999;max-height:200px;overflow:auto;border-top:2px solid #22c55e;">';
+        echo '<strong style="color:#22c55e;">[WebGSM B2B Debug]</strong> ';
+        echo 'user_id=' . (int) $user_id . ' | is_pj=' . ($is_pj ? 'DA' : 'NU') . ' | tier=' . esc_html($tier ?: '—') . ' | _b2b_status=' . esc_html($b2b_status ?: '—') . ' | _is_pj=' . esc_html($is_pj_meta ?: '—') . ' | billing_cui=' . (strlen((string)$billing_cui) ? 'set' : '—') . ' | _tip_client=' . esc_html($tip_client ?: '—') . ' | roles=' . esc_html(implode(',', $roles)) . '<br>';
+        echo '<span style="color:#fbbf24;">' . esc_html(implode(' ', $reasons)) . '</span>';
+        echo '</div>';
     }
     
     // =========================================
