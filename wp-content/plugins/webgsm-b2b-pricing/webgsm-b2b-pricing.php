@@ -1885,7 +1885,8 @@ class WebGSM_B2B_Pricing {
             return $discount_categorie;
         }
         
-        $discount_implicit = (float) get_option('webgsm_b2b_discount_implicit', 0);
+        // Default 5% ca pe local; pe live dacă opțiunea lipsește sau e 0, Bronze tot primește discount de bază
+        $discount_implicit = (float) get_option('webgsm_b2b_discount_implicit', 5);
         if ($return_source) return array('discount' => $discount_implicit, 'source' => 'implicit');
         return $discount_implicit;
     }
@@ -2089,8 +2090,11 @@ class WebGSM_B2B_Pricing {
         $savings = $original_price - $b2b_price;
         $savings_percent = round(($savings / $original_price) * 100, 1);
         
-        // Obține tier-ul pentru border color
+        // Obține tier-ul pentru border color; fallback bronze dacă lipsește (ex. pe live)
         $tier = $this->get_user_tier();
+        if (empty($tier) || !is_string($tier)) {
+            $tier = 'bronze';
+        }
         $tier_borders = array(
             'bronze' => '#d4a574',
             'silver' => '#c0c0c0',
@@ -2139,6 +2143,9 @@ class WebGSM_B2B_Pricing {
         $discount_pj = $this->get_discount_pj($product);
         $tier = $this->get_user_tier();
         $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        if (empty($tier) || !isset($tiers[$tier])) {
+            $tier = 'bronze';
+        }
         $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
         $discount_total = $discount_pj + $discount_tier;
         
@@ -2177,6 +2184,9 @@ class WebGSM_B2B_Pricing {
             $discount_pj = $this->get_discount_pj($product);
             $tier = $this->get_user_tier();
             $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+            if (empty($tier) || !isset($tiers[$tier])) {
+                $tier = 'bronze';
+            }
             $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
             $total_discount_percent = $discount_pj + $discount_tier;
             
