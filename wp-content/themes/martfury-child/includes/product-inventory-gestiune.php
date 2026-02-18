@@ -267,6 +267,19 @@ function webgsm_rest_sync_publish_product($product, $request) {
     return $product;
 }
 
+/** După ce produsul e salvat prin REST API, forțează din nou „publish” (în caz că request-ul a suprascris statusul). */
+add_action('woocommerce_rest_insert_product_object', 'webgsm_rest_sync_publish_product_after_save', 10, 3);
+function webgsm_rest_sync_publish_product_after_save($product, $request, $creating) {
+    if (!$product || !is_a($product, 'WC_Product')) {
+        return;
+    }
+    $post_status = $product->get_status();
+    if ($post_status !== 'publish') {
+        $product->set_status('publish');
+        $product->save();
+    }
+}
+
 /** Exclude _source_url și source_url din meta indexate de căutare (Relevanssi etc.). */
 add_filter('relevanssi_index_custom_fields', 'webgsm_exclude_source_url_from_search_index', 10, 1);
 function webgsm_exclude_source_url_from_search_index($custom_fields) {
