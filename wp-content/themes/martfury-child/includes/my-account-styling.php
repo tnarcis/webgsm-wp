@@ -9,7 +9,7 @@
 // =============================================
 
 // Adaugă coloana în header - între Status și Total
-add_filter('woocommerce_my_account_my_orders_columns', function($columns) {
+add_filter('woocommerce_account_orders_columns', function($columns) {
     $new_columns = array();
     
     foreach ($columns as $key => $value) {
@@ -25,7 +25,7 @@ add_filter('woocommerce_my_account_my_orders_columns', function($columns) {
 }, 20);
 
 // Afișează conținutul coloanei
-add_action('woocommerce_my_account_my_orders_column_order-type', function($order) {
+add_action('woocommerce_account_orders_column_order-type', function($order) {
     // Verifică tipul clientului salvat în comandă
     $tip_client = $order->get_meta('_tip_client');
     
@@ -2404,7 +2404,7 @@ add_action('woocommerce_order_details_after_customer_details', function($order) 
 }, 10, 1);
 
 // Forțează formatul datei scurt
-add_filter('woocommerce_my_account_my_orders_query', function($args) {
+add_filter('woocommerce_account_orders_query', function($args) {
     return $args;
 });
 

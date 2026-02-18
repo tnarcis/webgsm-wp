@@ -524,7 +524,7 @@ add_action('wp_ajax_download_factura_pdf', function() {
 // =============================================
 
 // Adaugă buton descărcare factură în lista de comenzi
-add_action('woocommerce_my_account_my_orders_actions', function($actions, $order) {
+add_action('woocommerce_account_orders_actions', function($actions, $order) {
     $invoice_number = get_post_meta($order->get_id(), '_smartbill_invoice_number', true);
     
     if($invoice_number) {

@@ -1144,13 +1144,12 @@ class WebGSM_B2B_Pricing {
         // Verifică invalidări recente
         $last_invalidation = get_user_meta($user_id, '_pj_last_invalidation', true);
         
-        // Afișează notificare vizuală dacă cache-ul a fost invalidat recent (ultimele 5 minute)
+        // Notificare informativă: prețurile și nivelul au fost actualizate (nu e eroare)
         if ($last_invalidation && (time() - $last_invalidation) < 300) {
             ?>
-            <div id="webgsm-cache-notice" style="position:fixed;top:60px;right:20px;background:#fef2f2;border:2px solid #ef4444;color:#991b1b;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px;max-width:300px;box-shadow:0 4px 12px rgba(239,68,68,0.3);transition:opacity 0.5s ease-out;">
-                <strong>⚠️ Cache Tier Invalidat:</strong><br>
-                <span style="font-size:11px;"><?php echo date('Y-m-d H:i:s', $last_invalidation); ?></span><br>
-                <span style="font-size:11px;color:#dc2626;margin-top:4px;display:block;">Datele tier-ului au fost recalculate.</span>
+            <div id="webgsm-cache-notice" style="position:fixed;top:60px;right:20px;background:#f0fdf4;border:2px solid #22c55e;color:#166534;padding:12px 18px;border-radius:8px;z-index:9999;font-size:13px;max-width:320px;box-shadow:0 4px 12px rgba(34,197,94,0.25);transition:opacity 0.5s ease-out;">
+                <strong>✓ Prețuri actualizate</strong><br>
+                <span style="font-size:11px;color:#15803d;margin-top:4px;display:block;">Nivelul tău și prețurile B2B au fost recalculate. Dacă nu vezi discount-urile, reîncarcă pagina.</span>
             </div>
             <script>
             (function() {
@@ -1619,7 +1618,9 @@ class WebGSM_B2B_Pricing {
         // Marchează invalidare
         update_user_meta($user_id, '_pj_last_invalidation', time());
         
-        // Log pentru debug
+        // Forțează reîmprospătare prețuri (cache WooCommerce)
+        $this->clear_all_price_cache();
+        
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă anulată #' . $order_id);
         }
@@ -1644,9 +1645,8 @@ class WebGSM_B2B_Pricing {
         delete_user_meta($user_id, '_pj_orders_calculated');
         delete_user_meta($user_id, '_pj_value_calculated');
         delete_user_meta($user_id, '_pj_tier');
-        
-        // Marchează invalidare
         update_user_meta($user_id, '_pj_last_invalidation', time());
+        $this->clear_all_price_cache();
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă ștearsă #' . $post_id);
@@ -1672,12 +1672,10 @@ class WebGSM_B2B_Pricing {
             delete_user_meta($user_id, '_pj_value_calculated');
             delete_user_meta($user_id, '_pj_tier');
             
-            // Recalculează
             $new_tier = $this->calculate_user_tier($user_id);
             update_user_meta($user_id, '_pj_tier', $new_tier);
-            
-            // Marchează invalidare
             update_user_meta($user_id, '_pj_last_invalidation', time());
+            $this->clear_all_price_cache();
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Status schimbat: ' . $old_status . ' → ' . $new_status);
@@ -1801,6 +1799,9 @@ class WebGSM_B2B_Pricing {
         $discount_pj = $this->get_discount_pj($product);
         $tier = $this->get_user_tier();
         $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
+        if (empty($tier) || !isset($tiers[$tier])) {
+            $tier = 'bronze';
+        }
         $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
         
         $discount_total = $discount_pj + $discount_tier;
