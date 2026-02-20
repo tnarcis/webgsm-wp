@@ -16,13 +16,22 @@ function webgsm_romanian_buffer_start() {
     ob_start('webgsm_romanian_buffer_callback');
 }
 function webgsm_romanian_buffer_callback($html) {
+    // Protejează <style> și <script> ca să nu stricăm CSS/JS (ex. "Back" în "background")
+    $protected = array();
+    $html = preg_replace_callback('#<(style|script)[^>]*>.*?</\1>#is', function($m) use (&$protected) {
+        $key = '%%WEBGSM_PROT_' . count($protected) . '%%';
+        $protected[$key] = $m[0];
+        return $key;
+    }, $html);
     $ro = webgsm_get_romanian_strings();
-    // Ordonează după lungime (texte lungi primele) ca să nu înlocuim "View" în "View All"
     uksort($ro, function($a, $b) { return strlen($b) - strlen($a); });
     foreach ($ro as $en => $ro_text) {
         if ($en !== $ro_text && strpos($html, $en) !== false) {
             $html = str_replace($en, $ro_text, $html);
         }
+    }
+    foreach ($protected as $key => $content) {
+        $html = str_replace($key, $content, $html);
     }
     return $html;
 }
