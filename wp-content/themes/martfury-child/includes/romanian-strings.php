@@ -37,10 +37,21 @@ function webgsm_romanian_dom_replacements() {
             ['iTelefon', 'iPhone'],
             ['ITelefon', 'iPhone'],
             ['itelefon', 'iPhone'],
-            ['Până latal', 'Preț'],
-            ['Pana latal', 'Preț']
+            ['Până latal', 'Total'],
+            ['Pana latal', 'Total']
         ];
+        function inFooter(n) {
+            if (!n || n.nodeType !== 1) return false;
+            if (n.closest) return n.closest('footer, .site-footer, #colophon') !== null;
+            var p = n.parentElement;
+            while (p) {
+                if (p.tagName === 'FOOTER' || p.classList.contains('site-footer') || p.id === 'colophon') return true;
+                p = p.parentElement;
+            }
+            return false;
+        }
         function walk(node) {
+            if (node.nodeType === 1 && inFooter(node)) return;
             if (node.nodeType === 3) {
                 var text = node.data;
                 for (var i = 0; i < r.length; i++) {
@@ -80,12 +91,22 @@ function webgsm_romanian_buffer_callback($html) {
         $protected[$key] = $m[0];
         return $key;
     }, $html);
+    // Exclude footer: conținutul din Personalizare să nu fie suprascris de traduceri
+    $footer_placeholders = array();
+    $html = preg_replace_callback('#<footer[^>]*>.*?</footer>#is', function($m) use (&$footer_placeholders) {
+        $key = '%%WEBGSM_FOOTER_' . count($footer_placeholders) . '%%';
+        $footer_placeholders[$key] = $m[0];
+        return $key;
+    }, $html);
     $ro = webgsm_get_romanian_strings();
     uksort($ro, function($a, $b) { return strlen($b) - strlen($a); });
     foreach ($ro as $en => $ro_text) {
         if ($en !== $ro_text && strpos($html, $en) !== false) {
             $html = str_replace($en, $ro_text, $html);
         }
+    }
+    foreach ($footer_placeholders as $key => $content) {
+        $html = str_replace($key, $content, $html);
     }
     foreach ($protected as $key => $content) {
         $html = str_replace($key, $content, $html);
@@ -442,8 +463,8 @@ function webgsm_get_romanian_strings() {
         'Deals Ends In'         => 'Oferta se termină în',
 
         // Corectare text greșit (traducere/typo)
-        'Până latal'            => 'Preț',
-        'Pana latal'            => 'Preț',
+        'Până latal'            => 'Total',
+        'Pana latal'            => 'Total',
     );
 }
 
