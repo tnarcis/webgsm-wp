@@ -270,6 +270,33 @@ nav.woocommerce-breadcrumb a:hover {
     color: #374151 !important;
 }
 
+/* SKU din entry-meta: doar „SKU:” în etichetă albastru umplut; codul text normal, cu spațiu */
+.entry-meta li.meta-sku {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 0;
+    list-style: none;
+}
+.entry-meta li.meta-sku .webgsm-sku-label {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    background: #3b82f6;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+}
+.entry-meta li.meta-sku .meta-value {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: inherit;
+    margin-left: 2px;
+}
+
 /* ============================================
    SEARCH DESKTOP - stil mobilesentrix
    ============================================ */
@@ -847,6 +874,31 @@ button.button {
 </style>
 <?php
 }
+
+// Înconjoară „SKU:” în span pentru etichetă albastru (doar pe pagina produs)
+add_action('wp_footer', function() {
+    if (!function_exists('is_product') || !is_product()) return;
+    ?>
+    <script>
+    (function() {
+        var li = document.querySelector('.entry-meta li.meta-sku');
+        if (!li) return;
+        var child = li.firstChild;
+        while (child) {
+            if (child.nodeType === 3 && child.textContent.replace(/\s/g, '').length > 0) {
+                var span = document.createElement('span');
+                span.className = 'webgsm-sku-label';
+                span.textContent = child.textContent.trim().replace(/:?\s*$/, '') + ' :';
+                li.insertBefore(span, child);
+                li.removeChild(child);
+                break;
+            }
+            child = child.nextSibling;
+        }
+    })();
+    </script>
+    <?php
+}, 5);
 
 // Badge stoc cu logică stoc virtual - REFĂCUT COMPLET
 add_action('woocommerce_single_product_summary', 'webgsm_stock_badge', 15);
