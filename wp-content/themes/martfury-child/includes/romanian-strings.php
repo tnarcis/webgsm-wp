@@ -9,6 +9,63 @@ add_filter('gettext', 'webgsm_romanian_strings', 5, 3);
 add_filter('gettext_with_context', 'webgsm_romanian_strings_with_context', 5, 4);
 add_filter('ngettext', 'webgsm_romanian_strings_plural', 5, 5);
 
+// iTelefon → iPhone peste tot (titluri, conținut, meniu, widget-uri)
+add_filter('the_title', 'webgsm_fix_itelefon', 10, 2);
+add_filter('the_content', 'webgsm_fix_itelefon', 10, 1);
+add_filter('nav_menu_item_title', 'webgsm_fix_itelefon', 10, 1);
+add_filter('widget_title', 'webgsm_fix_itelefon', 10, 1);
+add_filter('get_the_archive_title', 'webgsm_fix_itelefon', 10, 1);
+function webgsm_fix_itelefon($text) {
+    if (!is_string($text)) return $text;
+    return str_replace(array('iTelefon', 'ITelefon', 'itelefon'), 'iPhone', $text);
+}
+
+// Înlocuiri în DOM pentru texte randate via JavaScript (buffer-ul nu le prinde)
+add_action('wp_footer', 'webgsm_romanian_dom_replacements', 999);
+function webgsm_romanian_dom_replacements() {
+    if (is_admin() || wp_doing_ajax()) return;
+    ?>
+    <script>
+    (function() {
+        var r = [
+            ['Produse found', 'Produse găsite'],
+            ['Nuu', 'Nou'],
+            ['Your Recently Viewed Products', 'Produse vizualizate recent'],
+            ['Your Recently Viewed Products.', 'Produse vizualizate recent.'],
+            ['View All', 'Vezi toate'],
+            ['View all', 'Vezi toate'],
+            ['iTelefon', 'iPhone'],
+            ['ITelefon', 'iPhone'],
+            ['itelefon', 'iPhone'],
+            ['Până latal', 'Preț'],
+            ['Pana latal', 'Preț']
+        ];
+        function walk(node) {
+            if (node.nodeType === 3) {
+                var text = node.data;
+                for (var i = 0; i < r.length; i++) {
+                    text = text.split(r[i][0]).join(r[i][1]);
+                }
+                if (text !== node.data) node.data = text;
+            } else if (node.nodeType === 1 && !/^(script|style|textarea)$/i.test(node.tagName)) {
+                for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+            }
+        }
+        if (document.body) walk(document.body);
+        document.addEventListener('DOMContentLoaded', function() {
+            walk(document.body);
+            var obs = new MutationObserver(function(mutations) {
+                mutations.forEach(function(m) {
+                    for (var i = 0; i < m.addedNodes.length; i++) walk(m.addedNodes[i]);
+                });
+            });
+            if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+        });
+    })();
+    </script>
+    <?php
+}
+
 // Buffer pe HTML ca să înlocuim și textele hardcodate în temă (fără __()/_e())
 add_action('template_redirect', 'webgsm_romanian_buffer_start', 0);
 function webgsm_romanian_buffer_start() {
@@ -186,7 +243,7 @@ function webgsm_get_romanian_strings() {
         'Author'                => 'Autor',
         'Date'                  => 'Data',
         'Comments'              => 'Comentarii',
-        'Leave a comment'       => 'Lasa un comentariu',
+        'Leave a comment'       => 'Lasă un comentariu',
         'Reply'                 => 'Răspunde',
         'Send'                  => 'Trimite',
         'Name'                  => 'Nume',
@@ -211,10 +268,190 @@ function webgsm_get_romanian_strings() {
         'Skip to content'       => 'Sari la conținut',
         'Open menu'             => 'Deschide meniul',
         'Close menu'            => 'Închide meniul',
+
+        // Variante majuscule / formulări alternative
+        'View Cart'             => 'Vezi coșul',
+        'My Account'             => 'Contul meu',
+        'Billing address'       => 'Adresă facturare',
+        'Billing Address'       => 'Adresă facturare',
+        'Shipping address'      => 'Adresă livrare',
+        'Shipping Address'      => 'Adresă livrare',
+        'Ship to a different address?' => 'Livrare la altă adresă?',
+        'First name'            => 'Prenume',
+        'Last name'             => 'Nume',
+        'Order notes'           => 'Note comandă',
+        'Order Notes'            => 'Note comandă',
+        'Order notes (optional)' => 'Note comandă (opțional)',
+        'Product name'          => 'Denumire produs',
+        'Item'                  => 'Produs',
+        'Items'                 => 'Produse',
+        'Discount'              => 'Reducere',
+        'Order total'           => 'Total comandă',
+        'Order Total'           => 'Total comandă',
+        'Payment method'       => 'Metodă de plată',
+        'Payment Method'        => 'Metodă de plată',
+        'Shipping method'       => 'Metodă de livrare',
+        'Shipping Method'        => 'Metodă de livrare',
+        'Your order'            => 'Comanda ta',
+        'Order date'            => 'Data comenzii',
+        'Order number'          => 'Număr comandă',
+        'Order Number'          => 'Număr comandă',
+        'Order details'         => 'Detalii comandă',
+        'Order Details'         => 'Detalii comandă',
+        'View order'            => 'Vezi comanda',
+        'View Order'            => 'Vezi comanda',
+        'Order status'          => 'Status comandă',
+        'Order Status'          => 'Status comandă',
+        'Billing &amp; Shipping' => 'Facturare și livrare',
+        'Billing & Shipping'    => 'Facturare și livrare',
+
+        // Cont / My Account
+        'Account details'       => 'Detalii cont',
+        'Account Details'       => 'Detalii cont',
+        'Edit address'          => 'Editează adresa',
+        'Edit Address'          => 'Editează adresa',
+        'Addresses'             => 'Adrese',
+        'Change password'       => 'Schimbă parola',
+        'Change Password'       => 'Schimbă parola',
+        'Current password'      => 'Parola curentă',
+        'New password'          => 'Parolă nouă',
+        'Confirm password'      => 'Confirmă parola',
+        'Dashboard'             => 'Panou',
+        'Download'              => 'Descarcă',
+        'Downloads'             => 'Descărcări',
+        'No downloads available yet.' => 'Nu există descărcări disponibile.',
+        'No order has been made yet.' => 'Nu ați plasat încă nicio comandă.',
+        'Recent orders'         => 'Comenzi recente',
+        'Logout'                => 'Deconectare',
+        'Login'                 => 'Autentificare',
+        'Username'              => 'Utilizator',
+        'Email address'         => 'Adresă email',
+        'Phone number'          => 'Număr telefon',
+
+        // Checkout / plată
+        'Your order has been received. Thank you for your purchase!' => 'Comanda ta a fost primită. Mulțumim pentru achiziție!',
+        'I have read and agree to the website' => 'Am citit și accept',
+        'terms and conditions'  => 'termenii și condițiile',
+        'Please read and accept the terms and conditions to proceed with your order.' => 'Citiți și acceptați termenii și condițiile pentru a finaliza comanda.',
+        'There are no shipping methods available.' => 'Nu există metode de livrare disponibile.',
+        'Sorry, it seems there are no available payment methods.' => 'Nu există metode de plată disponibile.',
+        'Secure payment'        => 'Plată securizată',
+
+        // Produs / catalog
+        'SKU'                   => 'Cod produs',
+        'Weight'                => 'Greutate',
+        'Dimensions'            => 'Dimensiuni',
+        'Availability'          => 'Disponibilitate',
+        'Available on backorder' => 'Disponibil la comandă',
+        'Back to products'      => 'Înapoi la produse',
+        'Product categories'    => 'Categorii produse',
+        'Product Categories'    => 'Categorii produse',
+        'Product tags'          => 'Etichete produs',
+        'Product Tags'          => 'Etichete produs',
+        'Rating'                => 'Rating',
+        'No reviews yet'        => 'Nicio recenzie încă',
+        'Add a review'          => 'Adaugă o recenzie',
+        'Write a review'        => 'Scrie o recenzie',
+
+        // Mesaje / notificări
+        'has been added to your cart.' => 'a fost adăugat în coș.',
+        'has been added to your cart' => 'a fost adăugat în coș',
+        'Cart updated.'         => 'Coș actualizat.',
+        'Coupon applied successfully.' => 'Cupon aplicat cu succes.',
+        'Invalid coupon.'       => 'Cupon invalid.',
+        'Please enter a valid coupon code.' => 'Introduceți un cod de cupon valid.',
+        'Sorry, this coupon is not applicable to your cart.' => 'Acest cupon nu se aplică coșului tău.',
+        'Please fill in all required fields.' => 'Completați toate câmpurile obligatorii.',
+        'Please accept the terms and conditions.' => 'Acceptați termenii și condițiile.',
+        'An error occurred. Please try again.' => 'A apărut o eroare. Încercați din nou.',
+        'Processing...'         => 'Se procesează...',
+        'Please wait...'        => 'Așteptați...',
+
+        // Paginare / listare
+        'Previous page'         => 'Pagina anterioară',
+        'Next page'             => 'Pagina următoare',
+        'Page %s of %s'         => 'Pagina %s din %s',
+        'Showing the single result' => 'Se afișează rezultatul',
+        'Showing %s&ndash;%s of %s results' => 'Afișare %s&ndash;%s din %s rezultate',
+        'No results found'      => 'Nu s-au găsit rezultate',
+        'Search for:'           => 'Căutare:',
+        'Search Results for: %s' => 'Rezultate căutare: %s',
+
+        // Diverse
+        'Brands'                => 'Branduri',
+        'Brand'                 => 'Brand',
+        'All'                   => 'Toate',
+        'Select'                => 'Selectează',
+        'Choose an option'      => 'Alege o opțiune',
+        'Reset'                 => 'Resetează',
+        'Clear all'             => 'Șterge tot',
+        'Apply filters'         => 'Aplică filtre',
+        'Active filters'        => 'Filtre active',
+        'Price range'           => 'Interval preț',
+        'Any'                   => 'Oricare',
+        'From'                  => 'De la',
+        'To'                    => 'Până la',
+        'Go'                    => 'Mergi',
+        'View all results'      => 'Vezi toate rezultatele',
+        'Your rating'           => 'Ratingul tău',
+        'Your review'            => 'Recenzia ta',
+
+        // Recenzii produs
+        'Be the first to review' => 'Fii primul care lasă o recenzie',
+        'BE THE FIRST TO REVIEW' => 'FII PRIMUL CARE LASĂ O RECENZIE',
+        'of this product'       => 'pentru acest produs',
+        'Ratingul tău of this product' => 'Ratingul tău pentru acest produs',
+        'Write your review here...' => 'Scrie recenzia ta aici...',
+        'There are no reviews yet.' => 'Nu există încă recenzii.',
+        'No reviews yet'        => 'Nu există încă recenzii',
+
+        // Etichetă Nou / corectare Nuu
+        'Nuu'                   => 'Nou',
+
+        // Brand / denumiri produse (corectare iTelefon → iPhone)
+        'iTelefon'               => 'iPhone',
+
+        // Status stoc / precomandă
+        'Status:'               => 'Status:',
+        'Disponibil la precomanda' => 'Disponibil la precomandă',
+        'Available on backorder' => 'Disponibil la comandă',
+
+        // Rezultate căutare / listare
+        'products found'        => 'produse găsite',
+        'product found'         => 'produs găsit',
+        'Produse found'         => 'Produse găsite',
+        'Produs found'          => 'Produs găsit',
+        '%s products found'     => '%s produse găsite',
+        '%s product found'      => '%s produs găsit',
+        'result found'          => 'rezultat găsit',
+        'results found'         => 'rezultate găsite',
+        '1 result found'        => '1 rezultat găsit',
+        'Your Recently Viewed Products' => 'Produse vizualizate recent',
+        'Your Recently Viewed Products.' => 'Produse vizualizate recent',
+        'Recently Viewed Products' => 'Produse vizualizate recent',
+        'Recently Viewed'       => 'Vizualizate recent',
+
+        // Quick view (buton ochi)
+        'Quick View'            => 'Vizualizare rapidă',
+        'Vizualizeaza'          => 'Vizualizează',
+
+        // Oferte / countdown
+        'Ends In'               => 'Se termină în',
+        'Ends in'               => 'Se termină în',
+        'Ofertele Ends In'      => 'Oferta se termină în',
+        'Deals Ends In'         => 'Oferta se termină în',
+
+        // Corectare text greșit (traducere/typo)
+        'Până latal'            => 'Preț',
+        'Pana latal'            => 'Preț',
     );
 }
 
 function webgsm_romanian_strings($translated, $text, $domain) {
+    // Corectare Nuu → Nou (dacă o traducere greșită returnează Nuu)
+    if ($translated === 'Nuu') {
+        return 'Nou';
+    }
     $ro = webgsm_get_romanian_strings();
     if (isset($ro[$text])) {
         return $ro[$text];
@@ -230,6 +467,10 @@ function webgsm_romanian_strings_plural($translated, $single, $plural, $number, 
     $ro = array(
         '%s item' => array('%s produs', '%s produse'),
         '%s item(s)' => array('%s produs', '%s produse'),
+        '%s product' => array('%s produs', '%s produse'),
+        '%s products' => array('%s produs', '%s produse'),
+        '%s order' => array('%s comandă', '%s comenzi'),
+        '%s orders' => array('%s comandă', '%s comenzi'),
     );
     $key = $single;
     if (isset($ro[$key])) {
