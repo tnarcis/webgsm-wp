@@ -141,6 +141,7 @@ require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
 require_once get_stylesheet_directory() . '/includes/setup-acf-fields.php';
 require_once get_stylesheet_directory() . '/includes/product-specs-tab.php';
 require_once get_stylesheet_directory() . '/includes/product-inventory-gestiune.php';
+require_once get_stylesheet_directory() . '/includes/romanian-strings.php';
 
 // ============================================
 // WebGSM B2B Teaser - mesaj simplu, fără preț/discount (performanță)
