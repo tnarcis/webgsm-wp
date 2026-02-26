@@ -15,11 +15,13 @@ class WebGSM_Site_Audit_Link_Checker {
         check_ajax_referer('webgsm_site_audit', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error('Forbidden');
 
+        @set_time_limit(300);
+
         $settings = WebGSM_Site_Audit_Settings::get();
         $links = $this->collect_links($settings);
         $results = $this->check_links($links, $settings);
 
-        update_option(self::RESULTS_KEY, $results);
+        update_option(self::RESULTS_KEY, $results, false);
         update_option(self::LAST_SCAN_KEY, time());
 
         wp_send_json_success([
@@ -35,7 +37,7 @@ class WebGSM_Site_Audit_Link_Checker {
 
         $results = get_option(self::RESULTS_KEY, []);
         $last = get_option(self::LAST_SCAN_KEY, 0);
-        wp_send_json_success(['results' => $results, 'last_scan' => $last]);
+        wp_send_json_success(['results' => is_array($results) ? $results : [], 'last_scan' => $last]);
     }
 
     public function collect_links($settings) {
@@ -45,33 +47,22 @@ class WebGSM_Site_Audit_Link_Checker {
         $site_host = parse_url($site_url, PHP_URL_HOST);
         if (!$site_host) $site_host = '';
 
-        if (!empty($settings['scan_posts'])) {
-            $this->collect_from_posts('post', $links);
-        }
-        if (!empty($settings['scan_pages'])) {
-            $this->collect_from_posts('page', $links);
-        }
-        if (!empty($settings['scan_products']) && post_type_exists('product')) {
-            $this->collect_from_posts('product', $links);
-        }
-        if (!empty($settings['scan_menus'])) {
-            $this->collect_from_menus($links);
-        }
-        if (!empty($settings['scan_widgets'])) {
-            $this->collect_from_widgets($links);
-        }
-        if (!empty($settings['scan_options'])) {
-            $this->collect_from_options($links);
-        }
+        if (!empty($settings['scan_posts'])) $this->collect_from_posts('post', $links);
+        if (!empty($settings['scan_pages'])) $this->collect_from_posts('page', $links);
+        if (!empty($settings['scan_products']) && post_type_exists('product')) $this->collect_from_posts('product', $links);
+        if (!empty($settings['scan_menus'])) $this->collect_from_menus($links);
+        if (!empty($settings['scan_widgets'])) $this->collect_from_widgets($links);
+        if (!empty($settings['scan_options'])) $this->collect_from_options($links);
 
         $filtered = [];
         foreach ($links as $link) {
             $url = isset($link['url']) ? $link['url'] : '';
             if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) continue;
-            if (strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) continue;
-            if (strpos($url, '#') === 0) continue;
+            if (strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0 || strpos($url, '#') === 0) continue;
+            if (strpos($url, 'javascript:') === 0) continue;
 
-            $is_internal = (strpos($url, $site_url) === 0) || (parse_url($url, PHP_URL_HOST) === $site_host);
+            $link_host = parse_url($url, PHP_URL_HOST);
+            $is_internal = ($link_host === $site_host) || (strpos($url, $site_url) === 0);
             if ($is_internal && empty($settings['check_internal'])) continue;
             if (!$is_internal && empty($settings['check_external'])) continue;
 
@@ -83,7 +74,7 @@ class WebGSM_Site_Audit_Link_Checker {
         $unique = [];
         foreach ($filtered as $l) {
             if (empty($l['url'])) continue;
-            $key = $l['url'];
+            $key = rtrim($l['url'], '/');
             if (isset($seen[$key])) continue;
             $seen[$key] = true;
             $unique[] = $l;
@@ -95,7 +86,7 @@ class WebGSM_Site_Audit_Link_Checker {
         $posts = get_posts([
             'post_type' => $post_type,
             'post_status' => 'publish',
-            'numberposts' => -1,
+            'numberposts' => 500,
             'fields' => 'ids',
         ]);
         foreach ($posts as $id) {
@@ -129,7 +120,7 @@ class WebGSM_Site_Audit_Link_Checker {
     private function collect_from_widgets(&$links) {
         $sidebars = wp_get_sidebars_widgets();
         foreach ($sidebars as $sidebar_id => $widget_ids) {
-            if ($sidebar_id === 'wp_inactive_widgets') continue;
+            if ($sidebar_id === 'wp_inactive_widgets' || !is_array($widget_ids)) continue;
             foreach ($widget_ids as $widget_id) {
                 $widget = $this->get_widget_content($widget_id);
                 if ($widget) {
@@ -149,9 +140,7 @@ class WebGSM_Site_Audit_Link_Checker {
         if (!is_array($opt)) return '';
         $content = '';
         foreach ($opt as $w) {
-            if (is_array($w)) {
-                $content .= implode(' ', array_map('strval', $w));
-            }
+            if (is_array($w)) $content .= implode(' ', array_map('strval', $w));
         }
         return $content;
     }
@@ -161,12 +150,7 @@ class WebGSM_Site_Audit_Link_Checker {
         foreach ($opts as $opt) {
             $val = get_option($opt);
             if ($val && filter_var($val, FILTER_VALIDATE_URL)) {
-                $links[] = [
-                    'url' => $val,
-                    'source' => 'option',
-                    'source_id' => $opt,
-                    'source_title' => $opt,
-                ];
+                $links[] = ['url' => $val, 'source' => 'option', 'source_id' => $opt, 'source_title' => $opt];
             }
         }
     }
@@ -178,68 +162,123 @@ class WebGSM_Site_Audit_Link_Checker {
             foreach ($m[1] as $url) {
                 $url = trim($url);
                 if (empty($url) || strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) continue;
-                if (strpos($url, '/') === 0) $url = home_url($url);
-                $links[] = array_merge($meta, ['url' => $url]);
-            }
-        }
-        preg_match_all('/url\(["\']?([^"\')\s]+)["\']?\)/i', $html, $m2);
-        if (!empty($m2[1])) {
-            foreach ($m2[1] as $url) {
-                $url = trim($url);
-                if (empty($url) || strpos($url, 'data:') === 0) continue;
-                if (strpos($url, '/') === 0) $url = home_url($url);
+                if (strpos($url, '/') === 0 && strpos($url, '//') !== 0) $url = home_url($url);
                 $links[] = array_merge($meta, ['url' => $url]);
             }
         }
     }
 
     private function check_links($links, $settings) {
-        $timeout = (int) $settings['timeout'];
+        $timeout = min((int) $settings['timeout'], 5);
         $follow = !empty($settings['follow_redirects']);
-        $max_redir = (int) ($settings['max_redirects'] ?? 5);
+        $max_redir = isset($settings['max_redirects']) ? (int) $settings['max_redirects'] : 5;
         $results = [];
+
+        $site_url = home_url('/');
+        $site_host = parse_url($site_url, PHP_URL_HOST);
 
         foreach ($links as $link) {
             $url = isset($link['url']) ? $link['url'] : '';
             if (empty($url)) continue;
-            $status = $this->check_url($url, $timeout, $follow, $max_redir);
+
+            $link_host = parse_url($url, PHP_URL_HOST);
+            $is_internal = ($link_host === $site_host);
+
+            if ($is_internal) {
+                $status = $this->check_internal_url($url);
+            } else {
+                $status = $this->check_external_url($url, $timeout, $follow, $max_redir);
+            }
+
             $results[] = array_merge($link, [
                 'status' => $status['status'],
                 'http_code' => $status['code'],
-                'error' => $status['error'] ?? '',
+                'error' => isset($status['error']) ? $status['error'] : '',
             ]);
         }
 
         return $results;
     }
 
-    private function check_url($url, $timeout, $follow, $max_redirects) {
+    private function check_internal_url($url) {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (empty($path) || $path === '/') {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        $post_id = url_to_postid($url);
+        if ($post_id > 0) {
+            $post_status = get_post_status($post_id);
+            if ($post_status === 'publish') {
+                return ['status' => 'ok', 'code' => 200];
+            }
+            if ($post_status === 'trash' || $post_status === false) {
+                return ['status' => 'broken', 'code' => 404, 'error' => 'Post in trash or deleted'];
+            }
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        $clean_path = trim($path, '/');
+
+        if (preg_match('#^wp-content/uploads/(.+)$#', $clean_path, $m)) {
+            $file = ABSPATH . 'wp-content/uploads/' . $m[1];
+            if (file_exists($file)) return ['status' => 'ok', 'code' => 200];
+            return ['status' => 'broken', 'code' => 404, 'error' => 'Upload file missing'];
+        }
+
+        if (preg_match('#^(product-category|category|tag)/(.+)$#', $clean_path)) {
+            $term = get_term_by('slug', basename($clean_path), 'product_cat');
+            if (!$term) $term = get_term_by('slug', basename($clean_path), 'category');
+            if (!$term) $term = get_term_by('slug', basename($clean_path), 'post_tag');
+            if ($term && !is_wp_error($term)) return ['status' => 'ok', 'code' => 200];
+        }
+
+        $page = get_page_by_path($clean_path);
+        if ($page && $page->post_status === 'publish') {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        $static_files = ['robots.txt', 'sitemap.xml', 'sitemap_index.xml', 'wp-sitemap.xml', 'wp-login.php', 'wp-admin', 'feed', 'xmlrpc.php'];
+        foreach ($static_files as $sf) {
+            if (strpos($clean_path, $sf) === 0) return ['status' => 'ok', 'code' => 200];
+        }
+
+        if (file_exists(ABSPATH . $clean_path)) {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        return ['status' => 'broken', 'code' => 404, 'error' => 'URL not resolved internally'];
+    }
+
+    private function check_external_url($url, $timeout, $follow, $max_redirects) {
         $args = [
             'timeout' => $timeout,
             'redirection' => $follow ? $max_redirects : 0,
-            'user-agent' => 'WebGSM-Site-Audit/1.0',
-            'sslverify' => true,
+            'user-agent' => 'Mozilla/5.0 (compatible; WebGSM-Audit/3.0)',
+            'sslverify' => false,
         ];
 
         $response = wp_remote_head($url, $args);
         if (is_wp_error($response)) {
-            return [
-                'status' => 'error',
-                'code' => 0,
-                'error' => $response->get_error_message(),
-            ];
+            $msg = $response->get_error_message();
+            if (stripos($msg, 'timed out') !== false || stripos($msg, 'timeout') !== false) {
+                return ['status' => 'error', 'code' => 0, 'error' => 'Timeout'];
+            }
+            return ['status' => 'error', 'code' => 0, 'error' => $msg];
         }
 
         $code = wp_remote_retrieve_response_code($response);
-        if ($code >= 200 && $code < 400) {
-            return ['status' => 'ok', 'code' => $code];
+        if ($code >= 200 && $code < 400) return ['status' => 'ok', 'code' => $code];
+        if ($code === 404) return ['status' => 'broken', 'code' => 404, 'error' => 'Not Found'];
+        if ($code === 403) return ['status' => 'ok', 'code' => $code, 'error' => 'Forbidden (may block bots)'];
+        if ($code === 405) {
+            $get = wp_remote_get($url, $args);
+            if (!is_wp_error($get)) {
+                $gc = wp_remote_retrieve_response_code($get);
+                if ($gc >= 200 && $gc < 400) return ['status' => 'ok', 'code' => $gc];
+            }
         }
-        if ($code === 404) {
-            return ['status' => 'broken', 'code' => 404, 'error' => 'Not Found'];
-        }
-        if ($code >= 400) {
-            return ['status' => 'broken', 'code' => $code, 'error' => "HTTP $code"];
-        }
+        if ($code >= 400) return ['status' => 'broken', 'code' => $code, 'error' => "HTTP $code"];
 
         return ['status' => 'unknown', 'code' => $code];
     }

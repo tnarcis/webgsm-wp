@@ -4,19 +4,28 @@
     var ajax = webgsmSiteAudit.ajaxurl;
     var nonce = webgsmSiteAudit.nonce;
 
-    function post(action, extra) {
+    function post(action, extra, timeoutMs) {
         var data = $.extend({ action: action, nonce: nonce }, extra || {});
-        return $.post(ajax, data);
+        return $.ajax({
+            url: ajax,
+            type: 'POST',
+            data: data,
+            timeout: timeoutMs || 120000
+        });
     }
 
     function setStatus(msg, isError, $target) {
-        ($target || $('#wsa-status')).text(msg).css('color', isError ? '#d63638' : '#646970');
+        ($target || $('#wsa-status')).html(msg).css('color', isError ? '#d63638' : '#646970');
     }
 
     function escapeHtml(s) {
         var div = document.createElement('div');
         div.textContent = s || '';
         return div.innerHTML;
+    }
+
+    function spinner() {
+        return '<span class="spinner is-active" style="float:none;margin:0 6px;"></span>';
     }
 
     // --- TABS ---
@@ -51,8 +60,11 @@
     // --- LINK SCAN ---
     $('#wsa-scan-btn').on('click', function() {
         var $btn = $(this).prop('disabled', true);
-        setStatus('Se scanează linkurile...');
-        post('webgsm_audit_scan_links')
+        var $tbody = $('#wsa-results-table tbody').empty();
+        $tbody.append('<tr><td colspan="3">' + spinner() + ' Se scanează linkurile... poate dura 1-2 minute.</td></tr>');
+        setStatus(spinner() + ' Se scanează...');
+
+        post('webgsm_audit_scan_links', {}, 300000)
             .done(function(res) {
                 if (res.success) {
                     setStatus('Scan finalizat: ' + res.data.total + ' linkuri, ' + res.data.broken + ' rupte.');
@@ -60,9 +72,17 @@
                     renderLinkTable(res.data.results);
                 } else {
                     setStatus('Eroare: ' + (res.data || 'necunoscută'), true);
+                    $tbody.empty().append('<tr><td colspan="3">Eroare la scanare.</td></tr>');
                 }
             })
-            .fail(function() { setStatus('Eroare de rețea.', true); })
+            .fail(function(xhr, status) {
+                if (status === 'timeout') {
+                    setStatus('Timeout – prea multe linkuri. Reduce scope-ul din Setări.', true);
+                } else {
+                    setStatus('Eroare de rețea.', true);
+                }
+                $tbody.empty().append('<tr><td colspan="3">Scanarea nu s-a finalizat.</td></tr>');
+            })
             .always(function() { $btn.prop('disabled', false); });
     });
 
@@ -75,9 +95,9 @@
         results.forEach(function(r) {
             var statusText = r.http_code ? 'HTTP ' + r.http_code : (r.error || r.status || '?');
             $tbody.append(
-                '<tr data-status="' + (r.status || '') + '" data-source="' + (r.source || '') + '">' +
+                '<tr data-status="' + escapeHtml(r.status || '') + '" data-source="' + escapeHtml(r.source || '') + '">' +
                 '<td><a href="' + escapeHtml(r.url || '#') + '" target="_blank" rel="noopener">' + escapeHtml(r.url) + '</a></td>' +
-                '<td><span class="wsa-badge wsa-badge--' + (r.status || 'unknown') + '">' + escapeHtml(statusText) + '</span></td>' +
+                '<td><span class="wsa-badge wsa-badge--' + escapeHtml(r.status || 'unknown') + '">' + escapeHtml(statusText) + '</span></td>' +
                 '<td>' + escapeHtml(r.source || '') + ' – ' + escapeHtml(r.source_title || '') + '</td></tr>'
             );
         });
@@ -86,18 +106,24 @@
     // --- ROBOTS & SITEMAP ---
     $('#wsa-robots-scan').on('click', function() {
         var $btn = $(this).prop('disabled', true);
-        setStatus('Se verifică robots.txt și sitemap...', false, $('#wsa-robots-status'));
+        $('#wsa-robots-results').html('<p>' + spinner() + ' Se verifică...</p>');
+        setStatus(spinner() + ' Se verifică...', false, $('#wsa-robots-status'));
+
         post('webgsm_audit_robots_sitemap')
             .done(function(res) {
                 if (res.success) {
                     renderRobotsSitemap(res.data);
-                    var totalIssues = (res.data.robots.issues || []).length + (res.data.sitemap.issues || []).length;
-                    setStatus(totalIssues + ' probleme găsite.', false, $('#wsa-robots-status'));
+                    var total = (res.data.robots.issues || []).length + (res.data.sitemap.issues || []).length;
+                    setStatus(total + ' probleme, ' + ((res.data.robots.info || []).length + (res.data.sitemap.info || []).length) + ' info.', false, $('#wsa-robots-status'));
                 } else {
-                    setStatus('Eroare', true, $('#wsa-robots-status'));
+                    setStatus('Eroare: ' + (res.data || ''), true, $('#wsa-robots-status'));
+                    $('#wsa-robots-results').html('<p class="wsa-err">Eroare la verificare.</p>');
                 }
             })
-            .fail(function() { setStatus('Eroare de rețea.', true, $('#wsa-robots-status')); })
+            .fail(function() {
+                setStatus('Eroare de rețea.', true, $('#wsa-robots-status'));
+                $('#wsa-robots-results').html('<p class="wsa-err">Eroare de rețea.</p>');
+            })
             .always(function() { $btn.prop('disabled', false); });
     });
 
@@ -111,110 +137,60 @@
         } else {
             html += '<div class="wsa-badge wsa-badge--broken" style="margin-bottom:12px;">Nu există / inaccesibil</div>';
         }
-        if (data.robots.issues && data.robots.issues.length) {
-            data.robots.issues.forEach(function(i) {
-                html += renderIssueHtml(i);
-            });
-        }
-        if (data.robots.info && data.robots.info.length) {
-            data.robots.info.forEach(function(info) {
-                html += '<div class="wsa-info">' + escapeHtml(info) + '</div>';
-            });
-        }
+        (data.robots.issues || []).forEach(function(i) { html += renderIssueHtml(i); });
+        (data.robots.info || []).forEach(function(info) { html += '<div class="wsa-info">' + escapeHtml(info) + '</div>'; });
         if (data.robots.content) {
-            html += '<details style="margin-top:12px;"><summary>Conținut robots.txt</summary>';
+            html += '<details style="margin-top:12px;"><summary style="cursor:pointer;color:#2271b1;">Conținut robots.txt</summary>';
             html += '<pre class="wsa-robots-pre">' + escapeHtml(data.robots.content) + '</pre></details>';
         }
         html += '</div>';
 
         html += '<div class="wsa-section"><h3>Sitemap XML</h3>';
         if (data.sitemap.found) {
-            html += '<div class="wsa-badge wsa-badge--ok" style="margin-bottom:12px;">Găsit: ' + escapeHtml(data.sitemap.url) + '</div>';
-            if (data.sitemap.type) html += '<p>Tip: ' + escapeHtml(data.sitemap.type) + ' | URL-uri: ' + (data.sitemap.urls_count || 0) + '</p>';
+            html += '<div class="wsa-badge wsa-badge--ok" style="margin-bottom:12px;">Găsit</div>';
+            if (data.sitemap.url) html += '<p><a href="' + escapeHtml(data.sitemap.url) + '" target="_blank">' + escapeHtml(data.sitemap.url) + '</a></p>';
+            if (data.sitemap.type) html += '<p>Tip: ' + escapeHtml(data.sitemap.type) + ' | Elemente: ' + (data.sitemap.urls_count || 0) + '</p>';
         } else {
             html += '<div class="wsa-badge wsa-badge--broken" style="margin-bottom:12px;">Nu a fost găsit</div>';
         }
-        if (data.sitemap.issues && data.sitemap.issues.length) {
-            data.sitemap.issues.forEach(function(i) {
-                html += renderIssueHtml(i);
-            });
-        }
-        if (data.sitemap.info && data.sitemap.info.length) {
-            data.sitemap.info.forEach(function(info) {
-                html += '<div class="wsa-info">' + escapeHtml(info) + '</div>';
-            });
-        }
+        (data.sitemap.issues || []).forEach(function(i) { html += renderIssueHtml(i); });
+        (data.sitemap.info || []).forEach(function(info) { html += '<div class="wsa-info">' + escapeHtml(info) + '</div>'; });
         html += '</div>';
 
         $el.html(html);
     }
 
-    // --- CONFLICT DETECTOR ---
-    $('#wsa-conflict-scan').on('click', function() {
-        var $btn = $(this).prop('disabled', true);
-        setStatus('Se detectează conflicte...', false, $('#wsa-conflict-status'));
-        post('webgsm_audit_conflict_scan')
-            .done(function(res) {
-                if (res.success) {
-                    setStatus(res.data.count + ' probleme găsite.', false, $('#wsa-conflict-status'));
-                    renderIssues('#wsa-conflict-results', res.data.issues);
-                } else {
-                    setStatus('Eroare', true, $('#wsa-conflict-status'));
-                }
-            })
-            .fail(function() { setStatus('Eroare de rețea.', true, $('#wsa-conflict-status')); })
-            .always(function() { $btn.prop('disabled', false); });
-    });
+    // --- GENERIC SCAN HANDLER ---
+    function scanModule(btnId, statusId, resultsId, action, showUrl) {
+        $(btnId).on('click', function() {
+            var $btn = $(this).prop('disabled', true);
+            $(resultsId).html('<p>' + spinner() + ' Se scanează...</p>');
+            setStatus(spinner() + ' Se scanează...', false, $(statusId));
 
-    // --- SECURITY ---
-    $('#wsa-security-scan').on('click', function() {
-        var $btn = $(this).prop('disabled', true);
-        setStatus('Se scanează securitatea...', false, $('#wsa-security-status'));
-        post('webgsm_audit_security_scan')
-            .done(function(res) {
-                if (res.success) {
-                    setStatus(res.data.count + ' probleme găsite.', false, $('#wsa-security-status'));
-                    renderIssues('#wsa-security-results', res.data.issues);
-                } else {
-                    setStatus('Eroare', true, $('#wsa-security-status'));
-                }
-            })
-            .always(function() { $btn.prop('disabled', false); });
-    });
+            post(action)
+                .done(function(res) {
+                    if (res.success) {
+                        setStatus(res.data.count + ' probleme găsite.', false, $(statusId));
+                        renderIssues(resultsId, res.data.issues, showUrl);
+                    } else {
+                        setStatus('Eroare', true, $(statusId));
+                        $(resultsId).html('<p class="wsa-err">Eroare la scanare.</p>');
+                    }
+                })
+                .fail(function() {
+                    setStatus('Eroare de rețea.', true, $(statusId));
+                    $(resultsId).html('<p class="wsa-err">Eroare de rețea.</p>');
+                })
+                .always(function() { $btn.prop('disabled', false); });
+        });
+    }
 
-    // --- PERFORMANCE ---
-    $('#wsa-perf-scan').on('click', function() {
-        var $btn = $(this).prop('disabled', true);
-        setStatus('Se scanează performanța...', false, $('#wsa-perf-status'));
-        post('webgsm_audit_performance_scan')
-            .done(function(res) {
-                if (res.success) {
-                    setStatus(res.data.count + ' probleme găsite.', false, $('#wsa-perf-status'));
-                    renderIssues('#wsa-perf-results', res.data.issues);
-                } else {
-                    setStatus('Eroare', true, $('#wsa-perf-status'));
-                }
-            })
-            .always(function() { $btn.prop('disabled', false); });
-    });
+    scanModule('#wsa-conflict-scan', '#wsa-conflict-status', '#wsa-conflict-results', 'webgsm_audit_conflict_scan');
+    scanModule('#wsa-security-scan', '#wsa-security-status', '#wsa-security-results', 'webgsm_audit_security_scan');
+    scanModule('#wsa-perf-scan', '#wsa-perf-status', '#wsa-perf-results', 'webgsm_audit_performance_scan');
+    scanModule('#wsa-seo-scan', '#wsa-seo-status', '#wsa-seo-results', 'webgsm_audit_seo_scan', true);
 
-    // --- SEO ---
-    $('#wsa-seo-scan').on('click', function() {
-        var $btn = $(this).prop('disabled', true);
-        setStatus('Se scanează SEO...', false, $('#wsa-seo-status'));
-        post('webgsm_audit_seo_scan')
-            .done(function(res) {
-                if (res.success) {
-                    setStatus(res.data.count + ' probleme găsite.', false, $('#wsa-seo-status'));
-                    renderIssues('#wsa-seo-results', res.data.issues, true);
-                } else {
-                    setStatus('Eroare', true, $('#wsa-seo-status'));
-                }
-            })
-            .always(function() { $btn.prop('disabled', false); });
-    });
-
-    // --- RENDER ISSUES (universal) ---
+    // --- RENDER ISSUES ---
     function renderIssueHtml(i) {
         var sev = i.severity || 'info';
         var sevLabel = { high: 'CRITIC', medium: 'MEDIU', low: 'MINOR', info: 'INFO' };
@@ -231,7 +207,7 @@
     function renderIssues(selector, issues, showUrl) {
         var $el = $(selector);
         if (!issues || !issues.length) {
-            $el.html('<div class="wsa-no-issues"><span class="dashicons dashicons-yes-alt"></span> Nicio problemă găsită. Bine!</div>');
+            $el.html('<div class="wsa-no-issues"><span class="dashicons dashicons-yes-alt"></span> Nicio problemă găsită. Totul e în regulă!</div>');
             return;
         }
         var html = '';
@@ -255,7 +231,7 @@
     // --- DEBUG LOG ---
     function loadDebugLog() {
         var $out = $('#wsa-debug-output pre');
-        $out.text('Se încarcă...');
+        $out.html(spinner() + ' Se încarcă...');
         post('webgsm_audit_get_debug_log', {
             lines: $('#wsa-debug-lines').val(),
             filter: $('#wsa-debug-filter').val(),
@@ -266,15 +242,14 @@
                 if (res.data.size) $('#wsa-debug-size').text('Dimensiune: ' + res.data.size);
                 if (res.data.entries && res.data.entries.length) {
                     var html = res.data.entries.map(function(e) {
-                        var cls = 'wsa-log-' + (e.severity || 'info');
-                        return '<div class="' + cls + '">' + escapeHtml(e.raw) + '</div>';
+                        return '<div class="wsa-log-' + (e.severity || 'info') + '">' + escapeHtml(e.raw) + '</div>';
                     }).join('');
                     $out.html(html);
                 } else {
                     $out.text(res.data.exists ? 'Niciun rezultat cu filtrele actuale.' : 'debug.log nu există. Activează WP_DEBUG_LOG în wp-config.php');
                 }
             } else {
-                $out.text('Eroare: ' + (res.data || 'necunoscută'));
+                $out.text('Eroare: ' + (res.data || ''));
             }
         })
         .fail(function() { $out.text('Eroare de rețea.'); });
@@ -283,9 +258,7 @@
     $('#wsa-debug-refresh').on('click', loadDebugLog);
     $('#wsa-debug-clear').on('click', function() {
         if (!confirm('Golești debug.log?')) return;
-        post('webgsm_audit_clear_debug_log').done(function(res) {
-            if (res.success) loadDebugLog();
-        });
+        post('webgsm_audit_clear_debug_log').done(function(r) { if (r.success) loadDebugLog(); });
     });
 
     // --- GSC IMPORT ---
@@ -299,25 +272,25 @@
                     alert('Import reușit: ' + (res.data.pages || 0) + ' pagini, ' + (res.data.issues || 0) + ' probleme.');
                     location.reload();
                 } else {
-                    alert('Eroare: ' + (res.data || 'necunoscută'));
+                    alert('Eroare: ' + (res.data || ''));
                 }
             })
             .fail(function() { alert('Eroare de rețea.'); })
             .always(function() { $btn.prop('disabled', false); });
     });
 
-    // --- FULL SCAN (overview) ---
+    // --- FULL SCAN ---
     $('#wsa-full-scan-btn').on('click', function() {
         var $btn = $(this).prop('disabled', true);
         var $status = $('#wsa-full-scan-status');
         var $summary = $('#wsa-full-scan-summary').hide();
-        var results = { links: null, security: null, performance: null, seo: null, robots: null, conflicts: null };
+        var results = {};
         var done = 0;
         var total = 6;
 
-        function checkDone() {
+        function tick() {
             done++;
-            $status.text('Progres: ' + done + '/' + total + ' module...');
+            $status.html(spinner() + ' Progres: ' + done + '/' + total + ' module...');
             if (done >= total) {
                 $btn.prop('disabled', false);
                 $status.text('Scanare completă finalizată!').css('color', '#00a32a');
@@ -325,60 +298,45 @@
             }
         }
 
-        $status.text('Se rulează 6 module...').css('color', '#646970');
+        $status.html(spinner() + ' Se rulează ' + total + ' module...').css('color', '#646970');
 
-        post('webgsm_audit_scan_links').done(function(r) {
-            if (r.success) {
-                results.links = r.data;
-                updateOverview(r.data.broken, r.data.total - r.data.broken);
-                renderLinkTable(r.data.results);
-            }
-        }).always(checkDone);
+        post('webgsm_audit_scan_links', {}, 300000).done(function(r) {
+            if (r.success) { results.links = r.data; updateOverview(r.data.broken, r.data.total - r.data.broken); renderLinkTable(r.data.results); }
+        }).always(tick);
 
         post('webgsm_audit_security_scan').done(function(r) {
             if (r.success) { results.security = r.data; renderIssues('#wsa-security-results', r.data.issues); }
-        }).always(checkDone);
+        }).always(tick);
 
         post('webgsm_audit_performance_scan').done(function(r) {
             if (r.success) { results.performance = r.data; renderIssues('#wsa-perf-results', r.data.issues); }
-        }).always(checkDone);
+        }).always(tick);
 
         post('webgsm_audit_seo_scan').done(function(r) {
             if (r.success) { results.seo = r.data; renderIssues('#wsa-seo-results', r.data.issues, true); }
-        }).always(checkDone);
+        }).always(tick);
 
         post('webgsm_audit_robots_sitemap').done(function(r) {
             if (r.success) { results.robots = r.data; renderRobotsSitemap(r.data); }
-        }).always(checkDone);
+        }).always(tick);
 
         post('webgsm_audit_conflict_scan').done(function(r) {
             if (r.success) { results.conflicts = r.data; renderIssues('#wsa-conflict-results', r.data.issues); }
-        }).always(checkDone);
+        }).always(tick);
     });
 
     function renderFullSummary(r) {
         var $el = $('#wsa-full-scan-summary').show();
         var html = '<div class="wsa-cards" style="margin-top:20px;">';
-
-        var linksBroken = r.links ? r.links.broken : '?';
-        var linksTotal = r.links ? r.links.total : '?';
-        html += card('Linkuri', linksBroken + ' rupte / ' + linksTotal, linksBroken > 0 ? 'broken' : 'ok');
-
-        var secCount = r.security ? r.security.count : '?';
-        html += card('Securitate', secCount + ' probleme', secCount > 0 ? 'broken' : 'ok');
-
-        var perfCount = r.performance ? r.performance.count : '?';
-        html += card('Performanță', perfCount + ' probleme', perfCount > 0 ? 'broken' : 'ok');
-
-        var seoCount = r.seo ? r.seo.count : '?';
-        html += card('SEO', seoCount + ' probleme', seoCount > 0 ? 'broken' : 'ok');
-
-        var robotsIssues = r.robots ? (r.robots.robots.issues || []).length + (r.robots.sitemap.issues || []).length : '?';
-        html += card('Robots/Sitemap', robotsIssues + ' probleme', robotsIssues > 0 ? 'broken' : 'ok');
-
-        var conflictCount = r.conflicts ? r.conflicts.count : '?';
-        html += card('Conflicte', conflictCount + ' detectate', conflictCount > 0 ? 'broken' : 'ok');
-
+        var lb = r.links ? r.links.broken : '?';
+        var lt = r.links ? r.links.total : '?';
+        html += card('Linkuri', lb + ' rupte / ' + lt, lb > 0 ? 'broken' : 'ok');
+        html += card('Securitate', (r.security ? r.security.count : '?') + ' probleme', r.security && r.security.count > 0 ? 'broken' : 'ok');
+        html += card('Performanță', (r.performance ? r.performance.count : '?') + ' probleme', r.performance && r.performance.count > 0 ? 'broken' : 'ok');
+        html += card('SEO', (r.seo ? r.seo.count : '?') + ' probleme', r.seo && r.seo.count > 0 ? 'broken' : 'ok');
+        var ri = r.robots ? (r.robots.robots.issues || []).length + (r.robots.sitemap.issues || []).length : '?';
+        html += card('Robots/Sitemap', ri + ' probleme', ri > 0 ? 'broken' : 'ok');
+        html += card('Conflicte', (r.conflicts ? r.conflicts.count : '?') + ' detectate', r.conflicts && r.conflicts.count > 0 ? 'broken' : 'ok');
         html += '</div>';
         $el.html(html);
     }
