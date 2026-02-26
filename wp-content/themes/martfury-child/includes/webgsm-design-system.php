@@ -46,31 +46,6 @@ function webgsm_minimal_css() {
 
 /* NU ascunde butoanele din mini-cart (hover pe icon coș) */
 
-/* Adaugă în coș - jumătate + rotunjit */
-.woocommerce ul.products li.product .button,
-.woocommerce ul.products li.product .add_to_cart_button,
-.woocommerce ul.products li.product a.button,
-.woocommerce ul.products li.product .product-inner .button,
-.woocommerce ul.products li.product .product-inner .add_to_cart_button,
-ul.products li.product .add_to_cart_button,
-ul.products .product-inner .add_to_cart_button,
-.products-list .product .add_to_cart_button,
-.product-list .add_to_cart_button,
-.mf-shop-content .add_to_cart_button,
-li.product .add_to_cart_button,
-.product .add_to_cart_button,
-a.add_to_cart_button,
-.add_to_cart_button {
-    padding: 5px 12px !important;
-    font-size: 11px !important;
-    border-radius: 20px !important;
-    min-height: auto !important;
-    line-height: 1.4 !important;
-    height: auto !important;
-}
-
-/* Buton "Adaugă în coș" pe PAGINA PRODUSULUI - vezi secțiunea Martfury */
-
 /* ============================================
    PAGINA PRODUSULUI - Martfury specific
    ============================================ */
@@ -184,7 +159,6 @@ input.qty {
     vertical-align: middle !important;
     margin: 0 !important;
 }
-
 /* Wishlist - aliniat */
 .entry-summary .yith-wcwl-add-to-wishlist,
 .product-summary .yith-wcwl-add-to-wishlist,
@@ -838,39 +812,44 @@ button.button {
 }
 
 /* ============================================
-   FIX MOBIL: butoane produs (Adaugă în coș, Favorite, Compară) vizibile mereu după filtrare
-   Tema afișează butoanele doar la hover; pe touch nu există hover, deci rămân invizibile până la tap.
-   Forțăm vizibilitate pe mobil / dispozitive fără hover.
+   PRODUS ÎN LISTĂ: butoane vizibile la hover
    ============================================ */
+.woocommerce ul.products li.product:hover .product-footer,
+.woocommerce ul.products li.product:hover .product-actions,
+.woocommerce ul.products li.product .product-inner:hover .product-footer,
+.woocommerce ul.products li.product .product-inner:hover .product-actions,
+.woocommerce ul.products li.product:hover [class*="footer"],
+.woocommerce ul.products li.product .product-inner:hover [class*="footer"],
+.woocommerce ul.products li.product:hover .add_to_cart_button,
+.woocommerce ul.products li.product .product-inner:hover .add_to_cart_button,
+.woocommerce ul.products li.product:hover .product-inner .button,
+.woocommerce ul.products li.product .product-inner:hover .button,
+.woocommerce ul.products li.product:hover .yith-wcwl-add-to-wishlist,
+.woocommerce ul.products li.product .product-inner:hover .yith-wcwl-add-to-wishlist,
+.woocommerce ul.products li.product:hover .compare-button,
+.woocommerce ul.products li.product .product-inner:hover .compare-button,
+.woocommerce ul.products li.product:hover .mf-product-quick-view,
+.woocommerce ul.products li.product .product-inner:hover .mf-product-quick-view {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    pointer-events: auto !important;
+}
+/* Pe mobil/touch – butoane mereu vizibile (nu există hover) */
 @media (max-width: 768px), (hover: none) {
+    .woocommerce ul.products li.product .product-footer,
+    .woocommerce ul.products li.product .product-actions,
     .woocommerce ul.products li.product .product-inner .product-footer,
     .woocommerce ul.products li.product .product-inner .product-actions,
-    .woocommerce ul.products li.product .product-inner .product-summary,
-    .woocommerce ul.products li.product .product-inner [class*="footer"],
-    .woocommerce ul.products li.product .product-inner [class*="action"] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: none !important;
-        pointer-events: auto !important;
-    }
-    .woocommerce ul.products li.product .product-inner .add_to_cart_button,
-    .woocommerce ul.products li.product .product-inner .button,
-    .woocommerce ul.products li.product .product-inner a.button,
     .woocommerce ul.products li.product .add_to_cart_button,
-    .woocommerce ul.products li.product .button,
-    .woocommerce ul.products li.product a.button,
-    ul.products li.product .product-inner .add_to_cart_button,
-    ul.products li.product .product-inner .button,
-    ul.products li.product .product-inner .yith-wcwl-add-to-wishlist,
-    ul.products li.product .product-inner .compare-button,
-    ul.products li.product .product-inner a.compare {
+    .woocommerce ul.products li.product .product-inner .add_to_cart_button {
         opacity: 1 !important;
         visibility: visible !important;
-        display: inline-flex !important;
-        pointer-events: auto !important;
         transform: none !important;
+        pointer-events: auto !important;
     }
 }
+
 </style>
 <?php
 }

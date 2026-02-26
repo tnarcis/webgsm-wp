@@ -1,13 +1,15 @@
-# WebGSM Site Audit
+# WebGSM Site Audit – Super Tool
 
-Plugin WordPress pentru analiză site: linkuri moarte, crawl-uri, probleme SEO.
+Plugin WordPress pentru analiză completă: linkuri, debug, securitate, performanță, SEO.
 
 ## Funcționalități
 
-- **Scan linkuri** – verifică linkurile din posturi, pagini, produse, meniuri, widget-uri
-- **Setări** – configurezi ce surse să scaneze, timeout, redirect-uri
-- **Import GSC** – lipești JSON exportat din Google Search Console pentru analiză
-- **Dashboard** – rezultate vizuale, filtre, badge-uri pe status
+- **Linkuri** – scan linkuri moarte din posturi, pagini, produse, meniuri, widget-uri
+- **Debug Log** – vizualizare, filtrare, golire debug.log
+- **Securitate** – fișiere sensibile expuse, WP_DEBUG, SSL, plugin-uri neactualizate
+- **Performanță** – imagini mari, transiente, revizii, autoload DB
+- **SEO** – meta title/description, linkuri rupte, motorii de căutare
+- **GSC** – import JSON din Google Search Console
 
 ## Utilizare
 

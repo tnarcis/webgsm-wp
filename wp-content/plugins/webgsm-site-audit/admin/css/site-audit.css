@@ -1,7 +1,19 @@
 .webgsm-site-audit { max-width: 1200px; }
-.webgsm-site-audit h1 { margin-bottom: 20px; }
+.webgsm-site-audit h1 { margin-bottom: 10px; display: flex; align-items: center; }
 .webgsm-site-audit h2 { margin-top: 30px; margin-bottom: 15px; }
+.webgsm-site-audit h3 { margin: 0 0 12px; }
 
+.wsa-version {
+    font-size: 12px;
+    background: #2271b1;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 12px;
+    font-weight: 400;
+}
+
+/* Cards */
 .wsa-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -12,11 +24,13 @@
 .wsa-card {
     background: #fff;
     border: 1px solid #c3c4c7;
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 16px;
-    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    transition: box-shadow .2s;
 }
 
+.wsa-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 .wsa-card--broken { border-left: 4px solid #d63638; }
 .wsa-card--ok { border-left: 4px solid #00a32a; }
 
@@ -25,47 +39,48 @@
     font-size: 12px;
     color: #646970;
     margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
 }
 
-.wsa-card-value {
-    font-size: 24px;
-    font-weight: 600;
-}
-
+.wsa-card-value { font-size: 24px; font-weight: 600; }
 .wsa-card-value--small { font-size: 14px; }
 
+/* Actions */
 .wsa-actions {
     margin-bottom: 24px;
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
-.wsa-actions .button-hero .dashicons { margin-right: 6px; vertical-align: middle; }
-
+.wsa-actions .button .dashicons { margin-right: 4px; vertical-align: middle; }
 .wsa-status { color: #646970; font-size: 13px; }
 
+.wsa-overview-actions { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+.wsa-overview-actions .button-hero .dashicons { margin-right: 6px; vertical-align: middle; }
+
+/* Section */
 .wsa-section {
     background: #fff;
     border: 1px solid #c3c4c7;
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
 }
 
-.wsa-filters {
-    margin-bottom: 12px;
-    display: flex;
-    gap: 12px;
-}
-
+/* Filters */
+.wsa-filters { margin-bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
 .wsa-filters select { min-width: 160px; }
 
+/* Badges */
 .wsa-badge {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 3px;
+    padding: 2px 10px;
+    border-radius: 12px;
     font-size: 12px;
+    font-weight: 500;
 }
 
 .wsa-badge--ok { background: #d4edda; color: #155724; }
@@ -73,7 +88,130 @@
 .wsa-badge--error { background: #fff3cd; color: #856404; }
 .wsa-badge--unknown { background: #e2e3e5; color: #383d41; }
 
-.wsa-gsc-summary { margin-top: 12px; padding: 10px; background: #f0f0f1; border-radius: 4px; }
+/* Severity badges */
+.wsa-sev-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-right: 6px;
+}
 
+.wsa-sev-badge--high { background: #d63638; color: #fff; }
+.wsa-sev-badge--medium { background: #dba617; color: #1d2327; }
+.wsa-sev-badge--low { background: #72aee6; color: #fff; }
+.wsa-sev-badge--info { background: #c3c4c7; color: #1d2327; }
+
+/* Tabs */
+.wsa-nav-tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.wsa-nav-tabs .wsa-tab {
+    padding: 8px 16px;
+    background: #f0f0f1;
+    border: 1px solid #c3c4c7;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #1d2327;
+    font-size: 13px;
+    transition: all .15s;
+}
+.wsa-nav-tabs .wsa-tab:hover { background: #fff; border-color: #2271b1; color: #2271b1; }
+.wsa-nav-tabs .wsa-tab.active { background: #2271b1; color: #fff; border-color: #2271b1; }
+
+/* Issues list */
+.wsa-issues-list { margin-top: 16px; }
+.wsa-issue {
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border-left: 4px solid #ccc;
+    background: #fff;
+}
+.wsa-issue--high { border-left-color: #d63638; background: #fcf0f1; }
+.wsa-issue--medium { border-left-color: #dba617; background: #fcf9e8; }
+.wsa-issue--low { border-left-color: #72aee6; background: #f0f6fc; }
+.wsa-issue--info { border-left-color: #c3c4c7; background: #f6f7f7; }
+.wsa-issue code { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.06); border-radius: 3px; }
+.wsa-issue a { color: #2271b1; }
+.wsa-issue-detail { font-size: 12px; color: #646970; margin-top: 4px; white-space: pre-wrap; }
+
+/* Fix suggestions */
+.wsa-fix {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,.03);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1d2327;
+    line-height: 1.5;
+}
+.wsa-fix .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #dba617;
+    vertical-align: text-bottom;
+    margin-right: 4px;
+}
+
+.wsa-val { font-size: 12px; color: #646970; }
+
+/* No issues */
+.wsa-no-issues {
+    padding: 20px;
+    text-align: center;
+    color: #00a32a;
+    font-size: 14px;
+    background: #edfaef;
+    border-radius: 8px;
+}
+.wsa-no-issues .dashicons { font-size: 24px; width: 24px; height: 24px; vertical-align: middle; margin-right: 6px; }
+
+/* GSC */
+.wsa-gsc-summary { margin-top: 12px; padding: 12px; background: #f0f0f1; border-radius: 6px; }
+
+/* Links table */
+#wsa-results-table { border-radius: 6px; overflow: hidden; }
 #wsa-results-table td:first-child { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 #wsa-results-table a { word-break: break-all; }
+
+/* Debug Log */
+.wsa-debug-log pre { white-space: pre-wrap; word-break: break-all; }
+.wsa-debug-log .wsa-log-fatal_error { color: #f66; font-weight: 600; }
+.wsa-debug-log .wsa-log-parse_error { color: #f66; }
+.wsa-debug-log .wsa-log-warning { color: #fa0; }
+.wsa-debug-log .wsa-log-notice { color: #6cf; }
+.wsa-debug-log .wsa-log-deprecated { color: #c9a; }
+.wsa-debug-log .wsa-log-info { color: #d4d4d4; }
+
+/* Robots preview */
+.wsa-robots-pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-height: 300px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+/* Info lines */
+.wsa-info {
+    padding: 6px 12px;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #1d2327;
+    background: #f0f6fc;
+    border-left: 3px solid #72aee6;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .wsa-cards { grid-template-columns: 1fr 1fr; }
+    .wsa-actions { flex-direction: column; align-items: flex-start; }
+    .wsa-nav-tabs .wsa-tab { padding: 6px 10px; font-size: 12px; }
+}

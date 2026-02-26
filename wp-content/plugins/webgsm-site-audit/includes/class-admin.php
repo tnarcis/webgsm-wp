@@ -25,7 +25,7 @@ class WebGSM_Site_Audit_Admin {
             'Dashboard',
             'Dashboard',
             'manage_options',
-            self::SLUG,
+            self::SLUG . '-dashboard',
             [$this, 'render_dashboard']
         );
         add_submenu_page(
@@ -39,7 +39,7 @@ class WebGSM_Site_Audit_Admin {
     }
 
     public function enqueue($hook) {
-        if (strpos($hook, self::SLUG) === false) return;
+        if (strpos($hook, 'webgsm-site-audit') === false) return;
 
         wp_enqueue_style('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/css/site-audit.css', [], WEBGSM_SITE_AUDIT_VERSION);
         wp_enqueue_script('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/js/site-audit.js', ['jquery'], WEBGSM_SITE_AUDIT_VERSION, true);
@@ -51,13 +51,26 @@ class WebGSM_Site_Audit_Admin {
 
     public function render_dashboard() {
         $results = get_option('webgsm_site_audit_scan_results', []);
-        $last_scan = get_option('webgsm_site_audit_last_scan', 0);
+        if (!is_array($results)) $results = [];
+        $last_scan = (int) get_option('webgsm_site_audit_last_scan', 0);
         $gsc_data = WebGSM_Site_Audit_GSC::get_stored_data();
-        include WEBGSM_SITE_AUDIT_PATH . 'admin/views/dashboard.php';
+        if (!is_array($gsc_data)) $gsc_data = [];
+
+        $dashboard_file = WEBGSM_SITE_AUDIT_PATH . 'admin/views/dashboard.php';
+        if (file_exists($dashboard_file)) {
+            include $dashboard_file;
+        } else {
+            echo '<div class="wrap"><h1>Site Audit</h1><p>Fișier dashboard lipsă.</p></div>';
+        }
     }
 
     public function render_settings() {
         $settings = WebGSM_Site_Audit_Settings::get();
-        include WEBGSM_SITE_AUDIT_PATH . 'admin/views/settings.php';
+        $settings_file = WEBGSM_SITE_AUDIT_PATH . 'admin/views/settings.php';
+        if (file_exists($settings_file)) {
+            include $settings_file;
+        } else {
+            echo '<div class="wrap"><h1>Setări</h1><p>Fișier setări lipsă.</p></div>';
+        }
     }
 }

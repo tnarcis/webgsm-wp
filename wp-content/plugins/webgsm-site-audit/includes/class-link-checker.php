@@ -24,7 +24,7 @@ class WebGSM_Site_Audit_Link_Checker {
 
         wp_send_json_success([
             'total' => count($links),
-            'broken' => count(array_filter($results, fn($r) => $r['status'] !== 'ok')),
+            'broken' => count(array_filter($results, function($r) { return isset($r['status']) && $r['status'] !== 'ok'; })),
             'results' => $results,
         ]);
     }
@@ -40,8 +40,10 @@ class WebGSM_Site_Audit_Link_Checker {
 
     public function collect_links($settings) {
         $links = [];
+        $settings = is_array($settings) ? $settings : [];
         $site_url = home_url('/');
         $site_host = parse_url($site_url, PHP_URL_HOST);
+        if (!$site_host) $site_host = '';
 
         if (!empty($settings['scan_posts'])) {
             $this->collect_from_posts('post', $links);
@@ -64,7 +66,7 @@ class WebGSM_Site_Audit_Link_Checker {
 
         $filtered = [];
         foreach ($links as $link) {
-            $url = $link['url'];
+            $url = isset($link['url']) ? $link['url'] : '';
             if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) continue;
             if (strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) continue;
             if (strpos($url, '#') === 0) continue;
@@ -198,7 +200,8 @@ class WebGSM_Site_Audit_Link_Checker {
         $results = [];
 
         foreach ($links as $link) {
-            $url = $link['url'];
+            $url = isset($link['url']) ? $link['url'] : '';
+            if (empty($url)) continue;
             $status = $this->check_url($url, $timeout, $follow, $max_redir);
             $results[] = array_merge($link, [
                 'status' => $status['status'],

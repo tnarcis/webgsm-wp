@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) exit;
 ?>
 <div class="wrap webgsm-site-audit">
     <h1>Setări Site Audit</h1>
+    <p><a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-site-audit')); ?>">&larr; Înapoi la Dashboard</a></p>
 
     <form method="post" action="options.php">
         <?php settings_fields('webgsm_site_audit'); ?>
