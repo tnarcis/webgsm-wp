@@ -26,6 +26,7 @@ wp-content/plugins/*
 !wp-content/plugins/webgsm-setup-wizard-v2/
 !wp-content/plugins/webgsm-tools/
 !wp-content/plugins/webgsm-woo-sync/
+!wp-content/plugins/webgsm-site-audit/
 
 # Documentație (în repo pentru deploy / referință)
 !docs/
