@@ -1,8 +1,9 @@
 ---
 # Deploy: la webgsm-tools nu se uploadează folderul data/ și fișierele *.md (rămân doar în repo)
+# Site pe domeniul principal (webgsm.ro) – deploy în public_html, fără /test
 deployment:
   tasks:
-    - export DEPLOYPATH=/home2/webgsm/public_html/test/wp-content
+    - export DEPLOYPATH=/home2/webgsm/public_html/wp-content
     
     - /bin/mkdir -p $DEPLOYPATH/themes
     - /bin/mkdir -p $DEPLOYPATH/plugins
