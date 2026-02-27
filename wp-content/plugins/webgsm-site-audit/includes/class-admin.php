@@ -41,8 +41,13 @@ class WebGSM_Site_Audit_Admin {
     public function enqueue($hook) {
         if (strpos($hook, 'webgsm-site-audit') === false) return;
 
-        wp_enqueue_style('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/css/site-audit.css', [], WEBGSM_SITE_AUDIT_VERSION);
-        wp_enqueue_script('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/js/site-audit.js', ['jquery'], WEBGSM_SITE_AUDIT_VERSION, true);
+        $css_path = WEBGSM_SITE_AUDIT_PATH . 'admin/css/site-audit.css';
+        $js_path  = WEBGSM_SITE_AUDIT_PATH . 'admin/js/site-audit.js';
+        $css_ver  = file_exists($css_path) ? (string) @filemtime($css_path) : WEBGSM_SITE_AUDIT_VERSION;
+        $js_ver   = file_exists($js_path) ? (string) @filemtime($js_path) : WEBGSM_SITE_AUDIT_VERSION;
+
+        wp_enqueue_style('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/css/site-audit.css', [], $css_ver);
+        wp_enqueue_script('webgsm-site-audit', WEBGSM_SITE_AUDIT_URL . 'admin/js/site-audit.js', ['jquery'], $js_ver, true);
         wp_localize_script('webgsm-site-audit', 'webgsmSiteAudit', [
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('webgsm_site_audit'),
