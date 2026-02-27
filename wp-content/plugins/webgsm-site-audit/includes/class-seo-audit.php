@@ -13,6 +13,9 @@ class WebGSM_Site_Audit_SEO {
 
         $issues = [];
 
+        $has_rankmath = defined('RANK_MATH_VERSION') || function_exists('rank_math');
+        $has_acf = function_exists('acf_get_field_groups') && function_exists('acf_get_fields') && function_exists('get_field');
+
         $pages = get_posts([
             'post_type' => ['post', 'page', 'product'],
             'post_status' => 'publish',
@@ -61,6 +64,62 @@ class WebGSM_Site_Audit_SEO {
                 $post_type = get_post_type($id);
                 if ($post_type !== 'product' && $word_count < 300 && $word_count > 0) {
                     $issues[] = ['type' => 'thin_content', 'severity' => 'low', 'title' => "Conținut subțire ($word_count cuvinte)", 'url' => $url, 'page' => $title, 'fix' => 'Conținutul ideal are 300+ cuvinte. Adaugă text relevant.'];
+                }
+            }
+
+            // --- Rank Math specific (dacă este activ) ---
+            if ($has_rankmath) {
+                // Focus keyword
+                $focus = get_post_meta($id, 'rank_math_focus_keyword', true);
+                if (empty($focus)) {
+                    $issues[] = [
+                        'type' => 'rankmath_no_focus',
+                        'severity' => 'low',
+                        'title' => 'Rank Math: lipsește Focus Keyword',
+                        'url' => $url,
+                        'page' => $title,
+                        'fix' => 'În editor, tab-ul Rank Math → setează un cuvânt cheie principal (Focus Keyword) pentru această pagină.',
+                    ];
+                }
+
+                // Titlu / descriere personalizate în Rank Math (opțional, doar info)
+                $rm_title = get_post_meta($id, 'rank_math_title', true);
+                $rm_desc  = get_post_meta($id, 'rank_math_description', true);
+                if (empty($rm_title) && empty($rm_desc) && empty($focus)) {
+                    // Evităm să spamăm prea mult – deja avem alte issues de titlu/descriere
+                }
+            }
+
+            // --- ACF: câmpuri OBLIGATORII necompletate pe această pagină ---
+            if ($has_acf) {
+                $missing_required = 0;
+                $groups = acf_get_field_groups(['post_id' => $id]);
+                if (is_array($groups)) {
+                    foreach ($groups as $group) {
+                        $fields = acf_get_fields($group);
+                        if (!is_array($fields)) continue;
+                        foreach ($fields as $field) {
+                            if (empty($field['required'])) continue;
+                            // Ignorăm field-uri non-editabile (tab, message etc.)
+                            if (!empty($field['type']) && in_array($field['type'], ['tab', 'message'], true)) continue;
+                            $val = get_field($field['name'], $id);
+                            if ($val === null || $val === '' || $val === false) {
+                                $missing_required++;
+                            }
+                        }
+                    }
+                }
+
+                if ($missing_required > 0) {
+                    $issues[] = [
+                        'type' => 'acf_missing_required',
+                        'severity' => 'low',
+                        'title' => "ACF: $missing_required câmpuri obligatorii necompletate",
+                        'url' => $url,
+                        'page' => $title,
+                        'value' => $missing_required,
+                        'fix' => 'Deschide această pagină în editor și verifică grupurile de câmpuri ACF – câmpurile marcate cu * (obligatorii) trebuie completate.',
+                    ];
                 }
             }
         }

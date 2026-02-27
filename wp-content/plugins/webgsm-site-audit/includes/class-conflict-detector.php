@@ -25,6 +25,59 @@ class WebGSM_Site_Audit_Conflict_Detector {
         wp_send_json_success(['issues' => $issues, 'count' => count($issues)]);
     }
 
+    private function get_active_plugins_labels() {
+        $active = get_option('active_plugins', []);
+        if (!is_array($active)) $active = [];
+
+        if (!function_exists('get_plugins')) {
+            $plugin_php = ABSPATH . 'wp-admin/includes/plugin.php';
+            if (file_exists($plugin_php)) {
+                require_once $plugin_php;
+            }
+        }
+
+        $all = function_exists('get_plugins') ? get_plugins() : [];
+        $labels = [];
+        foreach ($active as $file) {
+            $data = isset($all[$file]) ? $all[$file] : null;
+            $name = is_array($data) && !empty($data['Name']) ? $data['Name'] : $file;
+            $ver = is_array($data) && !empty($data['Version']) ? $data['Version'] : '';
+            $labels[$file] = trim($name . ($ver ? ' v' . $ver : ''));
+        }
+        return $labels;
+    }
+
+    private function normalize_src($src) {
+        $src = (string) $src;
+        $src = strtok($src, '?');
+        $parts = wp_parse_url($src);
+        if (is_array($parts) && !empty($parts['path'])) {
+            return $parts['path'];
+        }
+        return $src;
+    }
+
+    private function guess_owner_from_src($src) {
+        $path = $this->normalize_src($src);
+        if (!$path) return 'unknown';
+
+        if (strpos($path, '/wp-content/plugins/') !== false) {
+            $p = explode('/wp-content/plugins/', $path, 2);
+            $rest = isset($p[1]) ? $p[1] : '';
+            $slug = $rest ? strtok($rest, '/') : '';
+            return $slug ? ('plugin: ' . $slug) : 'plugin';
+        }
+        if (strpos($path, '/wp-content/themes/') !== false) {
+            $p = explode('/wp-content/themes/', $path, 2);
+            $rest = isset($p[1]) ? $p[1] : '';
+            $slug = $rest ? strtok($rest, '/') : '';
+            return $slug ? ('theme: ' . $slug) : 'theme';
+        }
+        if (strpos($path, '/wp-includes/') !== false) return 'core: wp-includes';
+        if (strpos($path, '/wp-admin/') !== false) return 'core: wp-admin';
+        return 'unknown';
+    }
+
     private function check_plugin_conflicts(&$issues) {
         $known_conflicts = [
             [
@@ -50,6 +103,8 @@ class WebGSM_Site_Audit_Conflict_Detector {
         ];
 
         $active = get_option('active_plugins', []);
+        if (!is_array($active)) $active = [];
+        $labels = $this->get_active_plugins_labels();
 
         foreach ($known_conflicts as $pair) {
             $found = [];
@@ -57,11 +112,13 @@ class WebGSM_Site_Audit_Conflict_Detector {
                 if (in_array($file, $active)) $found[] = $file;
             }
             if (count($found) >= 2) {
+                $found_labels = [];
+                foreach ($found as $f) $found_labels[] = isset($labels[$f]) ? $labels[$f] : $f;
                 $issues[] = [
                     'type' => 'plugin_conflict',
                     'severity' => 'high',
                     'title' => $pair['msg'],
-                    'detail' => 'Ambele active simultan.',
+                    'detail' => 'Active: ' . implode(' + ', $found_labels) . ' (' . implode(', ', $found) . ')',
                     'fix' => 'Dezactivează unul din cele două. Folosirea simultană cauzează conflicte.',
                 ];
             }
@@ -78,17 +135,23 @@ class WebGSM_Site_Audit_Conflict_Detector {
         ];
 
         $active = get_option('active_plugins', []);
+        if (!is_array($active)) $active = [];
+        $labels = $this->get_active_plugins_labels();
         $active_seo = [];
         foreach ($seo_plugins as $file => $name) {
             if (in_array($file, $active)) $active_seo[$file] = $name;
         }
 
         if (count($active_seo) > 1) {
+            $detailed = [];
+            foreach ($active_seo as $file => $name) {
+                $detailed[] = (isset($labels[$file]) ? $labels[$file] : $name) . ' (' . $file . ')';
+            }
             $issues[] = [
                 'type' => 'multi_seo',
                 'severity' => 'high',
-                'title' => count($active_seo) . ' plugin-uri SEO active simultan: ' . implode(', ', $active_seo),
-                'detail' => 'Mai multe plugin-uri SEO creează meta tag-uri duplicat (title, description, canonical).',
+                'title' => count($active_seo) . ' plugin-uri SEO active simultan',
+                'detail' => 'Detectate: ' . implode('; ', $detailed) . '. Duplică meta tag-uri (title/description/canonical).',
                 'fix' => 'Păstrează un singur plugin SEO și dezactivează restul.',
             ];
         }
@@ -98,21 +161,38 @@ class WebGSM_Site_Audit_Conflict_Detector {
         global $wp_scripts;
         if (!is_object($wp_scripts) || empty($wp_scripts->registered)) return;
 
-        $jquery_handles = [];
+        // Ne interesează DOAR încărcări ale bibliotecii principale jQuery (jquery.js / jquery.min.js),
+        // nu toate scripturile bazate pe jQuery (jquery-ui, jquery-color, etc.).
+        $groups = [];
         foreach ($wp_scripts->registered as $handle => $dep) {
             if (empty($dep->src) || !is_string($dep->src)) continue;
-            if (strpos(strtolower($dep->src), 'jquery') !== false && strpos(strtolower($dep->src), 'jquery-migrate') === false && strpos(strtolower($dep->src), 'jquery-ui') === false) {
-                $jquery_handles[] = $handle;
-            }
+            $norm = $this->normalize_src($dep->src);
+            $base = strtolower(basename($norm));
+            if ($base !== 'jquery.js' && $base !== 'jquery.min.js') continue;
+
+            if (!isset($groups[$norm])) $groups[$norm] = [];
+            $groups[$norm][] = [
+                'handle' => $handle,
+                'src' => $dep->src,
+                'owner' => $this->guess_owner_from_src($dep->src),
+            ];
         }
 
-        if (count($jquery_handles) > 2) {
+        if (count($groups) > 1) {
+            $details = [];
+            foreach ($groups as $path => $list) {
+                $parts = [];
+                foreach ($list as $j) {
+                    $parts[] = $j['handle'] . ' (' . $j['owner'] . ')';
+                }
+                $details[] = $path . ' ← ' . implode(', ', $parts);
+            }
             $issues[] = [
                 'type' => 'multi_jquery',
                 'severity' => 'high',
-                'title' => 'Multiple încărcări jQuery detectate (' . count($jquery_handles) . ')',
-                'detail' => 'Handle-uri: ' . implode(', ', $jquery_handles),
-                'fix' => 'Folosește o singură versiune jQuery. Verifică tema și plugin-urile care încarcă jQuery manual.',
+                'title' => 'Multiple versiuni principale jQuery detectate (' . count($groups) . ')',
+                'detail' => implode(' | ', $details),
+                'fix' => 'Păstrează o singură versiune a bibliotecii principale jQuery. Dezactivează încărcările manuale din temă sau plugin-uri care aduc alt fișier jquery.js / jquery.min.js.',
             ];
         }
     }
@@ -129,19 +209,31 @@ class WebGSM_Site_Audit_Conflict_Detector {
             $by_src = [];
             foreach ($wp_scripts->registered as $handle => $dep) {
                 if (empty($dep->src) || !is_string($dep->src)) continue;
-                $base = basename(strtok($dep->src, '?'));
-                if (strlen($base) < 3) continue;
-                if (!isset($by_src[$base])) $by_src[$base] = [];
-                $by_src[$base][] = $handle;
+                $norm = $this->normalize_src($dep->src);
+                if (strlen((string) $norm) < 3) continue;
+                if (!isset($by_src[$norm])) $by_src[$norm] = [];
+                $by_src[$norm][] = [
+                    'handle' => $handle,
+                    'src' => $dep->src,
+                    'owner' => $this->guess_owner_from_src($dep->src),
+                ];
             }
             foreach ($by_src as $file => $handles) {
                 if (count($handles) > 1) {
+                    $list = [];
+                    $owners = [];
+                    foreach ($handles as $h) {
+                        $list[] = $h['handle'] . ' (' . $h['owner'] . ')';
+                        $owners[$h['owner']] = true;
+                    }
                     $issues[] = [
                         'type' => 'duplicate_script',
                         'severity' => 'medium',
-                        'title' => "JS duplicat: $file",
-                        'detail' => 'Handle-uri: ' . implode(', ', $handles),
-                        'fix' => 'Două plugin-uri încarcă același script. Dezactivează duplicatul.',
+                        'title' => 'JS duplicat: ' . basename($file),
+                        'detail' => 'Fișier: ' . $file . '. Handle-uri: ' . implode(', ', $list) . '.',
+                        'path' => $file,
+                        'value' => 'Owners: ' . implode(', ', array_keys($owners)),
+                        'fix' => 'De obicei e același script încărcat de două ori. Dezactivează duplicatul sau oprește încărcarea dintr-un plugin/temă.',
                     ];
                 }
             }
@@ -153,19 +245,31 @@ class WebGSM_Site_Audit_Conflict_Detector {
             $by_src = [];
             foreach ($wp_styles->registered as $handle => $dep) {
                 if (empty($dep->src) || !is_string($dep->src)) continue;
-                $base = basename(strtok($dep->src, '?'));
-                if (strlen($base) < 3) continue;
-                if (!isset($by_src[$base])) $by_src[$base] = [];
-                $by_src[$base][] = $handle;
+                $norm = $this->normalize_src($dep->src);
+                if (strlen((string) $norm) < 3) continue;
+                if (!isset($by_src[$norm])) $by_src[$norm] = [];
+                $by_src[$norm][] = [
+                    'handle' => $handle,
+                    'src' => $dep->src,
+                    'owner' => $this->guess_owner_from_src($dep->src),
+                ];
             }
             foreach ($by_src as $file => $handles) {
                 if (count($handles) > 1) {
+                    $list = [];
+                    $owners = [];
+                    foreach ($handles as $h) {
+                        $list[] = $h['handle'] . ' (' . $h['owner'] . ')';
+                        $owners[$h['owner']] = true;
+                    }
                     $issues[] = [
                         'type' => 'duplicate_style',
                         'severity' => 'low',
-                        'title' => "CSS duplicat: $file",
-                        'detail' => 'Handle-uri: ' . implode(', ', $handles),
-                        'fix' => 'Două plugin-uri încarcă același CSS.',
+                        'title' => 'CSS duplicat: ' . basename($file),
+                        'detail' => 'Fișier: ' . $file . '. Handle-uri: ' . implode(', ', $list) . '.',
+                        'path' => $file,
+                        'value' => 'Owners: ' . implode(', ', array_keys($owners)),
+                        'fix' => 'Două plugin-uri/tema încarcă același CSS. De obicei poți dezactiva una din funcții sau încărcarea duplicată.',
                     ];
                 }
             }
@@ -175,7 +279,7 @@ class WebGSM_Site_Audit_Conflict_Detector {
             'type' => 'asset_count',
             'severity' => 'info',
             'title' => "Total assets înregistrate: $script_count JS, $style_count CSS",
-            'detail' => 'Aceste numere sunt din contextul admin. Frontend-ul poate avea mai multe.',
+            'detail' => 'Aceste numere sunt din contextul admin (wp_scripts/wp_styles). Pe frontend pot fi diferite; pentru măsurare exactă folosește un tool de profilare (ex: Query Monitor).',
             'fix' => 'Dacă sunt peste 30 JS + 30 CSS, ia în considerare optimizarea cu un plugin de minificare/combinare.',
         ];
     }
