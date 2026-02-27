@@ -869,11 +869,17 @@ function webgsm_stock_badge() {
     
     // Scenariul 1: Stoc > 0 ȘI locatie_stoc = "magazin_webgsm"
     if ($stock_qty > 0 && $locatie_stoc === 'magazin_webgsm') {
-        $badge_class = 'wgsm-badge-stock';
-        $badge_icon = $icon_green;
-        $badge_text = 'În Stoc';
-        $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Ridicare azi / livrare 2-4h');
+        $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Livrare azi până în ora 19');
         $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 24h');
+        if ($stock_qty == 1) {
+            $badge_class = 'wgsm-badge-limited';
+            $badge_icon = $icon_yellow;
+            $badge_text = 'Stoc limitat';
+        } else {
+            $badge_class = 'wgsm-badge-stock';
+            $badge_icon = $icon_green;
+            $badge_text = 'În Stoc';
+        }
     }
     // Scenariul 2: Stoc = 0 ȘI locatie_stoc = "depozit_central"
     elseif ($stock_qty == 0 && $locatie_stoc === 'depozit_central') {
@@ -908,14 +914,18 @@ function webgsm_stock_badge() {
     // Fallback: Logica WooCommerce standard (dacă ACF nu e activ sau alte cazuri)
     else {
         if ($is_in_stock) {
-            if ($stock_qty !== null && $stock_qty > 0 && $stock_qty <= 4) {
+            if ($stock_qty !== null && $stock_qty == 1) {
                 $badge_class = 'wgsm-badge-limited';
                 $badge_icon = $icon_yellow;
                 $badge_text = 'Stoc limitat';
+                $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Livrare azi până în ora 19');
+                $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 24h');
             } else {
                 $badge_class = 'wgsm-badge-stock';
                 $badge_icon = $icon_green;
                 $badge_text = 'În stoc';
+                $delivery_info[] = array('icon' => $icon_truck, 'text' => 'Timișoara: Livrare azi până în ora 19');
+                $delivery_info[] = array('icon' => $icon_box, 'text' => 'Restul țării: Livrare 24h');
             }
         } else {
             $badge_class = 'wgsm-badge-outofstock';

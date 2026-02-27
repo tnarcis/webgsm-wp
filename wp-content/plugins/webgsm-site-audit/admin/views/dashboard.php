@@ -49,12 +49,15 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
             </div>
             <div class="wsa-card">
                 <span class="wsa-card-label">Ultima scanare</span>
-                <span class="wsa-card-value wsa-card-value--small"><?php echo $last_scan ? date_i18n('d M Y H:i', $last_scan) : 'Niciodată'; ?></span>
+                <span class="wsa-card-value wsa-card-value--small" id="wsa-last-scan"><?php echo $last_scan ? date_i18n('d M Y H:i', $last_scan) : 'Niciodată'; ?></span>
             </div>
         </div>
         <div class="wsa-overview-actions">
             <button type="button" class="button button-primary button-hero" id="wsa-full-scan-btn">
                 <span class="dashicons dashicons-superhero-alt"></span> Scanare completă
+            </button>
+            <button type="button" class="button button-secondary button-hero" id="wsa-clear-logs-btn" style="margin-left:10px;">
+                <span class="dashicons dashicons-trash"></span> Curăță rezultate audit
             </button>
             <span class="wsa-status" id="wsa-full-scan-status"></span>
         </div>
@@ -88,12 +91,17 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
         </div>
         <table class="wp-list-table widefat fixed striped" id="wsa-results-table">
             <thead>
-                <tr><th>URL</th><th>Status</th><th>Sursă</th></tr>
+                <tr><th>URL</th><th>Status</th><th>Sursă</th><th>Acțiuni</th></tr>
             </thead>
             <tbody>
                 <?php foreach ($results as $r): ?>
                 <tr data-status="<?php echo esc_attr(isset($r['status']) ? $r['status'] : ''); ?>" data-source="<?php echo esc_attr(isset($r['source']) ? $r['source'] : ''); ?>">
-                    <td><a href="<?php echo esc_url(isset($r['url']) ? $r['url'] : '#'); ?>" target="_blank" rel="noopener"><?php echo esc_html(isset($r['url']) ? $r['url'] : ''); ?></a></td>
+                    <td>
+                        <a href="<?php echo esc_url(isset($r['url']) ? $r['url'] : '#'); ?>" target="_blank" rel="noopener"><?php echo esc_html(isset($r['url']) ? $r['url'] : ''); ?></a>
+                        <?php if (!empty($r['anchor_text'])): ?>
+                            <div style="color:#646970;font-size:12px;margin-top:4px;">Anchor: <?php echo esc_html($r['anchor_text']); ?></div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <span class="wsa-badge wsa-badge--<?php echo esc_attr(isset($r['status']) ? $r['status'] : 'unknown'); ?>">
                             <?php
@@ -105,10 +113,17 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
                         </span>
                     </td>
                     <td><?php echo esc_html(isset($r['source']) ? $r['source'] : ''); ?> – <?php echo esc_html(isset($r['source_title']) ? $r['source_title'] : ''); ?></td>
+                    <td>
+                        <?php if (!empty($r['source_edit_url'])): ?>
+                            <a class="button button-small" href="<?php echo esc_url($r['source_edit_url']); ?>" target="_blank" rel="noopener">Deschide sursa</a>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($results)): ?>
-                <tr><td colspan="3">Niciun rezultat. Rulează un scan.</td></tr>
+                <tr><td colspan="4">Niciun rezultat. Rulează un scan.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

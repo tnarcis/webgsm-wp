@@ -1,7 +1,8 @@
 <?php
 /**
  * Traducere în română pentru butoane, linkuri și texte WooCommerce / temă (suprascrie engleza).
- * Pe local: gettext nu prinde textele hardcodate în temă, deci folosim și buffer pe HTML.
+ * DEZACTIVAT: nu este încărcat din functions.php (tragea site-ul în jos).
+ * Traducerile se fac doar prin .po/.mo – vezi TRADUCERI-PO-MO.md în rădăcina temei child.
  */
 if (!defined('ABSPATH')) exit;
 

@@ -61,7 +61,7 @@
     $('#wsa-scan-btn').on('click', function() {
         var $btn = $(this).prop('disabled', true);
         var $tbody = $('#wsa-results-table tbody').empty();
-        $tbody.append('<tr><td colspan="3">' + spinner() + ' Se scanează linkurile... poate dura 1-2 minute.</td></tr>');
+        $tbody.append('<tr><td colspan="4">' + spinner() + ' Se scanează linkurile... poate dura 1-2 minute.</td></tr>');
         setStatus(spinner() + ' Se scanează...');
 
         post('webgsm_audit_scan_links', {}, 300000)
@@ -72,7 +72,7 @@
                     renderLinkTable(res.data.results);
                 } else {
                     setStatus('Eroare: ' + (res.data || 'necunoscută'), true);
-                    $tbody.empty().append('<tr><td colspan="3">Eroare la scanare.</td></tr>');
+                    $tbody.empty().append('<tr><td colspan="4">Eroare la scanare.</td></tr>');
                 }
             })
             .fail(function(xhr, status) {
@@ -81,7 +81,7 @@
                 } else {
                     setStatus('Eroare de rețea.', true);
                 }
-                $tbody.empty().append('<tr><td colspan="3">Scanarea nu s-a finalizat.</td></tr>');
+                $tbody.empty().append('<tr><td colspan="4">Scanarea nu s-a finalizat.</td></tr>');
             })
             .always(function() { $btn.prop('disabled', false); });
     });
@@ -89,16 +89,19 @@
     function renderLinkTable(results) {
         var $tbody = $('#wsa-results-table tbody').empty();
         if (!results || !results.length) {
-            $tbody.append('<tr><td colspan="3">Niciun rezultat.</td></tr>');
+            $tbody.append('<tr><td colspan="4">Niciun rezultat.</td></tr>');
             return;
         }
         results.forEach(function(r) {
             var statusText = r.http_code ? 'HTTP ' + r.http_code : (r.error || r.status || '?');
+            var anchor = r.anchor_text ? ('<div style="color:#646970;font-size:12px;margin-top:4px;">Anchor: ' + escapeHtml(r.anchor_text) + '</div>') : '';
+            var actions = r.source_edit_url ? ('<a class="button button-small" href="' + escapeHtml(r.source_edit_url) + '" target="_blank" rel="noopener">Deschide sursa</a>') : '—';
             $tbody.append(
                 '<tr data-status="' + escapeHtml(r.status || '') + '" data-source="' + escapeHtml(r.source || '') + '">' +
-                '<td><a href="' + escapeHtml(r.url || '#') + '" target="_blank" rel="noopener">' + escapeHtml(r.url) + '</a></td>' +
+                '<td><a href="' + escapeHtml(r.url || '#') + '" target="_blank" rel="noopener">' + escapeHtml(r.url) + '</a>' + anchor + '</td>' +
                 '<td><span class="wsa-badge wsa-badge--' + escapeHtml(r.status || 'unknown') + '">' + escapeHtml(statusText) + '</span></td>' +
-                '<td>' + escapeHtml(r.source || '') + ' – ' + escapeHtml(r.source_title || '') + '</td></tr>'
+                '<td>' + escapeHtml(r.source || '') + ' – ' + escapeHtml(r.source_title || '') + '</td>' +
+                '<td>' + actions + '</td></tr>'
             );
         });
     }
@@ -259,6 +262,28 @@
     $('#wsa-debug-clear').on('click', function() {
         if (!confirm('Golești debug.log?')) return;
         post('webgsm_audit_clear_debug_log').done(function(r) { if (r.success) loadDebugLog(); });
+    });
+
+    // --- CLEAR AUDIT LOGS (rezultate linkuri + ultima scanare) ---
+    $('#wsa-clear-logs-btn').on('click', function() {
+        if (!confirm('Ștergi toate rezultatele auditului (linkuri)? Poți rula din nou scanarea.')) return;
+        var $btn = $(this).prop('disabled', true);
+        var $status = $('#wsa-full-scan-status');
+        post('webgsm_audit_clear_logs')
+            .done(function(r) {
+                if (r.success) {
+                    updateOverview(0, 0);
+                    renderLinkTable([]);
+                    $('#wsa-last-scan').text('Niciodată');
+                    $status.text(r.data && r.data.message ? r.data.message : 'Rezultatele au fost șterse.').css('color', '#00a32a');
+                } else {
+                    $status.text('Eroare la ștergere.').css('color', '#d63638');
+                }
+            })
+            .fail(function() {
+                $status.text('Eroare de rețea.').css('color', '#d63638');
+            })
+            .always(function() { $btn.prop('disabled', false); });
     });
 
     // --- GSC IMPORT ---

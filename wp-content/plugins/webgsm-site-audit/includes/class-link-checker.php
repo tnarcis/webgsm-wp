@@ -9,6 +9,7 @@ class WebGSM_Site_Audit_Link_Checker {
     public function __construct() {
         add_action('wp_ajax_webgsm_audit_scan_links', [$this, 'ajax_scan']);
         add_action('wp_ajax_webgsm_audit_get_results', [$this, 'ajax_get_results']);
+        add_action('wp_ajax_webgsm_audit_clear_logs', [$this, 'ajax_clear_logs']);
     }
 
     public function ajax_scan() {
@@ -38,6 +39,19 @@ class WebGSM_Site_Audit_Link_Checker {
         $results = get_option(self::RESULTS_KEY, []);
         $last = get_option(self::LAST_SCAN_KEY, 0);
         wp_send_json_success(['results' => is_array($results) ? $results : [], 'last_scan' => $last]);
+    }
+
+    /**
+     * Curăță rezultatele scanării linkuri și data ultimei scanări (pentru a reporni audit-ul „de la zero”).
+     */
+    public function ajax_clear_logs() {
+        check_ajax_referer('webgsm_site_audit', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Forbidden');
+
+        update_option(self::RESULTS_KEY, [], false);
+        update_option(self::LAST_SCAN_KEY, 0);
+
+        wp_send_json_success(['message' => 'Rezultatele auditului au fost șterse. Poți rula din nou scanarea.']);
     }
 
     public function collect_links($settings) {
@@ -157,13 +171,22 @@ class WebGSM_Site_Audit_Link_Checker {
 
     private function extract_links_from_html($html, &$links, $meta = []) {
         if (empty($html)) return;
-        preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>/i', $html, $m);
-        if (!empty($m[1])) {
-            foreach ($m[1] as $url) {
-                $url = trim($url);
+        // Capturăm și textul anchor pentru a indica „unde” apare linkul.
+        preg_match_all('/<a\\s[^>]*href=(["\'])(.*?)\\1[^>]*>(.*?)<\\/a>/is', $html, $m);
+        if (!empty($m[2])) {
+            foreach ($m[2] as $i => $url) {
+                $url = trim((string) $url);
                 if (empty($url) || strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) continue;
                 if (strpos($url, '/') === 0 && strpos($url, '//') !== 0) $url = home_url($url);
-                $links[] = array_merge($meta, ['url' => $url]);
+
+                $anchor_html = isset($m[3][$i]) ? (string) $m[3][$i] : '';
+                $anchor_text = trim(wp_strip_all_tags(html_entity_decode($anchor_html, ENT_QUOTES, 'UTF-8')));
+                if (mb_strlen($anchor_text) > 80) $anchor_text = mb_substr($anchor_text, 0, 77) . '...';
+
+                $links[] = array_merge($meta, [
+                    'url' => $url,
+                    'anchor_text' => $anchor_text,
+                ]);
             }
         }
     }
@@ -190,14 +213,36 @@ class WebGSM_Site_Audit_Link_Checker {
                 $status = $this->check_external_url($url, $timeout, $follow, $max_redir);
             }
 
+            $edit_url = $this->get_source_edit_url($link);
+
             $results[] = array_merge($link, [
                 'status' => $status['status'],
                 'http_code' => $status['code'],
                 'error' => isset($status['error']) ? $status['error'] : '',
+                'source_edit_url' => $edit_url,
             ]);
         }
 
         return $results;
+    }
+
+    private function get_source_edit_url($link) {
+        $source = isset($link['source']) ? (string) $link['source'] : '';
+        $source_id = isset($link['source_id']) ? $link['source_id'] : '';
+
+        if (in_array($source, ['post', 'page', 'product'], true) && is_numeric($source_id)) {
+            return admin_url('post.php?post=' . absint($source_id) . '&action=edit');
+        }
+        if ($source === 'menu' && is_numeric($source_id)) {
+            return admin_url('nav-menus.php?menu=' . absint($source_id));
+        }
+        if ($source === 'widget') {
+            return admin_url('widgets.php');
+        }
+        if ($source === 'option') {
+            return admin_url('options-general.php');
+        }
+        return '';
     }
 
     private function check_internal_url($url) {
