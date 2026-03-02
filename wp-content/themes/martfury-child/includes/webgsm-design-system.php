@@ -244,6 +244,29 @@ nav.woocommerce-breadcrumb a:hover {
     color: #374151 !important;
 }
 
+/* ============================================
+   SEARCH PRODUSE - FĂRĂ META DE BLOG
+   ============================================ */
+/* În rezultatele de căutare pentru produse, ascunde "posted by"/data
+   care vine din template-ul de post și nu are sens pentru catalog. */
+body.search .products .entry-meta,
+body.search .products .posted-on,
+body.search .products .byline,
+body.search .products .author,
+body.search .products .meta-author,
+body.search .products .meta-date,
+body.search .products .cat-links,
+body.search .products .tags-links {
+    display: none !important;
+}
+
+/* Fallback pentru markup-uri alternative din temă (desktop + mobil). */
+body.search .product .entry-meta,
+body.search .product .posted-on,
+body.search .product .byline {
+    display: none !important;
+}
+
 /* SKU din entry-meta: doar „SKU:” în etichetă albastru umplut; codul text normal, cu spațiu */
 .entry-meta li.meta-sku {
     display: inline-flex !important;

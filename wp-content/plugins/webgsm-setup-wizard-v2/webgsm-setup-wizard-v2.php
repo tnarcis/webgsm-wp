@@ -109,8 +109,11 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         }
         
         // Pentru fiecare subcategorie "piese-*", obține sub-subcategoriile (nivel 3)
+        // și normalizează tipul la forma generică (ex. ecrane, baterii),
+        // nu la slug specific pe brand (ex. ecrane-xiaomi).
         $tip_names = [];
         foreach ($piese_subcats as $subcat) {
+            $brand_suffix = str_replace('piese-', '', $subcat->slug);
             $tip_cats = get_terms([
                 'taxonomy' => 'product_cat',
                 'parent' => $subcat->term_id,
@@ -119,8 +122,12 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
             
             if (!is_wp_error($tip_cats) && !empty($tip_cats)) {
                 foreach ($tip_cats as $tip_cat) {
-                    // Folosește numele ca key pentru a evita duplicatele
-                    $tip_names[$tip_cat->name] = $tip_cat->slug;
+                    $tip_slug = preg_replace('/-' . preg_quote($brand_suffix, '/') . '$/', '', $tip_cat->slug);
+                    if (!$tip_slug) {
+                        continue;
+                    }
+                    $label = ucwords(str_replace('-', ' ', $tip_slug));
+                    $tip_names[$label] = $tip_slug;
                 }
             }
         }
@@ -212,7 +219,7 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         $tip_selected = [];
         if ($main_category_slug === 'piese' && isset($config['has_tip_filter']) && $config['has_tip_filter']) {
             $tip_param = isset($_GET['filter_piese_tip']) ? sanitize_text_field(wp_unslash($_GET['filter_piese_tip'])) : '';
-            $tip_selected = $tip_param ? array_map('trim', explode(',', $tip_param)) : [];
+            $tip_selected = $tip_param ? WebGSM_Widget_Piese_Filter::normalize_tip_slugs(array_map('trim', explode(',', $tip_param))) : [];
         }
         
         $base_url = remove_query_arg([$filter_param, 'filter_piese_tip', 'paged']);
@@ -308,6 +315,7 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
 }
 
 class WebGSM_Widget_Piese_Filter extends WP_Widget {
+    /** Fallback static – folosit doar dacă în WC nu există categorii. */
     private static $subcat_config = [
         'Piese iPhone' => 'piese-iphone',
         'Piese Samsung' => 'piese-samsung',
@@ -323,6 +331,110 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         'Difuzoare' => 'difuzoare',
         'Carcase' => 'carcase',
     ];
+
+    /** Subcategorii Piese din WooCommerce (nivel 2: piese-iphone, piese-samsung …). */
+    public static function get_subcat_slugs_from_wc() {
+        $parent = get_term_by('slug', 'piese', 'product_cat');
+        if (!$parent || is_wp_error($parent)) {
+            return array_values(self::$subcat_config);
+        }
+        $terms = get_terms([
+            'taxonomy' => 'product_cat',
+            'parent' => $parent->term_id,
+            'hide_empty' => false,
+            'orderby' => 'name',
+            'order' => 'ASC',
+        ]);
+        if (is_wp_error($terms) || empty($terms)) {
+            return array_values(self::$subcat_config);
+        }
+        return array_map(function ($t) { return $t->slug; }, $terms);
+    }
+
+    /** Tipuri piesă din WooCommerce (nivel 3: ecrane, mufe-incarcare etc. – prefix din ecrane-iphone, mufe-incarcare-iphone). */
+    public static function get_tip_slugs_from_wc() {
+        $parent = get_term_by('slug', 'piese', 'product_cat');
+        if (!$parent || is_wp_error($parent)) {
+            return array_values(self::$tip_config);
+        }
+        $subcats = get_terms([
+            'taxonomy' => 'product_cat',
+            'parent' => $parent->term_id,
+            'hide_empty' => false,
+        ]);
+        if (is_wp_error($subcats) || empty($subcats)) {
+            return array_values(self::$tip_config);
+        }
+        $tip_slugs = [];
+        foreach ($subcats as $sub) {
+            $brand_suffix = str_replace('piese-', '', $sub->slug);
+            $children = get_terms([
+                'taxonomy' => 'product_cat',
+                'parent' => $sub->term_id,
+                'hide_empty' => false,
+            ]);
+            if (is_wp_error($children)) continue;
+            foreach ($children as $c) {
+                $tip = preg_replace('/-' . preg_quote($brand_suffix, '/') . '$/', '', $c->slug);
+                if ($tip !== $c->slug) {
+                    $tip_slugs[] = $tip;
+                }
+            }
+        }
+        $tip_slugs = array_values(array_unique($tip_slugs));
+        return $tip_slugs ?: array_values(self::$tip_config);
+    }
+
+    /** Curăță lista de slug-uri din query string. */
+    public static function normalize_slug_list(array $slugs) {
+        $out = [];
+        foreach ($slugs as $slug) {
+            $slug = sanitize_title($slug);
+            if ($slug !== '') {
+                $out[] = $slug;
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * Normalizează tipurile de piese din URL la forma generică.
+     * Ex: ecrane-xiaomi => ecrane
+     */
+    public static function normalize_tip_slugs(array $tip_slugs) {
+        $tip_slugs = self::normalize_slug_list($tip_slugs);
+        $valid_tips = self::get_tip_slugs_from_wc();
+        $out = [];
+
+        foreach ($tip_slugs as $slug) {
+            if (in_array($slug, $valid_tips, true)) {
+                $out[] = $slug;
+                continue;
+            }
+
+            foreach ($valid_tips as $tip) {
+                if (strpos($slug, $tip . '-') === 0) {
+                    $out[] = $tip;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /** Păstrează doar slug-urile care există în product_cat. */
+    public static function normalize_existing_product_cat_slugs(array $slugs) {
+        $slugs = self::normalize_slug_list($slugs);
+        $out = [];
+        foreach ($slugs as $slug) {
+            $term = get_term_by('slug', $slug, 'product_cat');
+            if ($term && !is_wp_error($term)) {
+                $out[] = $slug;
+            }
+        }
+        return array_values(array_unique($out));
+    }
 
     public function __construct() {
         parent::__construct(
@@ -400,6 +512,9 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
         $base_url = remove_query_arg(['filter_piese_subcat', 'filter_piese_tip', 'paged']);
 
+        $subcats_for_display = $this->get_subcats_for_display();
+        $tips_for_display = $this->get_tips_for_display();
+
         echo $args['before_widget'];
         if (!empty($instance['title'])) {
             echo $args['before_title'] . esc_html($instance['title']) . $args['after_title'];
@@ -407,11 +522,10 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
         echo '<div class="webgsm-piese-filter">';
 
-        // Subcategorie Piese – aceleași clase ca filtrele WooCommerce, casuță mică albă cu bifă
         echo '<div class="webgsm-filter-group">';
-        echo '<div class="webgsm-filter-label">Subcategorie Piese</div>';
+        echo '<div class="webgsm-filter-label">Piese</div>';
         echo '<ul class="woocommerce-widget-layered-nav-list webgsm-filter-list">';
-        foreach (self::$subcat_config as $label => $slug) {
+        foreach ($subcats_for_display as $label => $slug) {
             $active = in_array($slug, $subcat_selected, true);
             $new_vals = $active ? array_diff($subcat_selected, [$slug]) : array_merge($subcat_selected, [$slug]);
             $href = $base_url;
@@ -428,11 +542,10 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         }
         echo '</ul></div>';
 
-        // Tip piesă
         echo '<div class="webgsm-filter-group">';
         echo '<div class="webgsm-filter-label">Tip piesă</div>';
         echo '<ul class="woocommerce-widget-layered-nav-list webgsm-filter-list">';
-        foreach (self::$tip_config as $label => $slug) {
+        foreach ($tips_for_display as $label => $slug) {
             $active = in_array($slug, $tip_selected, true);
             $new_vals = $active ? array_diff($tip_selected, [$slug]) : array_merge($tip_selected, [$slug]);
             $href = $base_url;
@@ -451,6 +564,69 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
         echo '</div>';
         echo $args['after_widget'];
+    }
+
+    private function get_subcats_for_display() {
+        $parent = get_term_by('slug', 'piese', 'product_cat');
+        if (!$parent || is_wp_error($parent)) {
+            return self::$subcat_config;
+        }
+        $terms = get_terms([
+            'taxonomy' => 'product_cat',
+            'parent' => $parent->term_id,
+            'hide_empty' => false,
+            'orderby' => 'name',
+            'order' => 'ASC',
+        ]);
+        if (is_wp_error($terms) || empty($terms)) {
+            return self::$subcat_config;
+        }
+        $out = [];
+        foreach ($terms as $t) {
+            $out[$t->name] = $t->slug;
+        }
+        return $out;
+    }
+
+    private function get_tips_for_display() {
+        $parent = get_term_by('slug', 'piese', 'product_cat');
+        if (!$parent || is_wp_error($parent)) {
+            return self::$tip_config;
+        }
+        $subcats = get_terms([
+            'taxonomy' => 'product_cat',
+            'parent' => $parent->term_id,
+            'hide_empty' => false,
+        ]);
+        if (is_wp_error($subcats) || empty($subcats)) {
+            return self::$tip_config;
+        }
+        $tip_by_slug = [];
+        foreach ($subcats as $sub) {
+            $brand_suffix = str_replace('piese-', '', $sub->slug);
+            $children = get_terms([
+                'taxonomy' => 'product_cat',
+                'parent' => $sub->term_id,
+                'hide_empty' => false,
+            ]);
+            if (is_wp_error($children)) continue;
+            foreach ($children as $c) {
+                $tip_slug = preg_replace('/-' . preg_quote($brand_suffix, '/') . '$/', '', $c->slug);
+                if ($tip_slug !== $c->slug && !isset($tip_by_slug[$tip_slug])) {
+                    $tip_by_slug[$tip_slug] = $c->name;
+                }
+            }
+        }
+        if (empty($tip_by_slug)) {
+            return self::$tip_config;
+        }
+        $out = [];
+        foreach ($tip_by_slug as $slug => $name) {
+            $label = ucfirst(str_replace('-', ' ', $slug));
+            $out[$label] = $slug;
+        }
+        ksort($out);
+        return $out;
     }
 
     public function form($instance) {
@@ -489,11 +665,225 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         }
         return $out;
     }
+
+    /**
+     * Rezolvă categoriile de nivel 3 direct din ierarhia WooCommerce
+     * (mai robust decât compunerea slug-ului tip-brand).
+     */
+    public static function resolve_category_term_ids(array $subcat_slugs, array $tip_slugs) {
+        $out = [];
+        $tip_slugs = array_values(array_unique(array_filter($tip_slugs)));
+        if (empty($subcat_slugs) || empty($tip_slugs)) {
+            return [];
+        }
+
+        foreach ($subcat_slugs as $subcat_slug) {
+            $subcat_term = get_term_by('slug', $subcat_slug, 'product_cat');
+            if (!$subcat_term || is_wp_error($subcat_term)) {
+                continue;
+            }
+
+            $children = get_terms([
+                'taxonomy' => 'product_cat',
+                'parent' => $subcat_term->term_id,
+                'hide_empty' => false,
+            ]);
+            if (is_wp_error($children) || empty($children)) {
+                continue;
+            }
+
+            foreach ($children as $child) {
+                foreach ($tip_slugs as $tip_slug) {
+                    $child_name_slug = sanitize_title($child->name);
+                    if (
+                        $child->slug === $tip_slug ||
+                        strpos($child->slug, $tip_slug . '-') === 0 ||
+                        $child_name_slug === $tip_slug ||
+                        strpos($child_name_slug, $tip_slug . '-') === 0
+                    ) {
+                        $out[] = (int) $child->term_id;
+                        break;
+                    }
+                }
+            }
+        }
+
+        $out = array_values(array_unique($out));
+        if (!empty($out)) {
+            return $out;
+        }
+
+        // Fallback pentru ierarhii neuniforme:
+        // caută termeni sub "piese" care au slug de tipul tip-brand chiar dacă nu sunt copii direcți.
+        $piese = get_term_by('slug', 'piese', 'product_cat');
+        if (!$piese || is_wp_error($piese)) {
+            return [];
+        }
+
+        $all_under_piese = get_terms([
+            'taxonomy' => 'product_cat',
+            'hide_empty' => false,
+        ]);
+        if (is_wp_error($all_under_piese) || empty($all_under_piese)) {
+            return [];
+        }
+
+        foreach ($subcat_slugs as $subcat_slug) {
+            $brand = str_replace('piese-', '', sanitize_title($subcat_slug));
+            if ($brand === '') {
+                continue;
+            }
+
+            foreach ($all_under_piese as $term) {
+                $ancestors = get_ancestors($term->term_id, 'product_cat');
+                if (!in_array((int) $piese->term_id, array_map('intval', $ancestors), true)) {
+                    continue;
+                }
+
+                $term_slug = sanitize_title($term->slug);
+                $term_name_slug = sanitize_title($term->name);
+
+                foreach ($tip_slugs as $tip_slug_raw) {
+                    $tip_slug = sanitize_title($tip_slug_raw);
+                    $matches_slug = (strpos($term_slug, $tip_slug . '-') === 0 && strpos($term_slug, '-' . $brand) !== false);
+                    $matches_name = (strpos($term_name_slug, $tip_slug . '-') === 0 && strpos($term_name_slug, '-' . $brand) !== false);
+                    if ($matches_slug || $matches_name) {
+                        $out[] = (int) $term->term_id;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
 }
 
 class WebGSM_Setup_Wizard_V2 {
     
     private static $instance = null;
+    private $filter_debug_data = [];
+
+    /** Sidebar-uri candidate pentru shop/catalog. */
+    private function get_shop_sidebar_candidates() {
+        $ids = [
+            'catalog-sidebar',
+            'shop-sidebar',
+            'sidebar-shop',
+            'woocommerce-sidebar',
+            'mf-catalog-sidebar',
+            'martfury-sidebar-shop',
+        ];
+        return apply_filters('webgsm_filter_shop_sidebar_ids', $ids);
+    }
+
+    /** Returnează slug-urile atributelor globale WooCommerce (fără prefixul pa_). */
+    private function get_existing_global_attribute_slugs() {
+        if (!function_exists('wc_get_attribute_taxonomies')) {
+            return [];
+        }
+        $rows = wc_get_attribute_taxonomies();
+        if (empty($rows)) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            if (!empty($row->attribute_name)) {
+                $out[] = sanitize_title($row->attribute_name);
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
+    /** Returnează map slug => label pentru atribute globale WooCommerce. */
+    private function get_existing_global_attribute_map() {
+        if (!function_exists('wc_get_attribute_taxonomies')) {
+            return [];
+        }
+        $rows = wc_get_attribute_taxonomies();
+        if (empty($rows)) {
+            return [];
+        }
+        $map = [];
+        foreach ($rows as $row) {
+            if (empty($row->attribute_name)) {
+                continue;
+            }
+            $slug = sanitize_title($row->attribute_name);
+            $label = isset($row->attribute_label) ? sanitize_text_field($row->attribute_label) : $slug;
+            $map[$slug] = $label;
+        }
+        return $map;
+    }
+
+    /**
+     * Mapează un filtru logic (calitate, brand-piesa etc.) la slug-ul real de atribut existent în site.
+     * Ajută când în magazin slug-ul este diferit (ex: calitate-baterie, brand_piesa etc.).
+     */
+    private function resolve_real_attribute_slug($logical_slug, array $existing_slugs) {
+        $logical_slug = sanitize_title($logical_slug);
+        if (empty($existing_slugs)) {
+            return $logical_slug;
+        }
+        if (in_array($logical_slug, $existing_slugs, true)) {
+            return $logical_slug;
+        }
+
+        $candidates = [
+            'model-compatibil' => ['model-compatibil', 'model_compatibil', 'compatibilitate', 'compatibil'],
+            'model' => ['model'],
+            'calitate' => ['calitate', 'calitate-baterie', 'calitate_baterie', 'quality'],
+            'brand-piesa' => ['brand-piesa', 'brand_piesa', 'brand-piese', 'brand'],
+            'tehnologie' => ['tehnologie', 'tip-tehnologie', 'tehnologie-baterie', 'tehnologie_baterie', 'tip'],
+        ];
+
+        $pool = isset($candidates[$logical_slug]) ? $candidates[$logical_slug] : [$logical_slug];
+        foreach ($pool as $cand) {
+            $cand = sanitize_title($cand);
+            if (in_array($cand, $existing_slugs, true)) {
+                return $cand;
+            }
+        }
+
+        // Fallback: încearcă potrivire parțială.
+        foreach ($existing_slugs as $exist) {
+            if (strpos($exist, $logical_slug) !== false || strpos($logical_slug, $exist) !== false) {
+                return $exist;
+            }
+        }
+
+        return $logical_slug;
+    }
+
+    /** Mapează filtru logic -> slug atribut existent, folosind și label-ul atributului. */
+    private function resolve_real_attribute_slug_with_labels($logical_slug, array $existing_map) {
+        $existing_slugs = array_keys($existing_map);
+        $resolved = $this->resolve_real_attribute_slug($logical_slug, $existing_slugs);
+        if (in_array($resolved, $existing_slugs, true)) {
+            return $resolved;
+        }
+
+        $logical_slug = sanitize_title($logical_slug);
+        $label_needles = [
+            'model-compatibil' => ['compatibil', 'model compatibil', 'compatibilitate'],
+            'model' => ['model'],
+            'calitate' => ['calitate', 'quality'],
+            'brand-piesa' => ['brand piesa', 'brand-piesa', 'brand'],
+            'tehnologie' => ['tehnologie', 'technology', 'tip'],
+        ];
+        $needles = isset($label_needles[$logical_slug]) ? $label_needles[$logical_slug] : [$logical_slug];
+        foreach ($existing_map as $slug => $label) {
+            $label_norm = strtolower(remove_accents((string) $label));
+            foreach ($needles as $needle) {
+                $needle_norm = strtolower(remove_accents((string) $needle));
+                if (strpos($label_norm, $needle_norm) !== false) {
+                    return $slug;
+                }
+            }
+        }
+
+        return $resolved;
+    }
     
     // ===========================================
     // STRUCTURA CATEGORIILOR - 5 TABURI (Piese are 3 nivele: Piese > Piese iPhone > Ecrane)
@@ -790,6 +1180,7 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('widgets_init', [$this, 'register_piese_filter_widget']);
         add_action('woocommerce_product_query', [$this, 'apply_piese_filter_query'], 20);
         add_filter('woocommerce_product_query_tax_query', [$this, 'apply_piese_filter_tax_query'], 20, 2);
+        add_action('wp_footer', [$this, 'render_filters_debug_console'], 999);
         
         // Adaugă automat widget-ul generic în sidebar la activarea plugin-ului
         register_activation_hook(__FILE__, [$this, 'activate_category_filter_widget']);
@@ -885,131 +1276,155 @@ class WebGSM_Setup_Wizard_V2 {
             .webgsm-filter-scroll-container::-webkit-scrollbar-thumb:hover {
                 background: #999;
             }
-            /* Stiluri comune pentru ambele widget-uri */
-            .webgsm-category-filter {
-                font-size: 12px;
-            }
-            .webgsm-category-filter .webgsm-filter-group {
-                margin-bottom: 12px;
-            }
-            .webgsm-category-filter .webgsm-filter-group:last-child {
-                margin-bottom: 0;
-            }
-            .webgsm-category-filter .webgsm-filter-label {
-                font-weight: 600;
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.02em;
-                margin-bottom: 6px;
-                color: #333;
-            }
-            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item {
-                padding: 0 0 1px;
-                list-style: none;
-            }
-            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 3px 0;
-                text-decoration: none;
-                color: inherit;
-                font-size: 12px;
-            }
-            .webgsm-category-filter .webgsm-filter-cb {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                width: 14px;
-                height: 14px;
-                min-width: 14px;
-                min-height: 14px;
+            /* Stiluri unificate, compacte si profesionale pentru filtre */
+            .catalog-sidebar .widget,
+            .shop-sidebar .widget,
+            .sidebar-shop .widget,
+            .woocommerce-sidebar .widget {
+                margin-bottom: 14px;
+                padding: 12px 12px 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
                 background: #fff;
-                border: 1px solid #ccc;
-                border-radius: 2px;
-                box-sizing: border-box;
-                font-size: 10px;
-                line-height: 1;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
             }
-            .webgsm-category-filter .webgsm-filter-cb.chosen::after {
-                content: "\2713";
-                display: block;
-                color: #333;
-                font-weight: bold;
+            .webgsm-category-filter,
+            .webgsm-piese-filter,
+            .widget_woocommerce_layered_nav {
+                font-size: 13px;
             }
-            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item--chosen .webgsm-filter-cb {
-                border-color: #666;
-                background: #f5f5f5;
-            }
-            .webgsm-category-filter .webgsm-filter-label-text {
-                flex: 1;
-            }
-            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a::before {
-                content: none !important;
-            }
-            /* Filtru Piese: același stil ca filtrele autentice – casuță mică albă, bifă centrată, totul mai mic */
-            .webgsm-piese-filter {
-                font-size: 12px;
-            }
+            .webgsm-category-filter .webgsm-filter-group,
             .webgsm-piese-filter .webgsm-filter-group {
                 margin-bottom: 12px;
             }
+            .webgsm-category-filter .webgsm-filter-group:last-child,
             .webgsm-piese-filter .webgsm-filter-group:last-child {
                 margin-bottom: 0;
             }
-            .webgsm-piese-filter .webgsm-filter-label {
-                font-weight: 600;
+            .webgsm-category-filter .webgsm-filter-label,
+            .webgsm-piese-filter .webgsm-filter-label,
+            .widget_woocommerce_layered_nav .widget-title {
+                font-weight: 700;
                 font-size: 11px;
                 text-transform: uppercase;
-                letter-spacing: 0.02em;
-                margin-bottom: 6px;
-                color: #333;
+                letter-spacing: 0.03em;
+                margin-bottom: 8px;
+                color: #1f2937;
             }
-            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item {
-                padding: 0 0 1px;
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list,
+            .webgsm-piese-filter .woocommerce-widget-layered-nav-list,
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list {
+                margin: 0;
+                padding: 0;
                 list-style: none;
             }
-            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item a {
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item,
+            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item,
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+            }
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item + .woocommerce-widget-layered-nav-list__item,
+            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item + .woocommerce-widget-layered-nav-list__item,
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item + .woocommerce-widget-layered-nav-list__item {
+                border-top: 1px solid #f3f4f6;
+            }
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a,
+            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item a,
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item a {
                 display: flex;
                 align-items: center;
-                gap: 6px;
-                padding: 3px 0;
+                gap: 8px;
+                padding: 8px 2px;
                 text-decoration: none;
-                color: inherit;
-                font-size: 12px;
+                color: #374151;
+                font-size: 13px;
+                line-height: 1.35;
+                transition: color 0.2s ease;
             }
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a:hover,
+            .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item a:hover,
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item a:hover {
+                color: #2563eb;
+            }
+            .webgsm-category-filter .webgsm-filter-cb,
             .webgsm-piese-filter .webgsm-filter-cb {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
-                width: 14px;
-                height: 14px;
-                min-width: 14px;
-                min-height: 14px;
+                width: 15px;
+                height: 15px;
+                min-width: 15px;
+                min-height: 15px;
                 background: #fff;
-                border: 1px solid #ccc;
-                border-radius: 2px;
+                border: 1px solid #cbd5e1;
+                border-radius: 3px;
                 box-sizing: border-box;
-                font-size: 10px;
                 line-height: 1;
             }
+            .webgsm-category-filter .webgsm-filter-cb.chosen::after,
             .webgsm-piese-filter .webgsm-filter-cb.chosen::after {
                 content: "\2713";
                 display: block;
-                color: #333;
-                font-weight: bold;
+                color: #1f2937;
+                font-size: 10px;
+                font-weight: 700;
             }
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item--chosen .webgsm-filter-cb,
             .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item--chosen .webgsm-filter-cb {
-                border-color: #666;
-                background: #f5f5f5;
+                border-color: #2563eb;
+                background: #eff6ff;
             }
+            .webgsm-category-filter .webgsm-filter-label-text,
             .webgsm-piese-filter .webgsm-filter-label-text {
                 flex: 1;
             }
+            .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a::before,
             .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item a::before {
                 content: none !important;
+            }
+            /* Woo layered nav (atribute) - aceeasi dimensiune cu filtrele custom */
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item a::before {
+                margin-right: 8px !important;
+                width: 15px !important;
+                height: 15px !important;
+                border-radius: 3px !important;
+                border-color: #cbd5e1 !important;
+            }
+            .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item--chosen a::before {
+                border-color: #2563eb !important;
+                background: #eff6ff !important;
+            }
+            .widget_price_filter .price_slider_wrapper {
+                margin-top: 6px;
+            }
+            .widget_price_filter .price_slider_amount .button {
+                height: 36px;
+                min-height: 36px;
+                border-radius: 20px;
+                padding: 0 14px;
+                font-size: 12px;
+                line-height: 36px;
+            }
+            @media (max-width: 992px) {
+                .catalog-sidebar .widget,
+                .shop-sidebar .widget,
+                .sidebar-shop .widget,
+                .woocommerce-sidebar .widget {
+                    padding: 10px;
+                    border-radius: 8px;
+                }
+                .webgsm-filter-scroll-container {
+                    max-height: 42vh;
+                }
+                .webgsm-category-filter .woocommerce-widget-layered-nav-list__item a,
+                .webgsm-piese-filter .woocommerce-widget-layered-nav-list__item a,
+                .widget_woocommerce_layered_nav .woocommerce-widget-layered-nav-list__item a {
+                    padding: 10px 2px;
+                    font-size: 13px;
+                }
             }
         ';
         wp_register_style('webgsm-wizard-sidebar', false);
@@ -1026,31 +1441,31 @@ class WebGSM_Setup_Wizard_V2 {
     }
     
     /**
-     * Asigură că widget-ul generic pentru categorii este adăugat în sidebar
-     * Rulează doar o dată la inițializare
+     * Asigură că widget-ul generic pentru categorii este în sidebar-ul folosit pe shop/categorii.
+     * Dacă widget-ul e doar în „blog sidebar”, îl copiază și în sidebar-ul de shop.
      */
     private function ensure_category_filter_widget() {
-        // Verifică dacă a fost deja verificat
         if (get_option('webgsm_category_filter_widget_checked')) {
             return;
         }
-        
         $sidebars = get_option('sidebars_widgets', []);
+        $shop_sidebar_ids = [
+            'catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar',
+            'mf-catalog-sidebar', 'martfury-sidebar-shop', 'sidebar-1', 'primary-sidebar',
+            'content-sidebar', 'blog-sidebar',
+        ];
+        $shop_sidebar_ids = apply_filters('webgsm_filter_shop_sidebar_ids', $shop_sidebar_ids);
         $shop_sidebar = null;
-        
-        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
-            if (isset($sidebars[$s])) {
+        foreach ($shop_sidebar_ids as $s) {
+            if (isset($sidebars[$s]) && $s !== 'wp_inactive_widgets') {
                 $shop_sidebar = $s;
                 break;
             }
         }
-        
         if (!$shop_sidebar) {
             update_option('webgsm_category_filter_widget_checked', true);
-            return; // Nu există sidebar de shop
+            return;
         }
-        
-        // Verifică dacă widget-ul generic există deja în sidebar
         $has_category_filter = false;
         if (isset($sidebars[$shop_sidebar]) && is_array($sidebars[$shop_sidebar])) {
             foreach ($sidebars[$shop_sidebar] as $widget_id) {
@@ -1060,37 +1475,46 @@ class WebGSM_Setup_Wizard_V2 {
                 }
             }
         }
-        
-        // Dacă nu există, adaugă-l
         if (!$has_category_filter) {
+            $widget_in_other = null;
+            foreach ($sidebars as $sid => $widgets) {
+                if ($sid === 'wp_inactive_widgets' || !is_array($widgets)) continue;
+                foreach ($widgets as $widget_id) {
+                    if (strpos($widget_id, 'webgsm_category_filter-') === 0) {
+                        $widget_in_other = $widget_id;
+                        break 2;
+                    }
+                }
+            }
             $category_filter_widget = get_option('widget_webgsm_category_filter', []);
             $category_filter_id = 1;
-            
-            // Găsește primul ID disponibil
             while (isset($category_filter_widget[$category_filter_id])) {
                 $category_filter_id++;
             }
-            
-            $category_filter_widget[$category_filter_id] = ['title' => ''];
+            if ($widget_in_other) {
+                $existing_id = (int) str_replace('webgsm_category_filter-', '', $widget_in_other);
+                $category_filter_widget[$category_filter_id] = isset($category_filter_widget[$existing_id])
+                    ? $category_filter_widget[$existing_id]
+                    : ['title' => ''];
+            } else {
+                $category_filter_widget[$category_filter_id] = ['title' => ''];
+            }
             update_option('widget_webgsm_category_filter', $category_filter_widget);
-            
-            // Adaugă widget-ul la începutul sidebar-ului
             if (!isset($sidebars[$shop_sidebar])) {
                 $sidebars[$shop_sidebar] = [];
             }
             array_unshift($sidebars[$shop_sidebar], 'webgsm_category_filter-' . $category_filter_id);
             update_option('sidebars_widgets', $sidebars);
         }
-        
-        // Marchează că a fost verificat
         update_option('webgsm_category_filter_widget_checked', true);
     }
     
     /**
-     * Adaugă widget-ul generic în sidebar la activarea plugin-ului
+     * Adaugă widget-ul generic în sidebar la activarea plugin-ului.
+     * Resetează și flag-ul de verificare ca la următoarea încărcare să poată copia widget-ul din blog în sidebar-ul de shop.
      */
     public function activate_category_filter_widget() {
-        delete_option('webgsm_category_filter_widget_checked'); // Reset pentru a forța verificarea
+        delete_option('webgsm_category_filter_widget_checked');
         $this->ensure_category_filter_widget();
     }
     
@@ -1121,17 +1545,14 @@ class WebGSM_Setup_Wizard_V2 {
         if ($subcat_param !== '' || $tip_param !== '') {
             $subcat_slugs = $subcat_param ? array_map('trim', explode(',', $subcat_param)) : [];
             $tip_slugs = $tip_param ? array_map('trim', explode(',', $tip_param)) : [];
-            $subcat_slugs = array_intersect($subcat_slugs, WebGSM_Widget_Piese_Filter::get_subcat_slugs());
-            $tip_slugs = array_intersect($tip_slugs, WebGSM_Widget_Piese_Filter::get_tip_slugs());
+            $subcat_slugs = WebGSM_Widget_Piese_Filter::normalize_existing_product_cat_slugs($subcat_slugs);
+            $tip_slugs = WebGSM_Widget_Piese_Filter::normalize_tip_slugs($tip_slugs);
 
             if (!empty($subcat_slugs) && !empty($tip_slugs)) {
-                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($subcat_slugs, $tip_slugs);
-                foreach ($category_slugs as $slug) {
-                    $t = get_term_by('slug', $slug, 'product_cat');
-                    if ($t && !is_wp_error($t)) {
-                        $cat_term_ids[] = $t->term_id;
-                    }
-                }
+                $cat_term_ids = array_merge(
+                    $cat_term_ids,
+                    WebGSM_Widget_Piese_Filter::resolve_category_term_ids($subcat_slugs, $tip_slugs)
+                );
             } elseif (!empty($subcat_slugs)) {
                 foreach ($subcat_slugs as $slug) {
                     $t = get_term_by('slug', $slug, 'product_cat');
@@ -1140,14 +1561,11 @@ class WebGSM_Setup_Wizard_V2 {
                     }
                 }
             } elseif (!empty($tip_slugs)) {
-                $all_subcats = WebGSM_Widget_Piese_Filter::get_subcat_slugs();
-                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($all_subcats, $tip_slugs);
-                foreach ($category_slugs as $slug) {
-                    $t = get_term_by('slug', $slug, 'product_cat');
-                    if ($t && !is_wp_error($t)) {
-                        $cat_term_ids[] = $t->term_id;
-                    }
-                }
+                $all_subcats = WebGSM_Widget_Piese_Filter::get_subcat_slugs_from_wc();
+                $cat_term_ids = array_merge(
+                    $cat_term_ids,
+                    WebGSM_Widget_Piese_Filter::resolve_category_term_ids($all_subcats, $tip_slugs)
+                );
             }
         }
         
@@ -1224,6 +1642,13 @@ class WebGSM_Setup_Wizard_V2 {
         }
 
         if (empty($cat_term_ids)) {
+            $this->filter_debug_data['apply_piese_filter_query'] = [
+                'status' => 'no_term_ids',
+                'get' => [
+                    'filter_piese_subcat' => isset($_GET['filter_piese_subcat']) ? sanitize_text_field(wp_unslash($_GET['filter_piese_subcat'])) : '',
+                    'filter_piese_tip' => isset($_GET['filter_piese_tip']) ? sanitize_text_field(wp_unslash($_GET['filter_piese_tip'])) : '',
+                ],
+            ];
             return;
         }
 
@@ -1235,6 +1660,12 @@ class WebGSM_Setup_Wizard_V2 {
             'include_children' => empty($tip_param), // Include children doar dacă nu filtrăm după Tip piesă
         ];
         $q->set('tax_query', $tax_query);
+        $this->filter_debug_data['apply_piese_filter_query'] = [
+            'status' => 'ok',
+            'term_ids' => array_values(array_unique($cat_term_ids)),
+            'tip_param' => $tip_param,
+            'tax_query' => $tax_query,
+        ];
     }
 
     /**
@@ -1248,6 +1679,10 @@ class WebGSM_Setup_Wizard_V2 {
         }
         $cat_term_ids = $this->get_webgsm_filter_term_ids();
         if (empty($cat_term_ids['term_ids'])) {
+            $this->filter_debug_data['apply_piese_filter_tax_query'] = [
+                'status' => 'no_term_ids',
+                'tax_query_before' => $tax_query,
+            ];
             return $tax_query;
         }
         $tax_query[] = [
@@ -1256,6 +1691,12 @@ class WebGSM_Setup_Wizard_V2 {
             'terms' => $cat_term_ids['term_ids'],
             'operator' => 'IN',
             'include_children' => $cat_term_ids['include_children'],
+        ];
+        $this->filter_debug_data['apply_piese_filter_tax_query'] = [
+            'status' => 'ok',
+            'term_ids' => $cat_term_ids['term_ids'],
+            'include_children' => $cat_term_ids['include_children'],
+            'tax_query_after' => $tax_query,
         ];
         return $tax_query;
     }
@@ -1272,26 +1713,24 @@ class WebGSM_Setup_Wizard_V2 {
         if ($subcat_param !== '' || $tip_param !== '') {
             $subcat_slugs = $subcat_param ? array_map('trim', explode(',', $subcat_param)) : [];
             $tip_slugs = $tip_param ? array_map('trim', explode(',', $tip_param)) : [];
-            $subcat_slugs = array_intersect($subcat_slugs, WebGSM_Widget_Piese_Filter::get_subcat_slugs());
-            $tip_slugs = array_intersect($tip_slugs, WebGSM_Widget_Piese_Filter::get_tip_slugs());
+            $subcat_slugs = WebGSM_Widget_Piese_Filter::normalize_existing_product_cat_slugs($subcat_slugs);
+            $tip_slugs = WebGSM_Widget_Piese_Filter::normalize_tip_slugs($tip_slugs);
             if (!empty($subcat_slugs) && !empty($tip_slugs)) {
-                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($subcat_slugs, $tip_slugs);
-                foreach ($category_slugs as $slug) {
-                    $t = get_term_by('slug', $slug, 'product_cat');
-                    if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
-                }
+                $cat_term_ids = array_merge(
+                    $cat_term_ids,
+                    WebGSM_Widget_Piese_Filter::resolve_category_term_ids($subcat_slugs, $tip_slugs)
+                );
             } elseif (!empty($subcat_slugs)) {
                 foreach ($subcat_slugs as $slug) {
                     $t = get_term_by('slug', $slug, 'product_cat');
                     if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
                 }
             } elseif (!empty($tip_slugs)) {
-                $all_subcats = WebGSM_Widget_Piese_Filter::get_subcat_slugs();
-                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($all_subcats, $tip_slugs);
-                foreach ($category_slugs as $slug) {
-                    $t = get_term_by('slug', $slug, 'product_cat');
-                    if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
-                }
+                $all_subcats = WebGSM_Widget_Piese_Filter::get_subcat_slugs_from_wc();
+                $cat_term_ids = array_merge(
+                    $cat_term_ids,
+                    WebGSM_Widget_Piese_Filter::resolve_category_term_ids($all_subcats, $tip_slugs)
+                );
             }
         }
         // UNELTE
@@ -1339,10 +1778,116 @@ class WebGSM_Setup_Wizard_V2 {
             }
         }
 
-        return [
+        $result = [
             'term_ids' => array_values(array_unique($cat_term_ids)),
             'include_children' => empty($tip_param),
         ];
+        $this->filter_debug_data['get_webgsm_filter_term_ids'] = [
+            'result' => $result,
+            'get' => [
+                'filter_piese_subcat' => $subcat_param,
+                'filter_piese_tip' => $tip_param,
+                'filter_unelte' => $unelte_param,
+                'filter_accesorii' => $accesorii_param,
+                'filter_dispozitive' => $dispozitive_param,
+                'filter_servicii' => $servicii_param,
+            ],
+        ];
+        return $result;
+    }
+
+    /** Debug runtime în consola browserului: adaugă ?webgsm_debug_filters=1 la URL. */
+    public function render_filters_debug_console() {
+        $has_filter_params = isset($_GET['filter_piese_subcat']) || isset($_GET['filter_piese_tip']) || isset($_GET['filter_unelte']) || isset($_GET['filter_accesorii']) || isset($_GET['filter_dispozitive']) || isset($_GET['filter_servicii']);
+        if (!isset($_GET['webgsm_debug_filters']) && !$has_filter_params) {
+            return;
+        }
+        if (!function_exists('is_shop') || (!is_shop() && !is_product_category() && !is_product_taxonomy())) {
+            return;
+        }
+        $payload = [
+            'url' => (is_ssl() ? 'https://' : 'http://') . sanitize_text_field($_SERVER['HTTP_HOST'] ?? '') . sanitize_text_field($_SERVER['REQUEST_URI'] ?? ''),
+            'debug' => $this->filter_debug_data,
+            'sidebar_diagnostics' => $this->get_sidebar_filter_diagnostics(),
+        ];
+        ?>
+        <script>
+        (function() {
+            try {
+                window.webgsmFilterDebugPayload = <?php echo wp_json_encode($payload); ?>;
+                console.group('WebGSM Filter Debug');
+                console.log(window.webgsmFilterDebugPayload);
+                console.log('WebGSM Filter Debug JSON:', JSON.stringify(window.webgsmFilterDebugPayload, null, 2));
+                console.groupEnd();
+            } catch (e) {}
+        })();
+        </script>
+        <!-- WebGSM Filter Debug: <?php echo esc_html(wp_json_encode($payload)); ?> -->
+        <?php
+    }
+
+    /** Diagnostic pentru widget-urile de filtre în sidebars de shop. */
+    private function get_sidebar_filter_diagnostics() {
+        $sidebars = get_option('sidebars_widgets', []);
+        $layered_opts = get_option('widget_woocommerce_layered_nav', []);
+        $price_opts = get_option('widget_woocommerce_price_filter', []);
+        $result = [
+            'selected_filter_attrs_option' => get_option('webgsm_v2_filter_attributes', []),
+            'shop_sidebar_candidates' => $this->get_shop_sidebar_candidates(),
+            'sidebars' => [],
+        ];
+
+        foreach ($this->get_shop_sidebar_candidates() as $sid) {
+            if (!isset($sidebars[$sid]) || !is_array($sidebars[$sid])) {
+                continue;
+            }
+
+            $widgets_info = [];
+            foreach ($sidebars[$sid] as $wid) {
+                if (strpos($wid, 'woocommerce_layered_nav-') === 0) {
+                    $num = (int) str_replace('woocommerce_layered_nav-', '', $wid);
+                    $cfg = isset($layered_opts[$num]) && is_array($layered_opts[$num]) ? $layered_opts[$num] : [];
+                    $attr_slug = isset($cfg['attribute']) ? sanitize_title($cfg['attribute']) : '';
+                    $tax = $attr_slug ? wc_attribute_taxonomy_name($attr_slug) : '';
+                    $tax_exists = $tax ? taxonomy_exists($tax) : false;
+                    $terms_count = null;
+                    if ($tax_exists) {
+                        $terms = get_terms([
+                            'taxonomy' => $tax,
+                            'hide_empty' => false,
+                            'fields' => 'ids',
+                        ]);
+                        $terms_count = is_wp_error($terms) ? 'wp_error' : count($terms);
+                    }
+                    $widgets_info[] = [
+                        'id' => $wid,
+                        'type' => 'layered_nav',
+                        'attribute' => $attr_slug,
+                        'taxonomy' => $tax,
+                        'taxonomy_exists' => $tax_exists,
+                        'terms_count' => $terms_count,
+                        'title' => $cfg['title'] ?? '',
+                    ];
+                } elseif (strpos($wid, 'woocommerce_price_filter-') === 0) {
+                    $num = (int) str_replace('woocommerce_price_filter-', '', $wid);
+                    $cfg = isset($price_opts[$num]) && is_array($price_opts[$num]) ? $price_opts[$num] : [];
+                    $widgets_info[] = [
+                        'id' => $wid,
+                        'type' => 'price',
+                        'title' => $cfg['title'] ?? '',
+                    ];
+                } elseif (strpos($wid, 'webgsm_category_filter-') === 0 || strpos($wid, 'webgsm_piese_filter-') === 0) {
+                    $widgets_info[] = [
+                        'id' => $wid,
+                        'type' => 'webgsm_filter',
+                    ];
+                }
+            }
+
+            $result['sidebars'][$sid] = $widgets_info;
+        }
+
+        return $result;
     }
     
     public function admin_styles($hook) {
@@ -2112,7 +2657,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
     private function get_current_sidebar_filters_list() {
         $sidebars = get_option('sidebars_widgets', []);
         $shop_sidebar = null;
-        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
+        foreach ($this->get_shop_sidebar_candidates() as $s) {
             if (isset($sidebars[$s]) && !empty($sidebars[$s])) { $shop_sidebar = $s; break; }
         }
         if (!$shop_sidebar) return '';
@@ -2145,7 +2690,8 @@ Dispozitive / Servicii → Dropdown simplu</div>
     public function ajax_setup_filters() {
         check_ajax_referer('webgsm_v2', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
-        
+        delete_option('webgsm_category_filter_widget_checked');
+
         $filter_attrs = isset($_POST['filter_attrs']) && is_array($_POST['filter_attrs']) ? array_map('sanitize_text_field', $_POST['filter_attrs']) : get_option('webgsm_v2_filter_attributes', ['model-compatibil', 'model', 'calitate', 'brand-piesa', 'tehnologie', 'price']);
         if (empty($filter_attrs)) {
             wp_send_json_error(['message' => 'Bifează cel puțin un filtru.']);
@@ -2153,22 +2699,38 @@ Dispozitive / Servicii → Dropdown simplu</div>
         update_option('webgsm_v2_filter_attributes', $filter_attrs);
         
         $sidebars = get_option('sidebars_widgets', []);
-        $shop_sidebar = null;
-        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
-            if (isset($sidebars[$s])) { $shop_sidebar = $s; break; }
+        $target_sidebars = [];
+        foreach ($this->get_shop_sidebar_candidates() as $s) {
+            if (isset($sidebars[$s])) {
+                $target_sidebars[] = $s;
+            }
         }
-        if (!$shop_sidebar) {
-            $shop_sidebar = 'catalog-sidebar';
-            $sidebars[$shop_sidebar] = [];
+        if (empty($target_sidebars)) {
+            $target_sidebars[] = 'catalog-sidebar';
+            $sidebars['catalog-sidebar'] = [];
         }
-        $sidebars[$shop_sidebar] = [];
+
+        foreach ($target_sidebars as $sid) {
+            if (!isset($sidebars[$sid]) || !is_array($sidebars[$sid])) {
+                $sidebars[$sid] = [];
+            }
+            // Curăță doar widget-urile de filtre, nu distruge alte widget-uri din sidebar.
+            $sidebars[$sid] = array_values(array_filter($sidebars[$sid], function ($id) {
+                return strpos($id, 'webgsm_category_filter-') !== 0
+                    && strpos($id, 'webgsm_piese_filter-') !== 0
+                    && strpos($id, 'woocommerce_layered_nav-') !== 0
+                    && strpos($id, 'woocommerce_price_filter-') !== 0;
+            }));
+        }
         
         // Widget generic dinamic pentru toate categoriile (Piese, Unelte, Accesorii)
         $category_filter_widget = get_option('widget_webgsm_category_filter', []);
         $category_filter_id = 1;
         $category_filter_widget[$category_filter_id] = ['title' => ''];
         update_option('widget_webgsm_category_filter', $category_filter_widget);
-        $sidebars[$shop_sidebar][] = 'webgsm_category_filter-' . $category_filter_id;
+        foreach ($target_sidebars as $sid) {
+            $sidebars[$sid][] = 'webgsm_category_filter-' . $category_filter_id;
+        }
         
         // Widget filtre cu bifă: Subcategorie Piese (iPhone, Samsung…) + Tip piesă (Ecrane, Baterii…)
         // Păstrăm și widget-ul vechi pentru compatibilitate, dar widget-ul generic va avea prioritate
@@ -2176,7 +2738,9 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $piese_id = 1;
         $piese_widget[$piese_id] = ['title' => ''];
         update_option('widget_webgsm_piese_filter', $piese_widget);
-        $sidebars[$shop_sidebar][] = 'webgsm_piese_filter-' . $piese_id;
+        foreach ($target_sidebars as $sid) {
+            $sidebars[$sid][] = 'webgsm_piese_filter-' . $piese_id;
+        }
         
         $attr_labels = [
             'model-compatibil' => 'Compatibilitate',
@@ -2185,19 +2749,37 @@ Dispozitive / Servicii → Dropdown simplu</div>
             'brand-piesa' => 'Brand Piesă',
             'tehnologie' => 'Tehnologie',
         ];
+        $existing_attr_map = $this->get_existing_global_attribute_map();
         $widget_id = 1;
         
         foreach ($filter_attrs as $slug) {
             if ($slug === 'price') continue;
+            $resolved_slug = $this->resolve_real_attribute_slug_with_labels($slug, $existing_attr_map);
+            $taxonomy = wc_attribute_taxonomy_name($resolved_slug);
+            if (!taxonomy_exists($taxonomy)) {
+                $this->filter_debug_data['resolved_widget_attributes'][$slug] = [
+                    'resolved' => $resolved_slug,
+                    'taxonomy' => $taxonomy,
+                    'status' => 'taxonomy_missing',
+                ];
+                continue;
+            }
             $widget_data = get_option('widget_woocommerce_layered_nav', []);
             $widget_data[$widget_id] = [
                 'title' => $attr_labels[$slug] ?? ucfirst($slug),
-                'attribute' => $slug,
+                'attribute' => $resolved_slug,
                 'display_type' => 'list',
                 'query_type' => 'or'
             ];
             update_option('widget_woocommerce_layered_nav', $widget_data);
-            $sidebars[$shop_sidebar][] = 'woocommerce_layered_nav-' . $widget_id;
+            foreach ($target_sidebars as $sid) {
+                $sidebars[$sid][] = 'woocommerce_layered_nav-' . $widget_id;
+            }
+            $this->filter_debug_data['resolved_widget_attributes'][$slug] = [
+                'resolved' => $resolved_slug,
+                'taxonomy' => $taxonomy,
+                'status' => 'ok',
+            ];
             $widget_id++;
         }
         
@@ -2205,12 +2787,14 @@ Dispozitive / Servicii → Dropdown simplu</div>
             $price_widget = get_option('widget_woocommerce_price_filter', []);
             $price_widget[1] = ['title' => 'Preț'];
             update_option('widget_woocommerce_price_filter', $price_widget);
-            $sidebars[$shop_sidebar][] = 'woocommerce_price_filter-1';
+            foreach ($target_sidebars as $sid) {
+                $sidebars[$sid][] = 'woocommerce_price_filter-1';
+            }
         }
         
         update_option('sidebars_widgets', $sidebars);
         update_option('webgsm_v2_filters', true);
-        wp_send_json_success(['message' => 'Filtre configurate în sidebar! (conform selecției bifate)']);
+        wp_send_json_success(['message' => 'Filtre configurate în sidebar! (conform selecției bifate)', 'sidebars' => $target_sidebars]);
     }
     
     // ===========================================
@@ -2221,18 +2805,22 @@ Dispozitive / Servicii → Dropdown simplu</div>
         if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
         
         $sidebars = get_option('sidebars_widgets', []);
-        $shop_sidebar = null;
-        foreach (['catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar'] as $s) {
-            if (isset($sidebars[$s])) { $shop_sidebar = $s; break; }
-        }
-        
-        if ($shop_sidebar && !empty($sidebars[$shop_sidebar])) {
-            $sidebars[$shop_sidebar] = array_filter($sidebars[$shop_sidebar], function ($id) {
+        $updated = false;
+        foreach ($this->get_shop_sidebar_candidates() as $sid) {
+            if (!isset($sidebars[$sid]) || empty($sidebars[$sid])) {
+                continue;
+            }
+            $sidebars[$sid] = array_filter($sidebars[$sid], function ($id) {
                 return strpos($id, 'woocommerce_layered_nav-') !== 0
                     && strpos($id, 'woocommerce_price_filter-') !== 0
-                    && strpos($id, 'webgsm_piese_filter-') !== 0;
+                    && strpos($id, 'webgsm_piese_filter-') !== 0
+                    && strpos($id, 'webgsm_category_filter-') !== 0;
             });
-            $sidebars[$shop_sidebar] = array_values($sidebars[$shop_sidebar]);
+            $sidebars[$sid] = array_values($sidebars[$sid]);
+            $updated = true;
+        }
+        
+        if ($updated) {
             update_option('sidebars_widgets', $sidebars);
         }
         
