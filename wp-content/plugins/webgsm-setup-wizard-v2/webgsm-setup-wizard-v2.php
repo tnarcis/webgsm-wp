@@ -789,6 +789,7 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('wp_enqueue_scripts', [$this, 'shop_sidebar_filter_styles'], 20);
         add_action('widgets_init', [$this, 'register_piese_filter_widget']);
         add_action('woocommerce_product_query', [$this, 'apply_piese_filter_query'], 20);
+        add_filter('woocommerce_product_query_tax_query', [$this, 'apply_piese_filter_tax_query'], 20, 2);
         
         // Adaugă automat widget-ul generic în sidebar la activarea plugin-ului
         register_activation_hook(__FILE__, [$this, 'activate_category_filter_widget']);
@@ -1234,6 +1235,114 @@ class WebGSM_Setup_Wizard_V2 {
             'include_children' => empty($tip_param), // Include children doar dacă nu filtrăm după Tip piesă
         ];
         $q->set('tax_query', $tax_query);
+    }
+
+    /**
+     * Aplică aceleași filtre prin woocommerce_product_query_tax_query, ca să nu fie suprascrise de WooCommerce.
+     * WooCommerce construiește tax_query din acest filtru; fără el, setarea pe $q poate fi ignorată.
+     */
+    public function apply_piese_filter_tax_query($tax_query, $wc_query) {
+        $tax_query = is_array($tax_query) ? $tax_query : [];
+        if (!isset($tax_query['relation'])) {
+            $tax_query['relation'] = 'AND';
+        }
+        $cat_term_ids = $this->get_webgsm_filter_term_ids();
+        if (empty($cat_term_ids['term_ids'])) {
+            return $tax_query;
+        }
+        $tax_query[] = [
+            'taxonomy' => 'product_cat',
+            'field' => 'term_id',
+            'terms' => $cat_term_ids['term_ids'],
+            'operator' => 'IN',
+            'include_children' => $cat_term_ids['include_children'],
+        ];
+        return $tax_query;
+    }
+
+    /**
+     * Returnează term_ids și include_children pentru filtrele WebGSM (GET params).
+     */
+    private function get_webgsm_filter_term_ids() {
+        $cat_term_ids = [];
+        $tip_param = isset($_GET['filter_piese_tip']) ? sanitize_text_field(wp_unslash($_GET['filter_piese_tip'])) : '';
+
+        // PIESE
+        $subcat_param = isset($_GET['filter_piese_subcat']) ? sanitize_text_field(wp_unslash($_GET['filter_piese_subcat'])) : '';
+        if ($subcat_param !== '' || $tip_param !== '') {
+            $subcat_slugs = $subcat_param ? array_map('trim', explode(',', $subcat_param)) : [];
+            $tip_slugs = $tip_param ? array_map('trim', explode(',', $tip_param)) : [];
+            $subcat_slugs = array_intersect($subcat_slugs, WebGSM_Widget_Piese_Filter::get_subcat_slugs());
+            $tip_slugs = array_intersect($tip_slugs, WebGSM_Widget_Piese_Filter::get_tip_slugs());
+            if (!empty($subcat_slugs) && !empty($tip_slugs)) {
+                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($subcat_slugs, $tip_slugs);
+                foreach ($category_slugs as $slug) {
+                    $t = get_term_by('slug', $slug, 'product_cat');
+                    if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
+                }
+            } elseif (!empty($subcat_slugs)) {
+                foreach ($subcat_slugs as $slug) {
+                    $t = get_term_by('slug', $slug, 'product_cat');
+                    if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
+                }
+            } elseif (!empty($tip_slugs)) {
+                $all_subcats = WebGSM_Widget_Piese_Filter::get_subcat_slugs();
+                $category_slugs = WebGSM_Widget_Piese_Filter::resolve_category_slugs($all_subcats, $tip_slugs);
+                foreach ($category_slugs as $slug) {
+                    $t = get_term_by('slug', $slug, 'product_cat');
+                    if ($t && !is_wp_error($t)) $cat_term_ids[] = $t->term_id;
+                }
+            }
+        }
+        // UNELTE
+        $unelte_param = isset($_GET['filter_unelte']) ? sanitize_text_field(wp_unslash($_GET['filter_unelte'])) : '';
+        if ($unelte_param !== '') {
+            foreach (array_map('trim', explode(',', $unelte_param)) as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'unelte') $cat_term_ids[] = $t->term_id;
+                }
+            }
+        }
+        // ACCESORII
+        $accesorii_param = isset($_GET['filter_accesorii']) ? sanitize_text_field(wp_unslash($_GET['filter_accesorii'])) : '';
+        if ($accesorii_param !== '') {
+            foreach (array_map('trim', explode(',', $accesorii_param)) as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'accesorii') $cat_term_ids[] = $t->term_id;
+                }
+            }
+        }
+        // DISPOZITIVE
+        $dispozitive_param = isset($_GET['filter_dispozitive']) ? sanitize_text_field(wp_unslash($_GET['filter_dispozitive'])) : '';
+        if ($dispozitive_param !== '') {
+            foreach (array_map('trim', explode(',', $dispozitive_param)) as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'dispozitive') $cat_term_ids[] = $t->term_id;
+                }
+            }
+        }
+        // SERVICII
+        $servicii_param = isset($_GET['filter_servicii']) ? sanitize_text_field(wp_unslash($_GET['filter_servicii'])) : '';
+        if ($servicii_param !== '') {
+            foreach (array_map('trim', explode(',', $servicii_param)) as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'servicii') $cat_term_ids[] = $t->term_id;
+                }
+            }
+        }
+
+        return [
+            'term_ids' => array_values(array_unique($cat_term_ids)),
+            'include_children' => empty($tip_param),
+        ];
     }
     
     public function admin_styles($hook) {
