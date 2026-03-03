@@ -2,17 +2,64 @@
 
 /* Hide default WooCommerce checkout */
 .woocommerce-checkout #customer_details,
-.woocommerce-checkout .woocommerce-checkout-review-order-table,
 .woocommerce-checkout #order_review_heading,
 .woocommerce-checkout .woocommerce-form-coupon-toggle,
 .woocommerce-checkout .checkout_coupon,
 .woocommerce-checkout form.checkout_coupon,
 .woocommerce-checkout .woocommerce-info,
 .woocommerce-checkout .woocommerce-NoticeGroup-checkout,
-.woocommerce-checkout form.checkout > h3,
-.woocommerce-checkout #order_review > *:not(#payment),
+.woocommerce-checkout form.checkout > h3 {
+    display: none !important;
+}
+
+/* Hide default order_review content (theme sidebar etc.) – but NOT inside our shipping section */
+.woocommerce-checkout .woocommerce-checkout-review-order-table,
+.woocommerce-checkout #order_review > *:not(#payment) {
+    display: none !important;
+}
 .woocommerce-checkout .woocommerce-checkout-review-order > *:not(#payment) {
     display: none !important;
+}
+
+/* WebGSM secțiune Metoda de livrare: afișăm doar transportul (Packeta etc.) din #order_review */
+.webgsm-shipping-section #order_review,
+.webgsm-shipping-section #order_review .woocommerce-checkout-review-order-table {
+    display: block !important;
+}
+.webgsm-shipping-section #order_review > table.woocommerce-checkout-review-order-table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+}
+.webgsm-shipping-section #order_review .woocommerce-checkout-review-order-table tr:not(.woocommerce-shipping-totals) {
+    display: none !important;
+}
+.webgsm-shipping-section #order_review .woocommerce-shipping-totals {
+    display: table-row !important;
+}
+.webgsm-shipping-section #order_review .woocommerce-shipping-totals td {
+    padding: 12px 0;
+    vertical-align: top;
+}
+/* Plată e mutată de JS în .webgsm-payment-methods – o ascundem aici */
+.webgsm-shipping-section #order_review #payment,
+.webgsm-shipping-section #order_review .woocommerce-checkout-payment {
+    display: none !important;
+}
+/* Packeta / alte pluginuri pot adăuga conținut sub rândul de transport – păstrăm vizibil */
+.webgsm-shipping-section #order_review .woocommerce-shipping-totals li,
+.webgsm-shipping-section #order_review .woocommerce-shipping-totals .shipping_method,
+.webgsm-shipping-section #order_review [id*="packeta"],
+.webgsm-shipping-section #order_review [class*="packeta"],
+.webgsm-shipping-section #order_review [class*="zasilkovna"] {
+    display: block !important;
+}
+.webgsm-shipping-section #order_review .woocommerce-shipping-totals label {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-bottom: 8px;
 }
 
 .woocommerce-checkout form.checkout {

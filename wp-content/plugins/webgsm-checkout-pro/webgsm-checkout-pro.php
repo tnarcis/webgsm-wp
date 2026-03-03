@@ -149,6 +149,19 @@ class WebGSM_Checkout_Pro {
         $this->render_invoice_type_section();
         $this->render_addresses_section();
         
+        /* Secțiune Metoda de livrare – necesară pentru Packeta și alte pluginuri de transport.
+         * Randăm blocul WooCommerce order_review aici ca să apară metodele de livrare (inclusiv puncte Packeta).
+         * Conținutul duplicat (tabel produse, total, plată) e ascuns cu CSS; la update_checkout fragmentul actualizează acest bloc.
+         */
+        echo '<div class="webgsm-section webgsm-shipping-section">';
+        echo '<div class="webgsm-section-header">Metoda de livrare</div>';
+        echo '<div class="webgsm-section-body">';
+        echo '<div id="order_review" class="woocommerce-checkout-review-order">';
+        if (function_exists('woocommerce_order_review')) {
+            woocommerce_order_review();
+        }
+        echo '</div></div></div>';
+        
         echo '<div class="webgsm-section"><div class="webgsm-section-header">Metoda de plată</div>';
         echo '<div class="webgsm-section-body webgsm-payment-methods"></div></div>';
         
