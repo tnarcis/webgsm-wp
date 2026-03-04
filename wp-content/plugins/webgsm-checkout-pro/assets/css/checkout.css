@@ -33,23 +33,33 @@
     margin: 0 !important;
 }
 
-/* Native order review (shipping radios, payment) – off-screen but with space for Packeta widget */
+/* Ascunde widget Packeta când door-to-door e selectat – evită eroarea scriptului */
+.woocommerce-checkout .webgsm-packeta-hidden {
+    display: none !important;
+}
+
+/* Logo-uri curieri punct ridicare – Sameday în loc de Packeta, dimensiune mică */
+.woocommerce-checkout .packetery-widget-button-logo,
+.woocommerce-checkout .packetery-widget-button-row img,
+.woocommerce-checkout .packeta-widget-button img {
+    max-height: 32px !important;
+    width: auto !important;
+    object-fit: contain;
+}
+.woocommerce-checkout .webgsm-carrier-logo-sameday {
+    /* Sameday logo – deja setat via JS */
+}
+
+/* Native order review (shipping radios, Packeta) – VIZIBIL în secțiunea Metoda de livrare */
 .woocommerce-checkout .webgsm-native-shipping-sr {
-    position: absolute !important;
-    left: -9999px !important;
-    top: 0 !important;
-    width: 800px !important;
-    height: 600px !important;
+    position: static !important;
+    left: auto !important;
+    width: 100% !important;
+    height: auto !important;
     overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    pointer-events: none !important;
-}
-/* Permite click pe widget Packeta/Easybox când e deschis (modal-ul e de obicei position:fixed) */
-.woocommerce-checkout .webgsm-native-shipping-sr .packeta-widget,
-.woocommerce-checkout .webgsm-native-shipping-sr [class*="packeta"],
-.woocommerce-checkout .webgsm-native-shipping-sr iframe {
     pointer-events: auto !important;
 }
 

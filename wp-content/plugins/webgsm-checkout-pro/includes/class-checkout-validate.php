@@ -55,6 +55,14 @@ class WebGSM_Checkout_Validate {
      */
     public function webgsm_validate_checkout() {
         
+        // Termeni și condiții – obligatoriu
+        if (empty($_POST['terms'])) {
+            wc_add_notice(
+                __('Trebuie să accepți termenii și condițiile pentru a continua.', 'webgsm-checkout-pro'),
+                'error'
+            );
+        }
+        
         // Determină tipul de client
         $customer_type = $this->webgsm_get_customer_type();
         

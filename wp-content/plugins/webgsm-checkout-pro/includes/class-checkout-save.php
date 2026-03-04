@@ -372,8 +372,11 @@ class WebGSM_Checkout_Save {
         // Procesează shipping
         $same_as_billing = isset($_POST['same_as_billing']) && $_POST['same_as_billing'] == '1';
         $order->update_meta_data('_same_as_billing', $same_as_billing ? '1' : '0');
-        
-        if ($same_as_billing) {
+
+        // Packeta/Easybox – nu suprascriem adresa, Packeta o setează din punctul selectat
+        if ( class_exists( 'WebGSM_Checkout_Pro' ) && WebGSM_Checkout_Pro::is_packeta_pickup_point_method() ) {
+            $order->update_meta_data( '_same_as_billing', '0' );
+        } elseif ($same_as_billing) {
             // Copiază billing în shipping
             $order->set_shipping_first_name($order->get_billing_first_name());
             $order->set_shipping_last_name($order->get_billing_last_name());
@@ -397,7 +400,7 @@ class WebGSM_Checkout_Save {
                 'shipping_postcode',
                 'shipping_country',
             ];
-            
+
             foreach ($shipping_fields as $field) {
                 if (isset($_POST[$field])) {
                     $method = 'set_' . $field;

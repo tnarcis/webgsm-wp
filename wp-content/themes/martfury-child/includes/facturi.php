@@ -39,7 +39,7 @@ function render_smartbill_settings_page() {
     $token = get_option('smartbill_token', '003|5088be0e0850155eaa7713f3d324a63a');
     $cif = get_option('smartbill_cif', 'RO31902941');
     $serie = get_option('smartbill_serie', 'WEB');
-    $tva = get_option('smartbill_tva', 19);
+    $tva = get_option('smartbill_tva', 21);
     ?>
     <div class="wrap">
         <h1>⚙️ Setări SmartBill</h1>
@@ -140,7 +140,7 @@ function render_smartbill_settings_page() {
                 <li>Mergi la <strong><a href="<?php echo admin_url('admin.php?page=wc-settings&tab=tax'); ?>">WooCommerce → Setări → Taxe</a></strong></li>
                 <li>Activează: <strong>☑ Activează taxele</strong></li>
                 <li>Click pe <strong>"Taxe standard"</strong></li>
-                <li>Adaugă rând: Țară <strong>RO</strong>, Cotă <strong>19.0000%</strong></li>
+                <li>Adaugă rând: Țară <strong>RO</strong>, Cotă <strong>21.0000%</strong></li>
                 <li>Salvează modificările</li>
             </ol>
             
@@ -292,7 +292,7 @@ function genereaza_factura_smartbill($order_id) {
     
     $cif = get_option('smartbill_cif', 'RO31902941');
     $serie = get_option('smartbill_serie', 'WEB');
-    $tva = get_option('smartbill_tva', 19);
+    $tva = get_option('smartbill_tva', 21);
     
     // Verifică dacă e factură PJ
     $tip_facturare = get_post_meta($order_id, '_tip_facturare', true);

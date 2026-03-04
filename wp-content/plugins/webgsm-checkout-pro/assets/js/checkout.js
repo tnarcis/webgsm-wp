@@ -54,6 +54,9 @@
         
         // Mută payment methods
         movePaymentMethods();
+        moveShippingSection();
+        replacePacketaLogosForCarriers();
+        togglePacketaWidgetVisibility();
         
         // Setează tipul inițial de client
         initCustomerType();
@@ -103,8 +106,9 @@
         // Elimină și de pe wrapper-ele WooCommerce
         $('.woocommerce-billing-fields .validate-required').removeClass('validate-required');
         $('.woocommerce-shipping-fields .validate-required').removeClass('validate-required');
-        $('form.checkout [required]').removeAttr('required');
-        $('form.checkout [aria-required]').removeAttr('aria-required');
+        // Exclude terms checkbox – termenii trebuie acceptați obligatoriu
+        $('form.checkout [required]').not('#terms, input[name="terms"]').removeAttr('required');
+        $('form.checkout [aria-required]').not('#terms, input[name="terms"]').removeAttr('aria-required');
         
         // Elimină clasa de wrapper required
         $('.form-row').removeClass('validate-required');
@@ -124,6 +128,47 @@
             $payment.appendTo($target);
             log('Payment methods mutat');
         }
+    }
+    
+    /** Mută secțiunea de livrare (curieri + Packeta) în containerul vizibil */
+    function moveShippingSection() {
+        var $container = $('#webgsm-shipping-container');
+        var $shipping = $('.webgsm-native-shipping-sr');
+        if ($container.length && $shipping.length && !$container.find('.webgsm-native-shipping-sr').length) {
+            $shipping.appendTo($container);
+            log('Shipping section mutată în Metoda de livrare');
+        }
+    }
+    
+    /** Ascunde widgetul Packeta când e selectat door-to-door – evită eroarea scriptului Packeta */
+    function togglePacketaWidgetVisibility() {
+        var chosen = ($('input[name^="shipping_method"]:checked').val() || '').toLowerCase();
+        var isPacketa = chosen.indexOf('packeta') === 0 || chosen.indexOf('easybox') !== -1 || chosen.indexOf('sameday') !== -1 || chosen.indexOf('fanbox') !== -1;
+        var $scope = $('.webgsm-native-shipping-sr, #webgsm-shipping-container');
+        var $rows = $scope.find('tr.packetery-widget-button-table-row, .packeta-widget, .packetery-widget-button-wrapper');
+        if (isPacketa) {
+            $rows.removeClass('webgsm-packeta-hidden').show();
+        } else {
+            $rows.addClass('webgsm-packeta-hidden').hide();
+        }
+    }
+    
+    /** Înlocuiește logo Packeta cu Sameday când metoda e Sameday Box */
+    function replacePacketaLogosForCarriers() {
+        var $scope = $('.webgsm-native-shipping-sr, #webgsm-shipping-container');
+        var $packetaRadios = $scope.find('input[name^="shipping_method"]').filter(function() {
+            var v = String((this.value || '')).toLowerCase();
+            return v.indexOf('packeta') === 0 || v.indexOf('easybox') !== -1 || v.indexOf('sameday') !== -1 || v.indexOf('fanbox') !== -1;
+        });
+        var $logos = $scope.find('img.packetery-widget-button-logo, tr.packetery-widget-button-table-row img');
+        var samedayLogo = (typeof webgsm_checkout !== 'undefined' && webgsm_checkout.sameday_logo_url) ? webgsm_checkout.sameday_logo_url : 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp';
+        $packetaRadios.each(function(i) {
+            var methodId = String((this.value || '')).toLowerCase();
+            var $img = $logos.eq(i);
+            if ($img.length && methodId.indexOf('sameday') !== -1) {
+                $img.attr('src', samedayLogo).attr('alt', 'Sameday').addClass('webgsm-carrier-logo-sameday');
+            }
+        });
     }
     
     // =========================================
@@ -533,6 +578,11 @@
                 // Injectează datele
                 injectBillingData(cData, 'pj');
             }
+        }
+        
+        // Validare termeni și condiții – obligatoriu
+        if (!$('#terms').is(':checked')) {
+            errors.push('Trebuie să accepți termenii și condițiile.');
         }
         
         // Log valori finale
@@ -1164,10 +1214,16 @@
                 return false;
             }
             
-            // FORȚEAZĂ SUBMIT PE FORM (butonul e în afara formularului)
+            // FORȚEAZĂ SUBMIT PE FORM (sumarul cu termeni e în afara formularului)
             log('TRIMITE FORM MANUAL - form.checkout.submit()');
             
             var $form = $('form.checkout');
+            
+            // Adaugă termenii în form – checkbox-ul e în sumar (în afara formularului)
+            $form.find('input[name="terms"]').remove();
+            if ($('#terms').is(':checked')) {
+                $form.append('<input type="hidden" name="terms" value="1">');
+            }
             
             // Adaugă nonce în form dacă nu există
             if (!$form.find('input[name="woocommerce-process-checkout-nonce"]').length) {
@@ -1215,7 +1271,13 @@
                 }
             });
         }
-        // La click pe elementul din sumar, bifează radio-ul WooCommerce și declanșează update_checkout (inclusiv hărți Easybox etc.)
+        /** Verifică dacă metoda de livrare e Packeta/Easybox/Fanbox/Sameday (punct ridicare) */
+        function isPacketaMethod(id) {
+            if (!id) return false;
+            var s = String(id).toLowerCase();
+            return s.indexOf('packeta') === 0 || s.indexOf('easybox') !== -1 || s.indexOf('fanbox') !== -1 || s.indexOf('sameday') !== -1;
+        }
+        // La click pe elementul din sumar, bifează radio-ul WooCommerce și declanșează update_checkout
         $(document).on('click', '.summary-shipping-list .summary-shipping-item', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1226,17 +1288,47 @@
                 $radio.prop('checked', true).trigger('change');
                 $(document.body).trigger('update_checkout');
                 syncSummaryShippingSelection();
+                // Doar pentru Packeta/Easybox/Fanbox: deschide harta după update. Pentru door-to-door: NU
+                if (isPacketaMethod(id)) {
+                    window._webgsm_open_packeta_after_update = true;
+                } else {
+                    window._webgsm_open_packeta_after_update = false;
+                }
             }
         });
         // Sincronizează când se schimbă curierul în blocul standard WooCommerce
         $(document).on('change', 'input[name^="shipping_method"]', function() {
+            var id = $(this).val();
+            if (!isPacketaMethod(id)) window._webgsm_open_packeta_after_update = false;
+            togglePacketaWidgetVisibility();
             syncSummaryShippingSelection();
+        });
+        // Buton "Selectează punct ridicare" – deschide harta DOAR dacă Packeta/Easybox/Fanbox e selectat
+        $(document).on('click', '.webgsm-packeta-open-btn', function(e) {
+            e.preventDefault();
+            var chosen = $('input[name^="shipping_method"]:checked').val();
+            if (!isPacketaMethod(chosen)) return; // door-to-door selectat – nu deschide Packeta
+            var $btn = $('.packeta-selector-open, .packeta-widget-button, [class*="packeta"][class*="open"], a[href*="packeta"], .wc-packeta-select-point');
+            if ($btn.length) {
+                $btn.first().trigger('click');
+                log('Packeta: deschis selector punct ridicare (manual)');
+            } else if (typeof Packeta !== 'undefined' && Packeta.Widget && typeof Packeta.Widget.pick === 'function') {
+                Packeta.Widget.pick();
+                log('Packeta: apelat Widget.pick() (manual)');
+            } else {
+                $('input[name^="shipping_method"]:checked').closest('tr').find('a, button, [role="button"]').first().trigger('click');
+            }
         });
         // Prima sincronizare la inițializare
         syncSummaryShippingSelection();
-        // Metodă 3: Form submit
+        // Metodă 3: Form submit – injectează termenii (checkbox-ul e în sumar, în afara formularului)
         $('form.checkout').on('submit', function() {
             log('========== FORM SUBMIT ==========');
+            var $form = $(this);
+            $form.find('input[name="terms"]').remove();
+            if ($('#terms').is(':checked')) {
+                $form.append('<input type="hidden" name="terms" value="1">');
+            }
             // Debug log: show values being submitted
             console.log('[WebGSM] Submit values:', {
                 ship_to_different_address: $('#ship_to_different_address').val(),
@@ -1444,6 +1536,11 @@
             // Re-aplică toate setările
             removeAllRequiredAttributes();
             movePaymentMethods();
+            moveShippingSection();
+            setTimeout(function() {
+                replacePacketaLogosForCarriers();
+                togglePacketaWidgetVisibility();
+            }, 100);
 
             // Re-injectează datele
             if (WebGSM.currentCustomerType === 'pf') {
@@ -1454,6 +1551,26 @@
 
             // Sincronizează selecția curier din sumar cu radio-urile WooCommerce
             syncSummaryShippingSelection();
+
+            // Packeta/Easybox/Fanbox: deschide harta DOAR dacă metoda selectată e punct ridicare
+            var chosen = $('input[name^="shipping_method"]:checked').val();
+            if (window._webgsm_open_packeta_after_update && isPacketaMethod(chosen)) {
+                window._webgsm_open_packeta_after_update = false;
+                setTimeout(function() {
+                    var currentChosen = $('input[name^="shipping_method"]:checked').val();
+                    if (!isPacketaMethod(currentChosen)) return; // utilizatorul a schimbat la door-to-door între timp
+                    var $btn = $('.packeta-selector-open, .packeta-widget-button, [class*="packeta"][class*="open"], a[href*="packeta"], .wc-packeta-select-point');
+                    if ($btn.length) {
+                        $btn.first().trigger('click');
+                        log('Packeta: deschis selector punct ridicare');
+                    } else if (typeof Packeta !== 'undefined' && Packeta.Widget && typeof Packeta.Widget.pick === 'function') {
+                        Packeta.Widget.pick();
+                        log('Packeta: apelat Widget.pick()');
+                    }
+                }, 300);
+            } else {
+                window._webgsm_open_packeta_after_update = false;
+            }
         });
         
         $(document.body).on('init_checkout', function() {

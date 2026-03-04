@@ -128,10 +128,12 @@ class WebGSM_Checkout_Pro {
         $js_ver  = WEBGSM_CHECKOUT_VERSION . '-' . (file_exists($js_file) ? filemtime($js_file) : time());
         wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], $css_ver);
         wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], $js_ver, true);
+        $sameday_logo = apply_filters('webgsm_sameday_logo_url', 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp');
         wp_localize_script('webgsm-checkout', 'webgsm_checkout', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('webgsm_nonce'),
             'is_logged_in' => is_user_logged_in(),
+            'sameday_logo_url' => $sameday_logo,
         ]);
     }
 
@@ -182,6 +184,9 @@ class WebGSM_Checkout_Pro {
         $this->render_coupon_section();
         $this->render_invoice_type_section();
         $this->render_addresses_section();
+        
+        echo '<div class="webgsm-section"><div class="webgsm-section-header">Metoda de livrare</div>';
+        echo '<div class="webgsm-section-body" id="webgsm-shipping-container"><!-- Packeta & curieri mutați aici via JS --></div></div>';
         
         echo '<div class="webgsm-section"><div class="webgsm-section-header">Metoda de plată</div>';
         echo '<div class="webgsm-section-body webgsm-payment-methods"></div></div>';
@@ -472,71 +477,68 @@ class WebGSM_Checkout_Pro {
         $has_packages = !empty($packages[0]['rates']);
         $free_shipping_threshold = apply_filters('webgsm_free_shipping_threshold', 250);
         $remaining = $free_shipping_threshold - $subtotal;
+        
+        $b2b_instance = class_exists('WebGSM_B2B_Pricing') ? WebGSM_B2B_Pricing::instance() : null;
+        $b2b_discount_total = 0;
+        $b2b_original_total = 0;
+        if ($b2b_instance && $b2b_instance->is_user_pj()) {
+            foreach (WC()->cart->get_cart() as $cart_item) {
+                $product = $cart_item['data'];
+                $product_id = $product->get_id();
+                $quantity = $cart_item['quantity'];
+                $original_price = (float) get_post_meta($product_id, '_regular_price', true);
+                
+                $discount_pj = $b2b_instance->get_discount_pj($product);
+                $tier = $b2b_instance->get_user_tier();
+                $tiers = get_option('webgsm_b2b_tiers', $b2b_instance->get_default_tiers());
+                $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
+                $total_discount_percent = $discount_pj + $discount_tier;
+                
+                if ($original_price > 0 && $total_discount_percent > 0) {
+                    $discount_amount = ($original_price * $total_discount_percent / 100) * $quantity;
+                    $b2b_discount_total += $discount_amount;
+                    $b2b_original_total += $original_price * $quantity;
+                }
+            }
+        }
         ?>
         <div class="webgsm-summary-box" id="webgsm-checkout-summary">
             <div class="summary-header">Sumar comandă</div>
             
             <?php
-            // Calculează și afișează economia B2B pentru clienți PJ - DEASUPRA Subtotal
-            $b2b_instance = WebGSM_B2B_Pricing::instance();
-            if ($b2b_instance && $b2b_instance->is_user_pj()) {
-                $b2b_discount_total = 0;
-                $b2b_original_total = 0;
-                
-                foreach (WC()->cart->get_cart() as $cart_item) {
-                    $product = $cart_item['data'];
-                    $product_id = $product->get_id();
-                    $quantity = $cart_item['quantity'];
-                    $original_price = get_post_meta($product_id, '_regular_price', true);
-                    
-                    $discount_pj = $b2b_instance->get_discount_pj($product);
-                    $tier = $b2b_instance->get_user_tier();
-                    $tiers = get_option('webgsm_b2b_tiers', $b2b_instance->get_default_tiers());
-                    $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
-                    $total_discount_percent = $discount_pj + $discount_tier;
-                    
-                    if ($original_price > 0 && $total_discount_percent > 0) {
-                        $discount_amount = ((float)$original_price * $total_discount_percent / 100) * $quantity;
-                        $b2b_discount_total += $discount_amount;
-                        $b2b_original_total += (float)$original_price * $quantity;
-                    }
-                }
-                
-                if ($b2b_discount_total > 0) :
-                    // Obține culoarea și label-ul tier-ului pentru B2B
-                    $tier_borders = array(
-                        'bronze' => '#d4a574',
-                        'silver' => '#c0c0c0',
-                        'gold' => '#d4af37',
-                        'platinum' => '#4a6073'
-                    );
-                    $tier_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
-                    
-                    $tier_labels = array(
-                        'bronze' => 'Bronze',
-                        'silver' => 'Silver',
-                        'gold' => 'Gold',
-                        'platinum' => 'Platinum'
-                    );
-                    $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
-                ?>
-                    <div class="summary-row summary-row-rrp">
-                        <span style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">Total RRC:</span>
-                        <span class="summary-value" style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">
-                            <?php echo wc_price($b2b_original_total); ?>
-                        </span>
-                    </div>
-                    <div class="summary-row summary-row-b2b-savings" style="background: #f0fdf4; border-top: 1px solid #bbf7d0; border-bottom: 1px solid #bbf7d0; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: <?php echo esc_attr($tier_color); ?>;">
-                            Economie <?php echo esc_html($tier_label); ?> (inclusă în subtotal):
-                        </span>
-                        <span class="summary-value" style="font-size: 13px; color: #15803d; font-weight: 600;">
-                            <?php echo wc_price($b2b_discount_total); ?>
-                        </span>
-                    </div>
-                <?php endif;
-            }
+            // Afișează Total RRC și Economie B2B pentru clienți PJ
+            if ($b2b_instance && $b2b_instance->is_user_pj() && isset($b2b_discount_total) && $b2b_discount_total > 0) :
+                $tier_borders = array(
+                    'bronze' => '#d4a574',
+                    'silver' => '#c0c0c0',
+                    'gold' => '#d4af37',
+                    'platinum' => '#4a6073'
+                );
+                $tier = $b2b_instance->get_user_tier();
+                $tier_color = isset($tier_borders[$tier]) ? $tier_borders[$tier] : '#3b82f6';
+                $tier_labels = array(
+                    'bronze' => 'Bronze',
+                    'silver' => 'Silver',
+                    'gold' => 'Gold',
+                    'platinum' => 'Platinum'
+                );
+                $tier_label = isset($tier_labels[$tier]) ? $tier_labels[$tier] : ucfirst($tier);
             ?>
+                <div class="summary-row summary-row-rrp">
+                    <span style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">Total RRC:</span>
+                    <span class="summary-value" style="font-size: 12px; color: #9ca3af; text-decoration: line-through;">
+                        <?php echo wc_price($b2b_original_total); ?>
+                    </span>
+                </div>
+                <div class="summary-row summary-row-b2b-savings" style="background: #f0fdf4; border-top: 1px solid #bbf7d0; border-bottom: 1px solid #bbf7d0; margin-bottom: 8px;">
+                    <span style="font-size: 12px; color: <?php echo esc_attr($tier_color); ?>;">
+                        Economie <?php echo esc_html($tier_label); ?> (inclusă în subtotal):
+                    </span>
+                    <span class="summary-value" style="font-size: 13px; color: #15803d; font-weight: 600;">
+                        <?php echo wc_price($b2b_discount_total); ?>
+                    </span>
+                </div>
+            <?php endif; ?>
             
             <div class="summary-row"><span>Subtotal:</span><span class="summary-value"><?php echo wc_price($subtotal); ?></span></div>
             
@@ -589,6 +591,15 @@ class WebGSM_Checkout_Pro {
                     <?php endif; ?>
                 </span>
             </div>
+            <?php
+            $is_packeta = $chosen_method && ( strpos( $chosen_method, 'packeta' ) === 0 || stripos( $chosen_method, 'easybox' ) !== false || stripos( $chosen_method, 'fanbox' ) !== false || stripos( $chosen_method, 'sameday' ) !== false );
+            if ( $is_packeta ) : ?>
+                <div class="summary-row">
+                    <button type="button" class="webgsm-packeta-open-btn" style="background:#3b82f6;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
+                        📍 Selectează punct ridicare
+                    </button>
+                </div>
+            <?php endif; ?>
             
             <?php 
             // Verifica daca exista cupon pentru transport gratuit
@@ -1284,10 +1295,33 @@ class WebGSM_Checkout_Pro {
     }
     
     /**
+     * Verifică dacă metoda de livrare aleasă este Packeta (Easybox/Fanbox).
+     * Când da, WebGSM nu trebuie să suprascrie adresa – Packeta o setează din punctul selectat.
+     */
+    public static function is_packeta_pickup_point_method( $method_id = null ) {
+        if ( $method_id === null ) {
+            $chosen = WC()->session ? WC()->session->get( 'chosen_shipping_methods' ) : null;
+            $method_id = ( is_array( $chosen ) && ! empty( $chosen[0] ) ) ? $chosen[0] : '';
+            if ( empty( $method_id ) && ! empty( $_POST['shipping_method'] ) && is_array( $_POST['shipping_method'] ) ) {
+                $method_id = sanitize_text_field( $_POST['shipping_method'][0] ?? '' );
+            }
+        }
+        $method_id = (string) $method_id;
+        $id = strtolower( $method_id );
+        return $method_id !== '' && ( strpos( $id, 'packeta' ) === 0 || strpos( $id, 'packeta_sender' ) !== false || strpos( $id, 'easybox' ) !== false || strpos( $id, 'fanbox' ) !== false || strpos( $id, 'sameday' ) !== false );
+    }
+
+    /**
      * Apply shipping fields from our custom checkout into the WC_Order object.
      * Ensures server-side the shipping address selected/filled in the form is used.
+     * Skip when Packeta/Easybox is chosen – Packeta sets the pickup point address.
      */
     public function apply_custom_shipping_fields( $order, $data ) {
+        if ( self::is_packeta_pickup_point_method() ) {
+            $order->update_meta_data( '_same_as_billing', '0' );
+            return;
+        }
+
         // $_POST is expected to contain our hidden fields
         $ship_flag = isset($_POST['ship_to_different_address']) ? sanitize_text_field($_POST['ship_to_different_address']) : '0';
 
