@@ -28,6 +28,13 @@ wp-content/plugins/*
 !wp-content/plugins/webgsm-woo-sync/
 !wp-content/plugins/webgsm-site-audit/
 
+# webgsm-checkout-pro: exclude backup, dev artifacts, tests
+wp-content/plugins/webgsm-checkout-pro.disabled/
+wp-content/plugins/webgsm-checkout-pro/DEBUG-*.md
+wp-content/plugins/webgsm-checkout-pro/assets.zip
+wp-content/plugins/webgsm-checkout-pro/tests/
+wp-content/plugins/webgsm-checkout-pro/**/.DS_Store
+
 # Documentație (în repo pentru deploy / referință)
 !docs/
 docs/*
@@ -35,5 +42,10 @@ docs/*
 
 # MacOS junk
 .DS_Store
+**/.DS_Store
+
+# Logs & debug (WordPress)
+debug.log
+wp-content/debug.log
  
 !.cpanel.yml
