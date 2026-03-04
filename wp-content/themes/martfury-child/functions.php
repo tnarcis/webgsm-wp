@@ -100,9 +100,7 @@ add_action('wp_footer', function() {
 // LAZY LOAD - My Account files (doar pe pagina My Account)
 // ============================================
 add_action('wp', function() {
-    // Folosim aceleași popup-uri (adrese, firme, persoane) și stiluri
-    // atât pe pagina My Account, cât și în checkout (pentru "Adaugă firmă").
-    if (is_account_page() || is_checkout()) {
+    if (is_account_page()) {
         require_once get_stylesheet_directory() . '/includes/my-account-styling.php';
         require_once get_stylesheet_directory() . '/includes/webgsm-myaccount-headers.php';
         require_once get_stylesheet_directory() . '/includes/webgsm-myaccount-modals.php';

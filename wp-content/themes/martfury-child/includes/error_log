@@ -1,0 +1,1 @@
+[23-Jan-2026 17:21:17 UTC] PHP Deprecated:  Mobile_Detect::__construct(): Implicitly marking parameter $headers as nullable is deprecated, the explicit nullable type must be used instead in /home2/webgsm/public_html/test/wp-content/themes/martfury/inc/libs/mobile_detect.php on line 696
