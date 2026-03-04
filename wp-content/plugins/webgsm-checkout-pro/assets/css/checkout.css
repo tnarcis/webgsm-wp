@@ -1,26 +1,14 @@
 /* WebGSM Checkout Pro v5.0.0 - CSS Complet */
 
-/* Hide default WooCommerce checkout */
+/* Hide elementele default WooCommerce (dar lăsăm formularul și shipping-ul vizibile) */
 .woocommerce-checkout #customer_details,
-.woocommerce-checkout .woocommerce-checkout-review-order-table,
-.woocommerce-checkout #order_review_heading,
 .woocommerce-checkout .woocommerce-form-coupon-toggle,
 .woocommerce-checkout .checkout_coupon,
 .woocommerce-checkout form.checkout_coupon,
 .woocommerce-checkout .woocommerce-info,
 .woocommerce-checkout .woocommerce-NoticeGroup-checkout,
-.woocommerce-checkout form.checkout > h3,
-.woocommerce-checkout #order_review > *:not(#payment),
-.woocommerce-checkout .woocommerce-checkout-review-order > *:not(#payment) {
+.woocommerce-checkout form.checkout > h3 {
     display: none !important;
-}
-
-.woocommerce-checkout form.checkout {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0,0,0,0);
 }
 
 .woocommerce-checkout #payment {
@@ -43,6 +31,29 @@
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+}
+
+/* Native order review (shipping radios, payment) – hidden but in DOM for JS/Easybox map */
+.woocommerce-checkout .webgsm-native-shipping-sr {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+/* În tabelul standard de review păstrăm DOAR rândurile de shipping (curieri) – restul le ascundem ca să nu dublăm produsele și totalurile */
+.woocommerce-checkout-review-order-table thead,
+.woocommerce-checkout-review-order-table .cart_item,
+.woocommerce-checkout-review-order-table .cart-subtotal,
+.woocommerce-checkout-review-order-table .order-total,
+.woocommerce-checkout-review-order-table .fee,
+.woocommerce-checkout-review-order-table .tax-total {
+    display: none !important;
 }
 
 /* Main Layout */
@@ -509,14 +520,55 @@
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
 }
 
-.webgsm-summary-box .terms-note {
-    padding: 0 20px 20px;
+.webgsm-summary-box .summary-terms {
+    margin: 10px 20px 12px;
+}
+.webgsm-summary-box .terms-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
-    color: #666;
-    text-align: center;
+    color: #111827;
+}
+.webgsm-summary-box .terms-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+.webgsm-summary-box .terms-checkbox a {
+    color: #2196f3;
+    text-decoration: underline;
 }
 
-.webgsm-summary-box .terms-note a { color: #2196f3; }
+.webgsm-summary-box .summary-shipping-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.webgsm-summary-box .summary-shipping-list li.summary-shipping-item {
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.webgsm-summary-box .summary-shipping-list li.summary-shipping-item::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    box-sizing: border-box;
+}
+.webgsm-summary-box .summary-shipping-list li.summary-shipping-item.is-selected {
+    font-weight: 600;
+    color: #111827;
+}
+.webgsm-summary-box .summary-shipping-list li.summary-shipping-item.is-selected::before {
+    border-color: #3b82f6;
+    background: #3b82f6;
+}
 
 /* Popup - now positioned absolutely within parent section */
 .webgsm-popup {

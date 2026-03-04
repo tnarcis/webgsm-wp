@@ -114,6 +114,17 @@ class WebGSM_Checkout_Pro {
 
     public function remove_default_checkout() {
         remove_action('woocommerce_checkout_order_review', 'woocommerce_order_review', 10);
+        add_action('woocommerce_checkout_order_review', [$this, 'render_native_order_review_hidden'], 10);
+    }
+
+    /**
+     * Render native WooCommerce order review (shipping radios, payment) inside a hidden container.
+     * Required so shipping_method inputs exist in DOM for summary clicks and Easybox/Packeta map.
+     */
+    public function render_native_order_review_hidden() {
+        echo '<div class="webgsm-native-shipping-sr" aria-hidden="true">';
+        wc_get_template('checkout/review-order.php');
+        echo '</div>';
     }
     
     public function add_endpoints() {
@@ -525,7 +536,34 @@ class WebGSM_Checkout_Pro {
                 </div>
             <?php endif; ?>
             
-            <div class="summary-row"><span>Transport:</span><span class="summary-value"><?php echo $shipping > 0 ? wc_price($shipping) : 'GRATUIT'; ?></span></div>
+            <?php
+            // Afișare toate metodele de livrare disponibile în sumar (curieri)
+            $packages = WC()->shipping()->get_packages();
+            $chosen_methods = WC()->session ? (array) WC()->session->get('chosen_shipping_methods') : [];
+            $chosen_method = isset($chosen_methods[0]) ? $chosen_methods[0] : '';
+            ?>
+            <div class="summary-row">
+                <span>Transport:</span>
+                <span class="summary-value">
+                    <?php if (!empty($packages[0]['rates'])): ?>
+                        <ul class="summary-shipping-list">
+                            <?php foreach ($packages[0]['rates'] as $rate_id => $rate): ?>
+                                <?php
+                                $label = $rate->get_label();
+                                $cost  = $rate->get_cost();
+                                $is_chosen = ($rate_id === $chosen_method);
+                                ?>
+                                <li class="summary-shipping-item<?php echo $is_chosen ? ' is-selected' : ''; ?>" data-rate-id="<?php echo esc_attr($rate_id); ?>">
+                                    <?php echo esc_html($label); ?>
+                                    – <?php echo $cost > 0 ? wc_price($cost) : 'GRATUIT'; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <?php echo $shipping > 0 ? wc_price($shipping) : 'GRATUIT'; ?>
+                    <?php endif; ?>
+                </span>
+            </div>
             
             <?php 
             // Verifica daca exista cupon pentru transport gratuit
@@ -549,8 +587,13 @@ class WebGSM_Checkout_Pro {
             <?php endif; ?>
             
             <div class="summary-total"><span>TOTAL:</span><span class="total-value"><?php echo wc_price($total); ?></span></div>
+            <div class="summary-terms">
+                <label class="terms-checkbox">
+                    <input type="checkbox" name="terms" id="terms" required>
+                    <span>Accept <a href="/termeni-si-conditii" target="_blank">termenii și condițiile</a></span>
+                </label>
+            </div>
             <button type="submit" class="btn-submit" id="place_order">Trimite comanda</button>
-            <p class="terms-note">Prin plasarea comenzii, esti de acord cu <a href="/termeni-si-conditii" target="_blank">T&C</a></p>
         </div>
         <?php
     }

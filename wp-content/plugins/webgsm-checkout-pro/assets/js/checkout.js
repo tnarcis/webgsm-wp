@@ -1200,6 +1200,38 @@
             return false;
         });
         
+        // ==========================================
+        // Selectare curier din sumar (lista de shipping din dreapta)
+        // ==========================================
+        function syncSummaryShippingSelection() {
+            var chosen = $('input[name^="shipping_method"]:checked').val();
+            $('.summary-shipping-list .summary-shipping-item').each(function() {
+                var $li = $(this);
+                var id = $li.data('rateId');
+                if (id === chosen) {
+                    $li.addClass('is-selected');
+                } else {
+                    $li.removeClass('is-selected');
+                }
+            });
+        }
+        // La click pe elementul din sumar, bifează radio-ul WooCommerce și declanșează update_checkout (inclusiv hărți Easybox etc.)
+        $(document).on('click', '.summary-shipping-list .summary-shipping-item', function() {
+            var id = $(this).data('rateId');
+            if (!id) return;
+            var $radio = $('input[name^="shipping_method"][value="' + id + '"]');
+            if ($radio.length) {
+                $radio.prop('checked', true).trigger('change');
+                $(document.body).trigger('update_checkout');
+                syncSummaryShippingSelection();
+            }
+        });
+        // Sincronizează când se schimbă curierul în blocul standard WooCommerce
+        $(document).on('change', 'input[name^="shipping_method"]', function() {
+            syncSummaryShippingSelection();
+        });
+        // Prima sincronizare la inițializare
+        syncSummaryShippingSelection();
         // Metodă 3: Form submit
         $('form.checkout').on('submit', function() {
             log('========== FORM SUBMIT ==========');
@@ -1406,17 +1438,20 @@
         
         $(document.body).on('updated_checkout', function() {
             log('========== updated_checkout - RE-INIT ==========');
-            
+
             // Re-aplică toate setările
             removeAllRequiredAttributes();
             movePaymentMethods();
-            
+
             // Re-injectează datele
             if (WebGSM.currentCustomerType === 'pf') {
                 injectPersonDataSilent();
             } else {
                 injectCompanyDataSilent();
             }
+
+            // Sincronizează selecția curier din sumar cu radio-urile WooCommerce
+            syncSummaryShippingSelection();
         });
         
         $(document.body).on('init_checkout', function() {
