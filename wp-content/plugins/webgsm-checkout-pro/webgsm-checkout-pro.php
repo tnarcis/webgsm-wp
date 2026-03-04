@@ -95,6 +95,25 @@ class WebGSM_Checkout_Pro {
         add_action('woocommerce_checkout_before_customer_details', [$this, 'render_hidden_form_fields']);
         // Apply our shipping fields on order creation if provided by our form (run late so WooCommerce core doesn't overwrite)
         add_action('woocommerce_checkout_create_order', [$this, 'apply_custom_shipping_fields'], 999, 2);
+        // Includem sumarul în fragmentele AJAX ca totalul și transportul să se actualizeze la schimbarea curierului
+        add_filter('woocommerce_update_order_review_fragments', [$this, 'add_summary_to_checkout_fragments'], 10, 1);
+    }
+
+    /**
+     * Adaugă sumarul în fragmentele checkout pentru ca la update_checkout (schimbare curier etc.)
+     * totalul și transportul să se actualizeze corect.
+     */
+    public function add_summary_to_checkout_fragments($fragments) {
+        ob_start();
+        $this->render_summary_section();
+        $fragments['.webgsm-summary-box'] = ob_get_clean();
+
+        ob_start();
+        $total_formatted = WC()->cart->get_cart_total();
+        echo '<div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong>' . $total_formatted . '</strong></div>';
+        $fragments['.webgsm-mobile-total-fragment'] = ob_get_clean();
+
+        return $fragments;
     }
     
     public function start_session() {
@@ -170,10 +189,10 @@ class WebGSM_Checkout_Pro {
         $this->render_summary_section();
         echo '</div>';
         
-        $total = WC()->cart->get_total();
+        $total_formatted = WC()->cart->get_cart_total();
         ?>
         <div class="webgsm-mobile-submit">
-            <div class="mobile-total"><span>Total:</span><strong><?php echo $total; ?></strong></div>
+            <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
             <button type="button" class="btn-submit-mobile" id="mobile_place_order">Trimite comanda</button>
         </div>
         <?php
@@ -502,10 +521,10 @@ class WebGSM_Checkout_Pro {
                     </div>
                     <div class="summary-row summary-row-b2b-savings" style="background: #f0fdf4; border-top: 1px solid #bbf7d0; border-bottom: 1px solid #bbf7d0; margin-bottom: 8px;">
                         <span style="font-size: 12px; color: <?php echo esc_attr($tier_color); ?>;">
-                            Discountul tau <?php echo esc_html($tier_label); ?> :
+                            Economie <?php echo esc_html($tier_label); ?> (inclusă în subtotal):
                         </span>
                         <span class="summary-value" style="font-size: 13px; color: #15803d; font-weight: 600;">
-                            -<?php echo wc_price($b2b_discount_total); ?>
+                            <?php echo wc_price($b2b_discount_total); ?>
                         </span>
                     </div>
                 <?php endif;
