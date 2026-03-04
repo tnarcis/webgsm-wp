@@ -33,17 +33,24 @@
     margin: 0 !important;
 }
 
-/* Native order review (shipping radios, payment) – hidden but in DOM for JS/Easybox map */
+/* Native order review (shipping radios, payment) – off-screen but with space for Packeta widget */
 .woocommerce-checkout .webgsm-native-shipping-sr {
     position: absolute !important;
     left: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    margin: -1px !important;
+    top: 0 !important;
+    width: 800px !important;
+    height: 600px !important;
+    overflow: visible !important;
+    margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
+    pointer-events: none !important;
+}
+/* Permite click pe widget Packeta/Easybox când e deschis (modal-ul e de obicei position:fixed) */
+.woocommerce-checkout .webgsm-native-shipping-sr .packeta-widget,
+.woocommerce-checkout .webgsm-native-shipping-sr [class*="packeta"],
+.woocommerce-checkout .webgsm-native-shipping-sr iframe {
+    pointer-events: auto !important;
 }
 
 /* În tabelul standard de review păstrăm DOAR rândurile de shipping (curieri) – restul le ascundem ca să nu dublăm produsele și totalurile */
