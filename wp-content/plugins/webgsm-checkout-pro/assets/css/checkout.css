@@ -464,6 +464,7 @@
 
 .webgsm-summary-box .shipping-notice.warning { background: #fff3e0; color: #e65100; }
 .webgsm-summary-box .shipping-notice.success { background: #e8f5e9; color: #2e7d32; }
+.webgsm-summary-box .shipping-notice.info { background: #e3f2fd; color: #1565c0; }
 
 .webgsm-summary-box .btn-submit {
     display: flex;
@@ -529,11 +530,17 @@
     gap: 8px;
     font-size: 12px;
     color: #111827;
+    cursor: pointer;
 }
 .webgsm-summary-box .terms-checkbox input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
+    margin: 0;
     border-radius: 3px;
+    vertical-align: middle;
 }
 .webgsm-summary-box .terms-checkbox a {
     color: #2196f3;
@@ -544,14 +551,16 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    display: block;
 }
 .webgsm-summary-box .summary-shipping-list li.summary-shipping-item {
     font-size: 12px;
     cursor: pointer;
-    padding: 2px 0;
+    padding: 6px 0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
 }
 .webgsm-summary-box .summary-shipping-list li.summary-shipping-item::before {
     content: '';

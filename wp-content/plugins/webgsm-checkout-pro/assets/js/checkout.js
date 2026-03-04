@@ -1216,7 +1216,9 @@
             });
         }
         // La click pe elementul din sumar, bifează radio-ul WooCommerce și declanșează update_checkout (inclusiv hărți Easybox etc.)
-        $(document).on('click', '.summary-shipping-list .summary-shipping-item', function() {
+        $(document).on('click', '.summary-shipping-list .summary-shipping-item', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             var id = $(this).data('rateId');
             if (!id) return;
             var $radio = $('input[name^="shipping_method"][value="' + id + '"]');
@@ -1283,13 +1285,13 @@
             // Re-injectează datele (fără popup!)
             if (type === 'pf') {
                 injectPersonDataSilent();
+                $(document.body).trigger('update_checkout');
             } else {
                 injectCompanyDataSilent();
-                // Pentru PJ, adresa de livrare trebuie să fie aceeași cu adresa firmei
+                // Pentru PJ, adresa de livrare trebuie să fie aceeași cu adresa firmei (change declanșează update_checkout)
                 $('#same_as_billing').prop('checked', true).trigger('change');
             }
             showAccountBillingIfEmpty();
-            $(document.body).trigger('update_checkout');
         });
         
         // ==========================================

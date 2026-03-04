@@ -2,13 +2,13 @@
 /**
  * Plugin Name: WebGSM Checkout Pro
  * Description: Checkout personalizat pentru România - PF/PJ, ANAF, adrese salvate
- * Version: 5.1.0
+ * Version: 5.1.1
  * Author: WebGSM
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('WEBGSM_CHECKOUT_VERSION', '5.0.2');
+define('WEBGSM_CHECKOUT_VERSION', '5.1.1');
 define('WEBGSM_CHECKOUT_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_CHECKOUT_URL', plugin_dir_url(__FILE__));
 
@@ -106,7 +106,7 @@ class WebGSM_Checkout_Pro {
     public function add_summary_to_checkout_fragments($fragments) {
         ob_start();
         $this->render_summary_section();
-        $fragments['.webgsm-summary-box'] = ob_get_clean();
+        $fragments['#webgsm-checkout-summary'] = ob_get_clean();
 
         ob_start();
         $total_formatted = WC()->cart->get_cart_total();
@@ -122,8 +122,12 @@ class WebGSM_Checkout_Pro {
     
     public function enqueue_assets() {
         if (!is_checkout()) return;
-        wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], WEBGSM_CHECKOUT_VERSION);
-        wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], WEBGSM_CHECKOUT_VERSION, true);
+        $css_file = WEBGSM_CHECKOUT_PATH . 'assets/css/checkout.css';
+        $js_file  = WEBGSM_CHECKOUT_PATH . 'assets/js/checkout.js';
+        $css_ver = WEBGSM_CHECKOUT_VERSION . '-' . (file_exists($css_file) ? filemtime($css_file) : time());
+        $js_ver  = WEBGSM_CHECKOUT_VERSION . '-' . (file_exists($js_file) ? filemtime($js_file) : time());
+        wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], $css_ver);
+        wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], $js_ver, true);
         wp_localize_script('webgsm-checkout', 'webgsm_checkout', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('webgsm_nonce'),
@@ -444,7 +448,6 @@ class WebGSM_Checkout_Pro {
         $subtotal = WC()->cart->get_subtotal();
         $shipping = WC()->cart->get_shipping_total();
         $total = WC()->cart->get_total('');
-        $remaining = 250 - $subtotal;
         $applied_coupons = WC()->cart->get_applied_coupons();
         $total_discount = 0;
         
@@ -465,8 +468,12 @@ class WebGSM_Checkout_Pro {
             }
         }
         
+        $packages = WC()->shipping()->get_packages();
+        $has_packages = !empty($packages[0]['rates']);
+        $free_shipping_threshold = apply_filters('webgsm_free_shipping_threshold', 250);
+        $remaining = $free_shipping_threshold - $subtotal;
         ?>
-        <div class="webgsm-summary-box">
+        <div class="webgsm-summary-box" id="webgsm-checkout-summary">
             <div class="summary-header">Sumar comandă</div>
             
             <?php
@@ -557,7 +564,6 @@ class WebGSM_Checkout_Pro {
             
             <?php
             // Afișare toate metodele de livrare disponibile în sumar (curieri)
-            $packages = WC()->shipping()->get_packages();
             $chosen_methods = WC()->session ? (array) WC()->session->get('chosen_shipping_methods') : [];
             $chosen_method = isset($chosen_methods[0]) ? $chosen_methods[0] : '';
             ?>
@@ -599,6 +605,8 @@ class WebGSM_Checkout_Pro {
             
             if ($has_free_shipping_coupon) : ?>
                 <div class="shipping-notice success">✓ Transport gratuit (cupon aplicat)</div>
+            <?php elseif (!$has_packages) : ?>
+                <div class="shipping-notice info">Completează adresa pentru a calcula transportul</div>
             <?php elseif ($remaining > 0) : ?>
                 <div class="shipping-notice warning">Mai adaugă <strong><?php echo wc_price($remaining); ?></strong> pentru transport gratuit</div>
             <?php else : ?>
