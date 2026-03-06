@@ -592,7 +592,7 @@ class WebGSM_Checkout_Pro {
                 </span>
             </div>
             <?php
-            $is_packeta = $chosen_method && ( strpos( $chosen_method, 'packeta' ) === 0 || stripos( $chosen_method, 'easybox' ) !== false || stripos( $chosen_method, 'fanbox' ) !== false || stripos( $chosen_method, 'sameday' ) !== false );
+            $is_packeta = $chosen_method && self::is_packeta_pickup_point_method( $chosen_method );
             if ( $is_packeta ) : ?>
                 <div class="summary-row">
                     <button type="button" class="webgsm-packeta-open-btn" style="background:#3b82f6;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
@@ -1295,8 +1295,8 @@ class WebGSM_Checkout_Pro {
     }
     
     /**
-     * Verifică dacă metoda de livrare aleasă este Packeta (Easybox/Fanbox).
-     * Când da, WebGSM nu trebuie să suprascrie adresa – Packeta o setează din punctul selectat.
+     * Doar metode BOX (punct ridicare): Fanbox, Easybox, Sameday Box.
+     * NU Sameday/Fan Courier (door-to-door). Când da, WebGSM nu suprascrie adresa – Packeta o setează.
      */
     public static function is_packeta_pickup_point_method( $method_id = null ) {
         if ( $method_id === null ) {
@@ -1308,7 +1308,10 @@ class WebGSM_Checkout_Pro {
         }
         $method_id = (string) $method_id;
         $id = strtolower( $method_id );
-        return $method_id !== '' && ( strpos( $id, 'packeta' ) === 0 || strpos( $id, 'packeta_sender' ) !== false || strpos( $id, 'easybox' ) !== false || strpos( $id, 'fanbox' ) !== false || strpos( $id, 'sameday' ) !== false );
+        if ( $method_id === '' ) return false;
+        if ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) === false ) return false;  // Sameday Courier door-to-door
+        if ( strpos( $id, 'fan' ) !== false && strpos( $id, 'fanbox' ) === false ) return false;   // Fan Courier door-to-door
+        return strpos( $id, 'packeta' ) === 0 || strpos( $id, 'packeta_sender' ) !== false || strpos( $id, 'easybox' ) !== false || strpos( $id, 'fanbox' ) !== false || ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) !== false );
     }
 
     /**
