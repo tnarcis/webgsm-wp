@@ -38,16 +38,174 @@
     display: none !important;
 }
 
-/* Logo-uri curieri punct ridicare – Sameday în loc de Packeta, dimensiune mică */
+/* Buton Selectează punct ridicare – pin + Sameday + Fan Courier */
+.webgsm-packeta-btn-row {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding: 12px 20px !important;
+    border-bottom: 1px solid #f0f0f0;
+}
+.webgsm-packeta-open-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0 !important;
+    min-width: 320px;
+    height: 64px;
+    padding: 0 4px 0 0 !important;
+    color: #1e293b !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    overflow: hidden !important;
+    background: #fff !important;
+}
+.webgsm-packeta-open-btn:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+    transform: translateY(-1px);
+    border-color: #cbd5e1 !important;
+}
+/* Pin – lineart, stânga */
+.webgsm-packeta-btn-pin {
+    flex: 0 0 48px !important;
+    width: 48px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #f1f5f9 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+}
+.webgsm-packeta-btn-pin svg {
+    width: 24px !important;
+    height: 24px !important;
+    flex-shrink: 0 !important;
+}
+.webgsm-packeta-open-btn:hover .webgsm-packeta-btn-pin {
+    color: #3b82f6 !important;
+}
+/* Zone logouri – Sameday și Fan Courier, mai mari */
+.webgsm-packeta-btn-logos {
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+.webgsm-packeta-logo-cell {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 10px 12px !important;
+    min-width: 0 !important;
+}
+.webgsm-packeta-logo-cell img {
+    max-height: 56px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+}
+.webgsm-packeta-logo-sameday {
+    border-right: 1px solid #e2e8f0 !important;
+}
+/* Text – dreapta */
+.webgsm-packeta-btn-text {
+    flex: 0 0 auto !important;
+    padding: 0 16px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.01em !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+}
+
+/* ===== RESPONSIVE – Buton punct ridicare ===== */
+@media (max-width: 768px) {
+    .webgsm-packeta-btn-row {
+        justify-content: stretch !important;
+        padding: 10px 16px !important;
+    }
+    .webgsm-packeta-open-btn {
+        min-width: 0 !important;
+        width: 100% !important;
+        height: 56px !important;
+    }
+    .webgsm-packeta-btn-pin {
+        flex: 0 0 44px !important;
+        width: 44px !important;
+    }
+    .webgsm-packeta-btn-pin svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    .webgsm-packeta-logo-cell {
+        padding: 6px 8px !important;
+    }
+    .webgsm-packeta-logo-cell img {
+        max-height: 44px !important;
+    }
+    .webgsm-packeta-btn-text {
+        padding: 0 10px !important;
+        font-size: 12px !important;
+    }
+}
+@media (max-width: 480px) {
+    .webgsm-packeta-btn-row {
+        padding: 8px 12px !important;
+    }
+    .webgsm-packeta-open-btn {
+        height: 54px !important;
+    }
+    .webgsm-packeta-btn-pin {
+        flex: 0 0 40px !important;
+        width: 40px !important;
+    }
+    .webgsm-packeta-btn-pin svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    .webgsm-packeta-logo-cell {
+        padding: 6px 6px !important;
+    }
+    .webgsm-packeta-logo-cell img {
+        max-height: 40px !important;
+    }
+    .webgsm-packeta-btn-text {
+        padding: 0 8px !important;
+        font-size: 11px !important;
+    }
+}
+
+/* Logo-uri Packeta în secțiunea Metoda de livrare – dimensiune mică, design curat */
+#webgsm-shipping-container .packetery-widget-button-logo,
+#webgsm-shipping-container .packetery-widget-button-row img,
+#webgsm-shipping-container .packeta-widget-button img,
+#webgsm-shipping-container [class*="packeta"] img,
+#webgsm-shipping-container [class*="packetery"] img,
+.webgsm-native-shipping-sr .packetery-widget-button-logo,
+.webgsm-native-shipping-sr .packetery-widget-button-row img,
+.webgsm-native-shipping-sr .packeta-widget-button img,
 .woocommerce-checkout .packetery-widget-button-logo,
 .woocommerce-checkout .packetery-widget-button-row img,
 .woocommerce-checkout .packeta-widget-button img {
-    max-height: 32px !important;
+    max-height: 24px !important;
     width: auto !important;
-    object-fit: contain;
+    object-fit: contain !important;
 }
 .woocommerce-checkout .webgsm-carrier-logo-sameday {
-    /* Sameday logo – deja setat via JS */
+    max-height: 24px !important;
+}
+/* Ascunde butonul duplicat "Choose pickup point" din Metoda de livrare – folosim doar butonul din sumar */
+#webgsm-shipping-container .packetery-widget-button-table-row,
+#webgsm-shipping-container .packetery-widget-button-wrapper,
+.webgsm-native-shipping-sr .packetery-widget-button-table-row,
+.webgsm-native-shipping-sr .packetery-widget-button-wrapper {
+    display: none !important;
 }
 
 /* Native order review (shipping radios, Packeta) – VIZIBIL în secțiunea Metoda de livrare */

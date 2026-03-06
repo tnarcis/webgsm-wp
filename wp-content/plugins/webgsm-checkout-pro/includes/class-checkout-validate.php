@@ -63,6 +63,26 @@ class WebGSM_Checkout_Validate {
             );
         }
         
+        // Punct ridicare – când Box e selectat, trebuie ales locker-ul
+        if (class_exists('WebGSM_Checkout_Pro') && WebGSM_Checkout_Pro::is_packeta_pickup_point_method()) {
+            $has_point = false;
+            foreach (array_keys($_POST) as $key) {
+                if (is_string($key) && (stripos($key, 'packetery') !== false || stripos($key, 'packeta') !== false) && (stripos($key, 'point') !== false || stripos($key, 'branch') !== false)) {
+                    $val = $_POST[$key] ?? '';
+                    if (!empty(trim((string) $val))) {
+                        $has_point = true;
+                        break;
+                    }
+                }
+            }
+            if (!$has_point) {
+                wc_add_notice(
+                    __('Selectează punctul de ridicare (Easybox/Fanbox/Sameday Box) înainte de a finaliza comanda.', 'webgsm-checkout-pro'),
+                    'error'
+                );
+            }
+        }
+        
         // Determină tipul de client
         $customer_type = $this->webgsm_get_customer_type();
         

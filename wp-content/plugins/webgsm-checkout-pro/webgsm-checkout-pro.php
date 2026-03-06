@@ -129,11 +129,13 @@ class WebGSM_Checkout_Pro {
         wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], $css_ver);
         wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], $js_ver, true);
         $sameday_logo = apply_filters('webgsm_sameday_logo_url', 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp');
+        $door_to_door_methods = apply_filters('webgsm_packeta_door_to_door_methods', ['packeta_sender_7397', 'packeta_sender_762']);
         wp_localize_script('webgsm-checkout', 'webgsm_checkout', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('webgsm_nonce'),
             'is_logged_in' => is_user_logged_in(),
             'sameday_logo_url' => $sameday_logo,
+            'door_to_door_methods' => array_map('strtolower', (array) $door_to_door_methods),
         ]);
     }
 
@@ -593,10 +595,24 @@ class WebGSM_Checkout_Pro {
             </div>
             <?php
             $is_packeta = $chosen_method && self::is_packeta_pickup_point_method( $chosen_method );
-            if ( $is_packeta ) : ?>
-                <div class="summary-row">
-                    <button type="button" class="webgsm-packeta-open-btn" style="background:#3b82f6;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;">
-                        📍 Selectează punct ridicare
+            if ( $is_packeta ) :
+                $sameday_logo = apply_filters('webgsm_sameday_logo_url', 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp');
+                $fan_logo = apply_filters('webgsm_fanbox_logo_url', 'https://www.fancourier.ro/wp-content/uploads/2023/03/logo.svg');
+                ?>
+                <div class="summary-row webgsm-packeta-btn-row">
+                    <button type="button" class="webgsm-packeta-open-btn">
+                        <span class="webgsm-packeta-btn-pin">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </span>
+                        <span class="webgsm-packeta-btn-logos">
+                            <span class="webgsm-packeta-logo-cell webgsm-packeta-logo-sameday">
+                                <img src="<?php echo esc_url($sameday_logo); ?>" alt="Sameday" loading="lazy">
+                            </span>
+                            <span class="webgsm-packeta-logo-cell webgsm-packeta-logo-fan">
+                                <img src="<?php echo esc_url($fan_logo); ?>" alt="Fan Courier" loading="lazy">
+                            </span>
+                        </span>
+                        <span class="webgsm-packeta-btn-text">Selectează punct ridicare</span>
                     </button>
                 </div>
             <?php endif; ?>
@@ -1309,8 +1325,11 @@ class WebGSM_Checkout_Pro {
         $method_id = (string) $method_id;
         $id = strtolower( $method_id );
         if ( $method_id === '' ) return false;
-        if ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) === false ) return false;  // Sameday Courier door-to-door
-        if ( strpos( $id, 'fan' ) !== false && strpos( $id, 'fanbox' ) === false ) return false;   // Fan Courier door-to-door
+        $door_list = apply_filters( 'webgsm_packeta_door_to_door_methods', [ 'packeta_sender_7397', 'packeta_sender_762' ] );
+        $door_list = array_map( 'strtolower', (array) $door_list );
+        if ( in_array( $id, $door_list, true ) ) return false;  // door-to-door din listă
+        if ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) === false ) return false;  // Sameday Courier
+        if ( strpos( $id, 'fan' ) !== false && strpos( $id, 'fanbox' ) === false ) return false;   // Fan Courier
         return strpos( $id, 'packeta' ) === 0 || strpos( $id, 'packeta_sender' ) !== false || strpos( $id, 'easybox' ) !== false || strpos( $id, 'fanbox' ) !== false || ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) !== false );
     }
 
