@@ -57,6 +57,8 @@
         moveShippingSection();
         replacePacketaLogosForCarriers();
         togglePacketaWidgetVisibility();
+        ensurePickupPointInfoContainer();
+        updatePickupPointDisplay();
         
         // Setează tipul inițial de client
         initCustomerType();
@@ -151,6 +153,70 @@
         return s.indexOf('packeta') === 0 || s.indexOf('easybox') !== -1 || s.indexOf('fanbox') !== -1 || (s.indexOf('sameday') !== -1 && s.indexOf('box') !== -1);
     }
     
+    /** Afișează adresa punctului de ridicare selectat (Easybox/Fanbox) */
+    function updatePickupPointDisplay() {
+        var chosen = $('input[name^="shipping_method"]:checked').val() || '';
+        var $info = $('#webgsm-pickup-point-info');
+
+        if (!isPacketaPickupMethod(chosen)) {
+            $info.hide().empty();
+            return;
+        }
+
+        // Citim datele din câmpurile ascunse Packeta
+        var place  = ($('#packetery_point_place').val()  || '').trim();
+        var street = ($('#packetery_point_street').val() || '').trim();
+        var city   = ($('#packetery_point_city').val()   || '').trim();
+        var zip    = ($('#packetery_point_zip').val()    || '').trim();
+
+        if (!place && !street) {
+            $info.hide().empty();
+            return;
+        }
+
+        // Determinăm tipul curierului din ID-ul metodei
+        var carrierLabel = 'Box';
+        var carrierClass = 'webgsm-pui-generic';
+        var s = chosen.toLowerCase();
+        if (s.indexOf('sameday') !== -1 || s.indexOf('easybox') !== -1) {
+            carrierLabel = 'Sameday Easybox';
+            carrierClass = 'webgsm-pui-sameday';
+        } else if (s.indexOf('fanbox') !== -1 || s.indexOf('fan') !== -1) {
+            carrierLabel = 'Fan Courier FanBox';
+            carrierClass = 'webgsm-pui-fanbox';
+        }
+
+        var addrParts = [street, (city + (zip ? ' ' + zip : ''))].filter(Boolean);
+        var addrStr = addrParts.join(', ');
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-pickup',location:'checkout.js:updatePickupPointDisplay',message:'pickup_point_data',data:{chosen:chosen,place:place,street:street,city:city,zip:zip,carrier:carrierLabel,addrStr:addrStr},timestamp:Date.now()})}).catch(function(){});
+        // #endregion agent log
+
+        $info.removeClass('webgsm-pui-sameday webgsm-pui-fanbox webgsm-pui-generic')
+             .addClass(carrierClass)
+             .html(
+                '<span class="webgsm-pui-icon">📍</span>' +
+                '<span class="webgsm-pui-body">' +
+                    '<strong class="webgsm-pui-name">' + place + '</strong>' +
+                    '<span class="webgsm-pui-carrier">' + carrierLabel + '</span>' +
+                    (addrStr ? '<span class="webgsm-pui-addr">' + addrStr + '</span>' : '') +
+                '</span>'
+             )
+             .show();
+    }
+
+    /** Injectează containerul pentru info punct ridicare după secțiunea de livrare */
+    function ensurePickupPointInfoContainer() {
+        if ($('#webgsm-pickup-point-info').length) return;
+        var $container = $('<div id="webgsm-pickup-point-info" style="display:none"></div>');
+        var $target = $('#webgsm-shipping-container, .webgsm-native-shipping-sr').last();
+        if ($target.length) {
+            $target.after($container);
+        } else {
+            $('.webgsm-checkout-main').append($container);
+        }
+    }
+
     /** Ascunde widgetul Packeta când e selectat door-to-door – evită eroarea scriptului Packeta */
     function togglePacketaWidgetVisibility() {
         var chosen = $('input[name^="shipping_method"]:checked').val();
@@ -1237,6 +1303,9 @@
             
             // Validează
             var isValid = validateBeforeSubmit();
+            // #region agent log
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-submit',location:'checkout.js:place_order_click',message:'submit_attempt',data:{isValid:isValid,termsChecked:$('#terms').is(':checked'),formExists:$('form.checkout').length>0,formAction:$('form.checkout').attr('action')||'n/a',personSelected:!!$('input[name="selected_person"]:checked').length,companySelected:!!$('input[name="selected_company"]:checked').length,customerType:WebGSM.currentCustomerType,billingFirstName:$('#billing_first_name').val()||'',billingPhone:$('#billing_phone').val()||'',billingEmail:$('#billing_email').val()||'',viewport:window.innerWidth},timestamp:Date.now()})}).catch(function(){});
+            // #endregion agent log
             
             if (!isValid) {
                 return false;
@@ -1279,6 +1348,9 @@
                 }
             }
             
+            // #region agent log
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-submit',location:'checkout.js:form_submit',message:'calling_form_submit',data:{formLength:$form.length,termsHiddenInForm:$form.find('input[name="terms"]').length,paymentInForm:$form.find('input[name="payment_method"]').val()||'',nonceInForm:!!$form.find('input[name="woocommerce-process-checkout-nonce"]').length},timestamp:Date.now()})}).catch(function(){});
+            // #endregion agent log
             $form.submit();
             
             return false;
@@ -1319,7 +1391,10 @@
             var id = $(this).val();
             if (!isPacketaPickupMethod(id)) window._webgsm_open_packeta_after_update = false;
             togglePacketaWidgetVisibility();
+            updatePickupPointDisplay();
             syncSummaryShippingSelection();
+            // Forțăm recalcularea totalului și re-randarea sumarului când metoda de livrare se schimbă din containerul „Metoda de livrare”
+            $(document.body).trigger('update_checkout');
         });
         // Buton "Selectează punct ridicare" – deschide harta DOAR dacă Packeta/Easybox/Fanbox e selectat
         $(document).on('click', '.webgsm-packeta-open-btn', function(e) {
@@ -1342,6 +1417,9 @@
         // Metodă 3: Form submit – injectează termenii (checkbox-ul e în sumar, în afara formularului)
         $('form.checkout').on('submit', function() {
             log('========== FORM SUBMIT ==========');
+            // #region agent log
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-submit',location:'checkout.js:form.submit_handler',message:'form_submit_fired',data:{termsChecked:$('#terms').is(':checked'),formId:this.id,timestamp:Date.now()}})}).catch(function(){});
+            // #endregion agent log
             var $form = $(this);
             $form.find('input[name="terms"]').remove();
             if ($('#terms').is(':checked')) {
@@ -1548,11 +1626,66 @@
         // WOOCOMMERCE / MARTFURY EVENTS - RE-INIT
         // ==========================================
         
+        // Sincronizează custom terms checkbox → native WC terms (care e în form și ajunge la POST)
+        $(document).on('change', '#terms', function() {
+            var isChecked = $(this).is(':checked');
+            // Selectăm TOATE câmpurile #terms și le setăm la același state
+            $('[name="terms"]').prop('checked', isChecked);
+        });
+
+        // #region agent log – terms debug
+        setTimeout(function() {
+            var allTerms = document.querySelectorAll('[name="terms"], #terms');
+            var data = [];
+            allTerms.forEach(function(el, i) {
+                var form = el.closest('form');
+                data.push({
+                    idx: i, id: el.id, name: el.name, type: el.type,
+                    checked: el.checked, visible: window.getComputedStyle(el).display !== 'none',
+                    inForm: !!form, formId: form ? form.id : 'n/a',
+                    parentClass: el.parentElement ? el.parentElement.className : ''
+                });
+            });
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-terms',location:'checkout.js:terms-debug',message:'terms_inputs_found',data:{count:allTerms.length,inputs:data,viewport:window.innerWidth},timestamp:Date.now()})}).catch(function(){});
+        }, 1000);
+        // #endregion agent log
+
+        // MutationObserver pe câmpurile Packeta – actualizează info punct ridicare după selecție
+        (function() {
+            function watchPacketaField(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                var observer = new MutationObserver(function() { updatePickupPointDisplay(); });
+                observer.observe(el, { attributes: true, attributeFilter: ['value'] });
+                el.addEventListener('change', updatePickupPointDisplay);
+            }
+            // Packeta actualizează și .packeta-widget-selected-address – observăm și aceasta
+            var selAddrObs = new MutationObserver(function() { updatePickupPointDisplay(); });
+            function attachSelAddrObs() {
+                var el = document.querySelector('.packeta-widget-selected-address');
+                if (el) selAddrObs.observe(el, { childList: true, subtree: true, characterData: true });
+            }
+            setTimeout(function() {
+                ['packetery_point_place','packetery_point_street','packetery_point_city','packetery_point_zip'].forEach(watchPacketaField);
+                attachSelAddrObs();
+            }, 800);
+        })();
+
+        $(document.body).on('checkout_error', function() {
+            // #region agent log
+            var notices = [];
+            document.querySelectorAll('.woocommerce-error li, .woocommerce-error, .woocommerce-notices-wrapper .woocommerce-error').forEach(function(el) { notices.push(el.textContent.trim().substring(0, 200)); });
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-wc-error',location:'checkout.js:checkout_error',message:'wc_server_errors',data:{notices:notices,noticeHTML:document.querySelector('.woocommerce-notices-wrapper') ? document.querySelector('.woocommerce-notices-wrapper').innerHTML.substring(0,500) : 'none'},timestamp:Date.now()})}).catch(function(){});
+            // #endregion agent log
+        });
+
         $(document.body).on('updated_checkout', function() {
             log('========== updated_checkout - RE-INIT ==========');
 
             // Ascunde widget Packeta IMEDIAT dacă door-to-door – înainte de scriptul Packeta
             togglePacketaWidgetVisibility();
+            ensurePickupPointInfoContainer();
+            updatePickupPointDisplay();
 
             // Re-aplică toate setările
             removeAllRequiredAttributes();
@@ -1561,6 +1694,7 @@
             setTimeout(function() {
                 replacePacketaLogosForCarriers();
                 togglePacketaWidgetVisibility();
+                updatePickupPointDisplay();
             }, 100);
 
             // Re-injectează datele

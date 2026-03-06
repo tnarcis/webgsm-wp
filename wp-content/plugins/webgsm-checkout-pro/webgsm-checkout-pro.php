@@ -108,9 +108,10 @@ class WebGSM_Checkout_Pro {
         $this->render_summary_section();
         $fragments['#webgsm-checkout-summary'] = ob_get_clean();
 
+        // Totalul din bara mobilă trebuie să fie IDENTIC cu cel din sumar (inclusiv transport + taxe)
         ob_start();
-        $total_formatted = WC()->cart->get_cart_total();
-        echo '<div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong>' . $total_formatted . '</strong></div>';
+        $mobile_total = WC()->cart->get_total('');
+        echo '<div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong>' . wc_price($mobile_total) . '</strong></div>';
         $fragments['.webgsm-mobile-total-fragment'] = ob_get_clean();
 
         return $fragments;
@@ -200,16 +201,29 @@ class WebGSM_Checkout_Pro {
         $this->render_summary_section();
         echo '</div>';
         
-        $total_formatted = WC()->cart->get_cart_total();
+        // Folosim același total ca în sumar (WC()->cart->get_total('')) ca să includem transportul și taxele
+        $total_formatted = wc_price(WC()->cart->get_total(''));
         ?>
-        <div class="webgsm-mobile-submit">
-            <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
-            <button type="button" class="btn-submit-mobile" id="mobile_place_order">Trimite comanda</button>
-        </div>
+            <div class="webgsm-mobile-submit">
+                <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
+                <button type="button" class="btn-submit-mobile" id="mobile_place_order" onclick="fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-click-raw',location:'php:mobile_place_order_onclick',message:'raw_click_fired',data:{ts:Date.now(),href:location.href},timestamp:Date.now()})}).catch(function(){});">Trimite comanda</button>
+            </div>
         <?php
         $this->render_address_popup();
         $this->render_company_popup();
         $this->render_person_popup();
+        // #region agent log – B2B DOM check
+        ?>
+        <script>
+        (function(){
+            var rrp=document.querySelector('.summary-row-rrp');
+            var b2b=document.querySelector('.summary-row-b2b-savings');
+            var summary=document.querySelector('#webgsm-checkout-summary');
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-dom',location:'webgsm-checkout-pro.php:checkout_start',message:'b2b_dom_check',data:{rrpExists:!!rrp,b2bSavingsExists:!!b2b,summaryExists:!!summary,rrpDisplay:rrp?window.getComputedStyle(rrp).display:'N/A',b2bDisplay:b2b?window.getComputedStyle(b2b).display:'N/A',viewport:window.innerWidth},timestamp:Date.now()})}).catch(function(){});
+        })();
+        </script>
+        <?php
+        // #endregion agent log
     }
     
     public function checkout_end() { echo '</div>'; }
@@ -1394,15 +1408,34 @@ class WebGSM_Checkout_Pro {
         <style>
         .woocommerce-cart .woocommerce{max-width:900px;margin:0 auto;padding:20px}
         .woocommerce-cart .coupon,.woocommerce-cart .cart_totals,.woocommerce-cart .woocommerce-shipping-calculator,.woocommerce-cart .shipping,.woocommerce-cart .cart-subtotal,.woocommerce-cart .order-total,.woocommerce-cart .cross-sells,.woocommerce-cart .cart-collaterals,.woocommerce-cart .return-to-shop,.woocommerce-cart .wc-proceed-to-checkout,.woocommerce-cart .btn-shop,.woocommerce-cart button[name="update_cart"],.woocommerce-cart td.actions{display:none!important}
-        .webgsm-cart-buttons{display:flex;justify-content:space-between;align-items:center;padding:20px 0;margin-top:20px;border-top:1px solid #e0e0e0}
+        .webgsm-cart-buttons{display:flex;justify-content:space-between;align-items:center;padding:20px 0;margin-top:0;border-top:none}
         .webgsm-cart-buttons .btn-continue{display:inline-flex;align-items:center;gap:8px;background:#333;color:#fff;padding:10px 18px;border-radius:25px;text-decoration:none;font-size:13px}
         .webgsm-cart-buttons .btn-checkout{background:#4caf50;color:#fff;padding:12px 30px;border-radius:25px;font-size:14px;font-weight:600;text-decoration:none}
+        .webgsm-cart-total-bar{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 20px;margin-top:20px}
+        .webgsm-cart-total-bar .wctb-label{font-size:15px;font-weight:600;color:#374151}
+        .webgsm-cart-total-bar .wctb-count{font-size:13px;color:#6b7280;margin-left:8px}
+        .webgsm-cart-total-bar .wctb-amount{font-size:22px;font-weight:800;color:#3b82f6}
         </style>
         <script>
         jQuery(function($){
             var shop='<?php echo esc_url(wc_get_page_permalink('shop')); ?>',chk='<?php echo esc_url(wc_get_checkout_url()); ?>';
-            function add(){$('.webgsm-cart-buttons').remove();$('.woocommerce-cart .shop_table.cart').after('<div class="webgsm-cart-buttons"><a href="'+shop+'" class="btn-continue">← Continuă</a><a href="'+chk+'" class="btn-checkout">Finalizare</a></div>');}
-            add();$(document.body).on('updated_wc_div',add);
+            function getAmount(sel){var el=document.querySelector(sel);return el?el.innerHTML:'';}
+            function getCount(){var t=0;document.querySelectorAll('.woocommerce-cart-form .shop_table.cart tbody tr.cart_item .qty').forEach(function(i){t+=parseInt(i.value)||0;});return t||document.querySelectorAll('.woocommerce-cart-form .shop_table.cart tbody tr.cart_item').length;}
+            function add(){
+                $('.webgsm-cart-buttons').remove();
+                $('.webgsm-cart-total-bar').remove();
+                var total=getAmount('.order-total .amount');
+                var count=getCount();
+                var totalBar='<div class="webgsm-cart-total-bar">'
+                    +'<div><span class="wctb-label">Total coș</span><span class="wctb-count">('+count+' bucăți)</span></div>'
+                    +'<div class="wctb-amount">'+total+'</div>'
+                    +'</div>';
+                var buttons='<div class="webgsm-cart-buttons"><a href="'+shop+'" class="btn-continue">← Continuă</a><a href="'+chk+'" class="btn-checkout">Finalizare →</a></div>';
+                $('.woocommerce-cart .shop_table.cart').first().after(totalBar+buttons);
+            }
+            add();
+            $(document.body).on('updated_wc_div', add);
+            $(document.body).on('wc_cart_emptied', add);
         });
         </script>
         <?php

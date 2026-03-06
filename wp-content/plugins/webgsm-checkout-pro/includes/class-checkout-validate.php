@@ -65,6 +65,19 @@ class WebGSM_Checkout_Validate {
         
         // Punct ridicare – când Box e selectat, trebuie ales locker-ul
         if (class_exists('WebGSM_Checkout_Pro') && WebGSM_Checkout_Pro::is_packeta_pickup_point_method()) {
+            // #region agent log – PHP pickup validation
+            $log_path = '/Users/narcistomescu/Local Sites/webgsm/app/public/.cursor/debug-2901b8.log';
+            $packeta_keys = [];
+            $all_keys = array_keys($_POST);
+            foreach ($all_keys as $k) {
+                if (stripos($k, 'packetery') !== false || stripos($k, 'packeta') !== false || stripos($k, 'point') !== false || stripos($k, 'branch') !== false) {
+                    $packeta_keys[$k] = substr((string)($_POST[$k] ?? ''), 0, 80);
+                }
+            }
+            $log_entry = json_encode(['sessionId'=>'2901b8','hypothesisId'=>'H-php-pickup','location'=>'class-checkout-validate.php:pickup_check','message'=>'post_packeta_keys','data'=>['packeta_keys'=>$packeta_keys,'all_post_keys'=>array_slice($all_keys, 0, 60),'shipping_method'=>$_POST['shipping_method'] ?? 'n/a'],'timestamp'=>round(microtime(true)*1000)]);
+            file_put_contents($log_path, $log_entry . "\n", FILE_APPEND | LOCK_EX);
+            // #endregion agent log
+
             $has_point = false;
             foreach (array_keys($_POST) as $key) {
                 if (is_string($key) && (stripos($key, 'packetery') !== false || stripos($key, 'packeta') !== false) && (stripos($key, 'point') !== false || stripos($key, 'branch') !== false)) {

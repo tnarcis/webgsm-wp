@@ -556,6 +556,30 @@ body.search .product .byline {
 /* ============================================
    PAGINA COȘ - STILIZARE
    ============================================ */
+/* Tabel coș: centrat pe pagină, coloane Preț / Cantitate / Total mai late, pe mijloc */
+.woocommerce-cart table.shop_table.cart {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+.woocommerce-cart table.shop_table.cart td.product-price,
+.woocommerce-cart table.shop_table.cart td.product-quantity,
+.woocommerce-cart table.shop_table.cart td.product-subtotal {
+    text-align: center !important;
+    min-width: 110px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+.woocommerce-cart table.shop_table.cart th.product-price,
+.woocommerce-cart table.shop_table.cart th.product-quantity,
+.woocommerce-cart table.shop_table.cart th.product-subtotal {
+    text-align: center !important;
+    min-width: 110px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+.woocommerce-cart table.shop_table.cart .quantity {
+    justify-content: center !important;
+}
 /* Toate butoanele din coș - rotunjite albastre */
 .woocommerce-cart .woocommerce .button,
 .woocommerce-cart .button,
@@ -785,20 +809,78 @@ button.button {
     vertical-align: middle !important;
 }
 
-/* Mobile cart fixes */
+/* Mobile cart – fix complet bazat pe date runtime */
 @media (max-width: 768px) {
-    .woocommerce-cart .quantity {
-        width: auto !important;
-        min-width: 100px !important;
+    /* Mărește gutter-ul stâng al rândului pentru poza mai mare */
+    .woocommerce-cart table.cart tr.cart_item {
+        padding-left: 120px !important;
     }
-    
-    .woocommerce-cart .quantity input.qty {
-        width: 40px !important;
+    /* FIX ROOT CAUSE: thumbnail absolut în gutter stâng + poză fără clipping */
+    .woocommerce-cart table.cart tr.cart_item td.product-thumbnail {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 114px !important;
+        padding: 4px 2px !important;
+        display: block !important;
+        overflow: visible !important;
     }
-    
-    .woocommerce-cart .quantity .plus,
-    .woocommerce-cart .quantity .minus {
-        width: 25px !important;
+    .woocommerce-cart table.cart tr.cart_item td.product-thumbnail > a {
+        display: block !important;
+    }
+    .woocommerce-cart table.cart tr.cart_item td.product-thumbnail > a img {
+        width: 110px !important;
+        max-width: none !important;
+        height: 110px !important;
+        object-fit: cover !important;
+        display: block !important;
+        border-radius: 6px !important;
+    }
+    /* Nume produs – albastru, bold */
+    .woocommerce-cart table.cart tr.cart_item td.product-name {
+        padding-top: 8px !important;
+        padding-bottom: 4px !important;
+    }
+    .woocommerce-cart table.cart tr.cart_item td.product-name a {
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        color: #3b82f6 !important;
+        line-height: 1.3 !important;
+    }
+    /* Preț unitar */
+    .woocommerce-cart table.cart tr.cart_item td.product-price {
+        font-size: 14px !important;
+        padding-top: 2px !important;
+        padding-bottom: 4px !important;
+    }
+    /* Total produs – mai mare, mai vizibil */
+    .woocommerce-cart table.cart tr.cart_item td.product-subtotal {
+        font-size: 16px !important;
+        padding-top: 2px !important;
+        padding-bottom: 8px !important;
+    }
+    .woocommerce-cart table.cart tr.cart_item td.product-subtotal .amount {
+        font-weight: 800 !important;
+        color: #1e293b !important;
+        font-size: 17px !important;
+    }
+    /* Cantitate row */
+    .woocommerce-cart table.cart tr.cart_item td.product-quantity {
+        padding-top: 4px !important;
+        padding-bottom: 6px !important;
+        align-items: center !important;
+    }
+    /* X (mf-remove) – stil clar */
+    .woocommerce-cart table.cart tr.cart_item td.product-quantity .product-remove .mf-remove {
+        background-color: #fee2e2 !important;
+        color: #dc2626 !important;
+        border-radius: 6px !important;
+        font-size: 18px !important;
+        width: 32px !important;
+        height: 32px !important;
+        line-height: 32px !important;
+        display: inline-block !important;
+        text-align: center !important;
     }
 }
 
