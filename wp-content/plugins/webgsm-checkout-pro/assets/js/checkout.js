@@ -1481,9 +1481,11 @@
 
             // Packeta – doar dacă e pickup point (Box/Easybox/Locker)
             if (isPacketaPickupMethod(chosenShippingMethod)) {
-                $form.find('input[name^="packetery_"]').remove();
-
                 var packetaFields = {};
+                var requiredKeys = ['packetery_point_id', 'packetery_point_name', 'packetery_point_city',
+                 'packetery_point_zip', 'packetery_point_street', 'packetery_point_place',
+                 'packetery_point_url', 'packetery_point_type', 'packetery_carrier_id'];
+
                 $('input[name^="packetery_"], input[id^="packetery_"]').each(function() {
                     var n = $(this).attr('name') || $(this).attr('id');
                     var v = $(this).val();
@@ -1492,22 +1494,29 @@
                     }
                 });
 
-                ['packetery_point_id', 'packetery_point_name', 'packetery_point_city',
-                 'packetery_point_zip', 'packetery_point_street', 'packetery_point_place',
-                 'packetery_point_url', 'packetery_point_type', 'packetery_carrier_id'].forEach(function(fieldName) {
+                requiredKeys.forEach(function(fieldName) {
                     if (!packetaFields[fieldName]) {
                         var $el = $('#' + fieldName);
                         if ($el.length && $el.val()) {
                             packetaFields[fieldName] = $el.val();
                         }
                     }
+                    if (!packetaFields[fieldName] && _packetaSavedState[fieldName]) {
+                        packetaFields[fieldName] = _packetaSavedState[fieldName];
+                    }
                 });
+
+                $form.find('input.webgsm-packetery-injected').remove();
 
                 for (var fieldName in packetaFields) {
                     if (packetaFields.hasOwnProperty(fieldName)) {
-                        $form.append('<input type="hidden" name="' + fieldName + '" value="' + (packetaFields[fieldName] || '') + '">');
+                        $form.append('<input type="hidden" class="webgsm-packetery-injected" name="' + fieldName + '" value="' + (packetaFields[fieldName] || '') + '">');
                     }
                 }
+
+                // #region agent log
+                fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:injectPacketaFields',message:'Packeta inject result',data:{packetaFields:packetaFields,savedStateFallback:_packetaSavedState,formPacketaCount:$form.find('input[name^="packetery_"]').length,shippingMethod:chosenShippingMethod},timestamp:Date.now(),hypothesisId:'INJECT'})}).catch(function(){});
+                // #endregion
 
                 log('Packeta fields injected:', packetaFields);
                 if (!packetaFields['packetery_point_id']) {
@@ -1537,6 +1546,15 @@
             $('form.checkout').removeClass('processing');
 
             log('TRIMITE FORM – form.checkout.submit()');
+
+            // #region agent log
+            var formData=$('form.checkout').serialize();
+            var packetaInForm=formData.match(/packetery_[^&]*/g)||[];
+            var paymentInForm=formData.match(/payment_method=[^&]*/g)||[];
+            var shippingInForm=formData.match(/shipping_method[^&]*/g)||[];
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:formSubmit',message:'Form data at submit',data:{packetaFields:packetaInForm,paymentFields:paymentInForm,shippingFields:shippingInForm,totalFormLength:formData.length},timestamp:Date.now(),hypothesisId:'SUBMIT'})}).catch(function(){});
+            // #endregion
+
             $('form.checkout').submit();
             return false;
         });

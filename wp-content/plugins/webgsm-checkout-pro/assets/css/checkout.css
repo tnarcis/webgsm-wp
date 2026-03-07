@@ -222,8 +222,8 @@
 }
 
 /* Ascunde metoda WC "Free Shipping" din radio-urile native – redundantă când curieri afișează deja GRATUIT */
-.webgsm-native-shipping-sr tr:has(input[value*="free_shipping"]),
-#webgsm-shipping-container tr:has(input[value*="free_shipping"]) {
+.webgsm-native-shipping-sr li:has(input[value*="free_shipping"]),
+#webgsm-shipping-container li:has(input[value*="free_shipping"]) {
     display: none !important;
 }
 

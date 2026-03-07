@@ -71,6 +71,26 @@ class WebGSM_Checkout_Validate {
                 $is_pickup = WebGSM_Checkout_Pro::is_packeta_pickup_point_method();
                 error_log('[WebGSM] is_packeta_pickup_point: ' . ($is_pickup ? 'DA' : 'NU'));
             }
+
+            // #region agent log
+            $debug_log_path = ABSPATH . '.cursor/debug-d841f7.log';
+            $log_data = json_encode([
+                'sessionId' => 'd841f7',
+                'location' => 'class-checkout-validate.php:webgsm_debug_log_post',
+                'message' => 'Server-side checkout process',
+                'data' => [
+                    'shipping_method' => $shipping_method,
+                    'session_chosen' => $chosen,
+                    'packetery_post_fields' => $packetery_fields,
+                    'is_pickup' => isset($is_pickup) ? $is_pickup : null,
+                    'payment_method' => $_POST['payment_method'] ?? 'NESETAT',
+                    'has_terms' => !empty($_POST['terms']),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+                'hypothesisId' => 'SERVER',
+            ]);
+            file_put_contents($debug_log_path, $log_data . "\n", FILE_APPEND);
+            // #endregion
         }
     }
     

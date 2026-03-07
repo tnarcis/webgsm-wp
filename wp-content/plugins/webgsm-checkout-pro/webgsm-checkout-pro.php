@@ -1429,15 +1429,41 @@ class WebGSM_Checkout_Pro {
         if ( self::is_packeta_pickup_point_method() ) {
             $order->update_meta_data( '_same_as_billing', '0' );
 
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                $packetery_keys = array_filter( array_keys( $_POST ), function( $k ) {
-                    return is_string( $k ) && stripos( $k, 'packetery' ) !== false;
-                });
-                error_log( '[WebGSM] Packeta pickup detected – NOT setting shipping address (Packeta handles it)' );
-                error_log( '[WebGSM] Packeta POST keys: ' . implode( ', ', $packetery_keys ) );
-                foreach ( $packetery_keys as $pk ) {
-                    error_log( "[WebGSM] Packeta POST: {$pk} = " . ( $_POST[ $pk ] ?? '' ) );
+            $point_name   = isset( $_POST['packetery_point_name'] ) ? sanitize_text_field( $_POST['packetery_point_name'] ) : '';
+            $point_street = isset( $_POST['packetery_point_street'] ) ? sanitize_text_field( $_POST['packetery_point_street'] ) : '';
+            $point_city   = isset( $_POST['packetery_point_city'] ) ? sanitize_text_field( $_POST['packetery_point_city'] ) : '';
+            $point_zip    = isset( $_POST['packetery_point_zip'] ) ? sanitize_text_field( $_POST['packetery_point_zip'] ) : '';
+            $point_place  = isset( $_POST['packetery_point_place'] ) ? sanitize_text_field( $_POST['packetery_point_place'] ) : '';
+
+            if ( ! empty( $point_name ) || ! empty( $point_street ) ) {
+                $addr1 = ! empty( $point_street ) ? $point_street : $point_name;
+                if ( is_callable( [ $order, 'set_shipping_first_name' ] ) ) {
+                    $order->set_shipping_first_name( $order->get_billing_first_name() ?: '' );
                 }
+                if ( is_callable( [ $order, 'set_shipping_last_name' ] ) ) {
+                    $order->set_shipping_last_name( $order->get_billing_last_name() ?: '' );
+                }
+                if ( is_callable( [ $order, 'set_shipping_address_1' ] ) ) {
+                    $order->set_shipping_address_1( $addr1 );
+                }
+                if ( is_callable( [ $order, 'set_shipping_address_2' ] ) ) {
+                    $order->set_shipping_address_2( $point_place );
+                }
+                if ( is_callable( [ $order, 'set_shipping_city' ] ) ) {
+                    $order->set_shipping_city( $point_city );
+                }
+                if ( is_callable( [ $order, 'set_shipping_postcode' ] ) ) {
+                    $order->set_shipping_postcode( $point_zip );
+                }
+                if ( is_callable( [ $order, 'set_shipping_country' ] ) ) {
+                    $order->set_shipping_country( 'RO' );
+                }
+                if ( is_callable( [ $order, 'set_shipping_company' ] ) ) {
+                    $order->set_shipping_company( $point_place );
+                }
+                $order->update_meta_data( '_shipping_address_1', $addr1 );
+                $order->update_meta_data( '_shipping_city', $point_city );
+                $order->update_meta_data( '_shipping_postcode', $point_zip );
             }
 
             return;
@@ -1484,7 +1510,14 @@ class WebGSM_Checkout_Pro {
             $order->update_meta_data('_same_as_billing', '1');
         }
 
+        // #region agent log
+        $debug_log_path = ABSPATH . '.cursor/debug-d841f7.log';
+        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'webgsm-checkout-pro.php:apply_custom_shipping_fields','message'=>'BEFORE order->save()','data'=>['order_id'=>method_exists($order,'get_id')?$order->get_id():'N/A'],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
+        // #endregion
         $order->save();
+        // #region agent log
+        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'webgsm-checkout-pro.php:apply_custom_shipping_fields','message'=>'AFTER order->save()','data'=>[],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
+        // #endregion
     }
     
     public function cart_page_css() {
