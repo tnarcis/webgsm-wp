@@ -52,7 +52,9 @@
         // Elimină required de pe toate inputurile (CRITIC)
         removeAllRequiredAttributes();
         
-        // Mută payment methods
+        // Restructurează DOM-ul: form.checkout wrappează tot layout-ul
+        integrateFormWithLayout();
+        // Mută payment/shipping din WC-original în containerele vizuale (tot inside form)
         movePaymentMethods();
         moveShippingSection();
         replacePacketaLogosForCarriers();
@@ -73,7 +75,23 @@
         
         // Marchează ca inițializat
         WebGSM.initialized = true;
-        
+
+        // #region agent log
+        (function(){
+            var sc=$('#webgsm-shipping-container')[0];
+            var pm=$('.webgsm-payment-methods')[0];
+            var sr=$('.webgsm-native-shipping-sr')[0];
+            var pay=$('#payment')[0];
+            var form=$('form.checkout')[0];
+            function vis(el){if(!el)return'NOT_IN_DOM';var s=window.getComputedStyle(el);return{display:s.display,visibility:s.visibility,opacity:s.opacity,h:el.offsetHeight,w:el.offsetWidth,overflow:s.overflow};}
+            var shippingRadioHTML='';
+            if(sr){var radios=$(sr).find('input[name^="shipping_method"]');shippingRadioHTML=radios.length+'_radios';radios.each(function(){shippingRadioHTML+=' | '+this.value+'(checked:'+this.checked+')';});}
+            var payRadioHTML='';
+            if(pay){var pradios=$(pay).find('input[name="payment_method"]');payRadioHTML=pradios.length+'_radios';pradios.each(function(){payRadioHTML+=' | '+this.value+'(checked:'+this.checked+')';});}
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:initComplete',message:'Visual state after init',data:{shippingContainer:vis(sc),paymentContainer:vis(pm),shippingSR:vis(sr),paymentDiv:vis(pay),formEl:vis(form),shippingRadios:shippingRadioHTML,paymentRadios:payRadioHTML,formClasses:form?form.className:'NONE',wcOrigHidden:$('.webgsm-wc-original').css('display')},timestamp:Date.now(),hypothesisId:'VISUAL'})}).catch(function(){});
+        })();
+        // #endregion
+
         log('========== INIT COMPLETE ==========');
     }
     
@@ -122,24 +140,131 @@
     // MUTĂ PAYMENT METHODS
     // =========================================
     
+    /**
+     * Restructurează DOM-ul: mută form.checkout să învelească tot conținutul custom.
+     *
+     * Problema: wc_checkout_form (variabilă locală în closure WC) deleghează
+     * TOATE evenimentele de pe form.checkout. Dacă mutăm #payment/shipping
+     * ÎN AFARA formularului, WC nu le mai vede → payment_method nu se trimite,
+     * selecția sare pe Bank Transfer, update_checkout nu se triggeruiește.
+     *
+     * Soluția: în loc să mutăm elemente DIN form, mutăm FORM-ul să le conțină pe TOATE.
+     * Astfel #payment + shipping rămân INSIDE form, WC funcționează nativ.
+     */
+    function integrateFormWithLayout() {
+        var $form = $('form.checkout');
+        var $wrapper = $('.webgsm-checkout-wrapper');
+
+        if (!$form.length || !$wrapper.length) return;
+        if ($form.hasClass('webgsm-form-integrated')) return;
+
+        // 1. Salvăm conținutul original al formularului WC (billing, shipping, #payment...)
+        var $wcOriginal = $('<div class="webgsm-wc-original"></div>');
+        $form.children().appendTo($wcOriginal);
+
+        // 2. Detașăm formularul din wrapper
+        $form.detach();
+
+        // 3. Mutăm tot conținutul wrapper-ului în formular
+        $wrapper.children().appendTo($form);
+
+        // 4. Adăugăm conținutul original WC (ascuns, dar accesibil pt fragment replacement)
+        $form.append($wcOriginal);
+
+        // 5. Formularul ia locul wrapper-ului
+        $wrapper.replaceWith($form);
+        $form.addClass('webgsm-checkout-wrapper webgsm-form-integrated');
+
+        // Ascundem tot conținutul WC original. Elementele care trebuie vizibile
+        // (#payment, .webgsm-native-shipping-sr) vor fi mutate de
+        // movePaymentMethods() / moveShippingSection() în containere vizibile.
+        $wcOriginal.hide();
+
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:integrateFormWithLayout',message:'DOM integration done',data:{formInDOM:$form.closest('body').length>0,wcOriginalChildren:$wcOriginal.children().length,paymentInWcOrig:$wcOriginal.find('#payment').length,shippingSrInWcOrig:$wcOriginal.find('.webgsm-native-shipping-sr').length,paymentMethodsContainer:$('.webgsm-payment-methods').length,shippingContainer:$('#webgsm-shipping-container').length,formHasClass:$form.hasClass('webgsm-form-integrated')},timestamp:Date.now(),hypothesisId:'A'})}).catch(function(){});
+        // #endregion
+
+        log('DOM restructurat: form.checkout wrappează tot layout-ul custom');
+    }
+
     function movePaymentMethods() {
         var $payment = $('#payment');
         var $target = $('.webgsm-payment-methods');
-        
+
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:movePaymentMethods',message:'movePayment check',data:{paymentFound:$payment.length,targetFound:$target.length,alreadyInTarget:$target.find('#payment').length,packeteryInputsInPayment:$payment.find('input[name^="packetery_"]').length,paymentIsInsideForm:$payment.closest('form.checkout').length>0},timestamp:Date.now(),hypothesisId:'A,C'})}).catch(function(){});
+        // #endregion
+
         if ($payment.length && $target.length && !$target.find('#payment').length) {
             $payment.appendTo($target);
-            log('Payment methods mutat');
+            $payment.show();
+            log('Payment methods mutat în .webgsm-payment-methods (inside form)');
         }
     }
-    
-    /** Mută secțiunea de livrare (curieri + Packeta) în containerul vizibil */
+
     function moveShippingSection() {
         var $container = $('#webgsm-shipping-container');
         var $shipping = $('.webgsm-native-shipping-sr');
+
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:moveShippingSection',message:'moveShipping check',data:{containerFound:$container.length,shippingFound:$shipping.length,alreadyInContainer:$container.find('.webgsm-native-shipping-sr').length,shippingRadiosCount:$shipping.find('input[name^="shipping_method"]').length,shippingVisible:$shipping.is(':visible'),containerInsideForm:$container.closest('form.checkout').length>0},timestamp:Date.now(),hypothesisId:'A,E'})}).catch(function(){});
+        // #endregion
+
         if ($container.length && $shipping.length && !$container.find('.webgsm-native-shipping-sr').length) {
             $shipping.appendTo($container);
-            log('Shipping section mutată în Metoda de livrare');
+            $shipping.show();
+            log('Shipping section mutată în #webgsm-shipping-container (inside form)');
         }
+    }
+
+    /**
+     * Salvează starea Packeta (hidden inputs) înainte de update_checkout.
+     * WC's fragment replacement înlocuiește #payment complet → inputurile
+     * packetery_* se resetează. Le salvăm și le restaurăm după.
+     */
+    var _packetaSavedState = {};
+
+    function savePacketaState() {
+        _packetaSavedState = {};
+        var allPacketaInputs = $('input[name^="packetery_"], input[id^="packetery_"]');
+        allPacketaInputs.each(function() {
+            var name = $(this).attr('name') || $(this).attr('id');
+            var val = $(this).val();
+            if (name && val) {
+                _packetaSavedState[name] = val;
+            }
+        });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:savePacketaState',message:'Packeta save',data:{totalInputsFound:allPacketaInputs.length,savedKeys:Object.keys(_packetaSavedState),savedValues:_packetaSavedState},timestamp:Date.now(),hypothesisId:'B'})}).catch(function(){});
+        // #endregion
+
+        if (Object.keys(_packetaSavedState).length > 0) {
+            log('Packeta state salvat:', _packetaSavedState);
+        }
+    }
+
+    function restorePacketaState() {
+        var keysToRestore = Object.keys(_packetaSavedState);
+
+        // #region agent log
+        fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:restorePacketaState',message:'Packeta restore',data:{keysToRestore:keysToRestore,packeteryInputsInDomNow:$('input[name^="packetery_"]').length,packeteryIdsInDomNow:$('input[id^="packetery_"]').length},timestamp:Date.now(),hypothesisId:'B'})}).catch(function(){});
+        // #endregion
+
+        if (!keysToRestore.length) return;
+
+        $.each(_packetaSavedState, function(name, val) {
+            var $el = $('input[name="' + name + '"]');
+            if (!$el.length) {
+                $el = $('input#' + name);
+            }
+            if ($el.length && !$el.val()) {
+                $el.val(val);
+            }
+        });
+        log('Packeta state restaurat');
+
+        updatePickupPointDisplay();
     }
     
     /**
@@ -691,10 +816,21 @@
         // Validare punct ridicare – când Box e selectat, utilizatorul trebuie să aleagă locker-ul
         var chosenShipping = $('input[name^="shipping_method"]:checked').val();
         if (isPacketaPickupMethod(chosenShipping)) {
+            var $allPacketeryInputs = $('input[name*="packetery_point"], input[name*="packeta_point"]');
+            var $allPacketeryById = $('input[id*="packetery_point"]');
             var $branchInput = $('.packeta-selector-branch-id, input[name*="packetery_point"], input[name*="packeta_point"], input[id*="packeta_branch"], input[id*="branch_id"]').filter(function() {
                 return $(this).val() && $(this).val().toString().trim().length > 0;
             });
-            var hasSelectedPoint = $branchInput.length > 0 || ($('.packeta-widget-selected-address').text() || '').trim().length > 0;
+            var widgetAddrText = ($('.packeta-widget-selected-address').text() || '').trim();
+            var hasSelectedPoint = $branchInput.length > 0 || widgetAddrText.length > 0;
+
+            // #region agent log
+            var inputDetails = {};
+            $allPacketeryInputs.each(function(){inputDetails[$(this).attr('name')]=$(this).val();});
+            $allPacketeryById.each(function(){inputDetails['#'+$(this).attr('id')]=$(this).val();});
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:validatePickupPoint',message:'Pickup validation',data:{chosenShipping:chosenShipping,isPickup:true,packeteryByName:$allPacketeryInputs.length,packeteryById:$allPacketeryById.length,branchInputsWithValue:$branchInput.length,widgetAddrText:widgetAddrText,hasSelectedPoint:hasSelectedPoint,inputDetails:inputDetails,savedState:_packetaSavedState},timestamp:Date.now(),hypothesisId:'D,C'})}).catch(function(){});
+            // #endregion
+
             if (!hasSelectedPoint) {
                 errors.push('Selectează punctul de ridicare (click pe „Selectează punct ridicare").');
             }
@@ -1303,60 +1439,36 @@
         });
         
         // ==========================================
-        // SUBMIT - VALIDARE DOAR AICI!
+        // SUBMIT - VALIDARE + INJECTARE CÂMPURI
         // ==========================================
-        
-        // Metodă 1: WooCommerce event – returnăm true ca să nu dublăm validarea din click handler
-        $(document.body).on('checkout_place_order', function() {
-            return true;
-        });
-        
-        // Metodă 2: Click pe buton - FORȚEAZĂ SUBMIT MANUAL
-        $(document).on('click', '#place_order, #mobile_place_order', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            log('========== CLICK PLACE ORDER ==========');
-            
-            // Elimină required
-            removeAllRequiredAttributes();
-            
-            // Validează
-            var isValid = validateBeforeSubmit();
-            if (!isValid) {
-                return false;
-            }
-            
-            // FORȚEAZĂ SUBMIT PE FORM (sumarul cu termeni e în afara formularului)
-            log('TRIMITE FORM MANUAL - form.checkout.submit()');
-            
+
+        /**
+         * Injectează toate câmpurile necesare în form.checkout înainte de submit.
+         * Câmpuri care sunt în afara formularului (termeni, shipping, payment, Packeta)
+         * trebuie copiate ca hidden inputs în form pentru a fi incluse în POST.
+         */
+        function injectFieldsIntoForm() {
             var $form = $('form.checkout');
-            
-            // Adaugă termenii în form – checkbox-ul e în sumar (în afara formularului)
-            $form.find('input[name="terms"]').remove();
+
+            // Termeni — checkbox-ul #terms e acum INSIDE form (integrateFormWithLayout).
+            // Asigurăm doar că valoarea ajunge la server (checkbox unchecked nu se serializează).
+            $form.find('input[name="terms"][type="hidden"]').remove();
             if ($('#terms').is(':checked')) {
                 $form.append('<input type="hidden" name="terms" value="1">');
             }
-            
-            // Adaugă nonce în form dacă nu există
+
+            // Nonce
             if (!$form.find('input[name="woocommerce-process-checkout-nonce"]').length) {
                 var nonceVal = $('input[name="woocommerce-process-checkout-nonce"]').val();
                 if (nonceVal) {
                     $form.append('<input type="hidden" name="woocommerce-process-checkout-nonce" value="' + nonceVal + '">');
-                    log('Nonce adăugat în form: ' + nonceVal);
                 }
             }
-            
-            // Adaugă payment method în form dacă nu există
-            if (!$form.find('input[name="payment_method"]').length) {
-                var paymentMethod = $('input[name="payment_method"]:checked').val();
-                if (paymentMethod) {
-                    $form.append('<input type="hidden" name="payment_method" value="' + paymentMethod + '">');
-                    log('Payment method adăugat în form: ' + paymentMethod);
-                }
-            }
-            
-            // Adaugă _wp_http_referer dacă nu există
+
+            // Payment method + Shipping method sunt acum INSIDE form.checkout
+            // (datorită integrateFormWithLayout), nu mai trebuie injectate separat.
+
+            // _wp_http_referer
             if (!$form.find('input[name="_wp_http_referer"]').length) {
                 var referer = $('input[name="_wp_http_referer"]').val();
                 if (referer) {
@@ -1364,29 +1476,76 @@
                 }
             }
 
-            // Injectează shipping_method – mutat din form de moveShippingSection()
-            $form.find('input[name^="shipping_method"]').remove();
-            var chosenShippingMethod = $('#webgsm-shipping-container input[name^="shipping_method"]:checked').val()
-                                    || $('input[name^="shipping_method"]:checked').first().val() || '';
-            if (chosenShippingMethod) {
-                $form.append('<input type="hidden" name="shipping_method[0]" value="' + chosenShippingMethod + '">');
-            }
+            var chosenShippingMethod = $('input[name^="shipping_method"][type="radio"]:checked').val()
+                                    || $('input[name^="shipping_method"][type="hidden"]').first().val() || '';
 
-            // Injectează inputurile Packeta DOAR dacă e metodă Box (evită procesare inutilă la door-to-door)
+            // Packeta – doar dacă e pickup point (Box/Easybox/Locker)
             if (isPacketaPickupMethod(chosenShippingMethod)) {
-                $form.find('input[name*="packetery"], input[name*="packeta"]').remove();
-                $('input[name*="packetery"], input[name*="packeta"]').not($form.find('input')).each(function() {
-                    var n = $(this).attr('name');
+                $form.find('input[name^="packetery_"]').remove();
+
+                var packetaFields = {};
+                $('input[name^="packetery_"], input[id^="packetery_"]').each(function() {
+                    var n = $(this).attr('name') || $(this).attr('id');
                     var v = $(this).val();
-                    if (n) {
-                        $form.append('<input type="hidden" name="' + n + '" value="' + (v || '') + '">');
+                    if (n && v) {
+                        packetaFields[n] = v;
                     }
                 });
+
+                ['packetery_point_id', 'packetery_point_name', 'packetery_point_city',
+                 'packetery_point_zip', 'packetery_point_street', 'packetery_point_place',
+                 'packetery_point_url', 'packetery_point_type', 'packetery_carrier_id'].forEach(function(fieldName) {
+                    if (!packetaFields[fieldName]) {
+                        var $el = $('#' + fieldName);
+                        if ($el.length && $el.val()) {
+                            packetaFields[fieldName] = $el.val();
+                        }
+                    }
+                });
+
+                for (var fieldName in packetaFields) {
+                    if (packetaFields.hasOwnProperty(fieldName)) {
+                        $form.append('<input type="hidden" name="' + fieldName + '" value="' + (packetaFields[fieldName] || '') + '">');
+                    }
+                }
+
+                log('Packeta fields injected:', packetaFields);
+                if (!packetaFields['packetery_point_id']) {
+                    log('WARNING: packetery_point_id LIPSEȘTE! Packeta nu va putea genera AWB.');
+                }
             }
-            
-            $form.submit();
-            
+
+            return chosenShippingMethod;
+        }
+
+        // Click pe buton – validare + injectare, apoi lasă WooCommerce să facă submit-ul AJAX
+        $(document).on('click', '#place_order, #mobile_place_order', function(e) {
+            e.preventDefault();
+            // NU folosim stopPropagation() – lăsăm WooCommerce să primească event-ul
+
+            log('========== CLICK PLACE ORDER ==========');
+            removeAllRequiredAttributes();
+
+            var isValid = validateBeforeSubmit();
+            if (!isValid) {
+                return false;
+            }
+
+            injectFieldsIntoForm();
+
+            // Deblocăm flag-ul .processing dacă a rămas de la un submit anterior eșuat
+            $('form.checkout').removeClass('processing');
+
+            log('TRIMITE FORM – form.checkout.submit()');
+            $('form.checkout').submit();
             return false;
+        });
+
+        // WooCommerce checkout_place_order – rulează INSIDE submit handler-ul WC
+        $(document.body).on('checkout_place_order', function() {
+            removeAllRequiredAttributes();
+            injectFieldsIntoForm();
+            return true;
         });
         
         // ==========================================
@@ -1422,6 +1581,9 @@
         // Sincronizează când se schimbă curierul în blocul standard WooCommerce
         $(document).on('change', 'input[name^="shipping_method"]', function() {
             var id = $(this).val();
+            // #region agent log
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:shippingChange',message:'Shipping radio changed',data:{selectedValue:id,totalRadios:$('input[name^="shipping_method"]').length,checkedVal:$('input[name^="shipping_method"]:checked').val()},timestamp:Date.now(),hypothesisId:'INTERACTION'})}).catch(function(){});
+            // #endregion
             if (!isPacketaPickupMethod(id)) window._webgsm_open_packeta_after_update = false;
             togglePacketaWidgetVisibility();
             updatePickupPointDisplay();
@@ -1447,31 +1609,14 @@
         });
         // Prima sincronizare la inițializare
         syncSummaryShippingSelection();
-        // Metodă 3: Form submit – injectează termenii (checkbox-ul e în sumar, în afara formularului)
+
+        // Form submit – sincronizare shipping + termeni (handler dedicat, fără duplicare cu click handler)
         $('form.checkout').on('submit', function() {
             log('========== FORM SUBMIT ==========');
-            var $form = $(this);
-            $form.find('input[name="terms"]').remove();
-            if ($('#terms').is(':checked')) {
-                $form.append('<input type="hidden" name="terms" value="1">');
-            }
-            // Debug log: show values being submitted
-            console.log('[WebGSM] Submit values:', {
-                ship_to_different_address: $('#ship_to_different_address').val(),
-                same_as_billing_checked: $('#same_as_billing').is(':checked'),
-                shipping_first_name: $('input[name="shipping_first_name"]').val(),
-                shipping_address_1: $('input[name="shipping_address_1"]').val(),
-                shipping_city: $('input[name="shipping_city"]').val(),
-                shipping_state: $('input[name="shipping_state"]').val(),
-                shipping_postcode: $('input[name="shipping_postcode"]').val()
-            });
 
-            // Set the ship_to_different_address flag so WooCommerce knows to use shipping fields
+            // Sincronizează shipping address dacă e altă adresă decât billing
             if (!$('#same_as_billing').is(':checked')) {
                 $('#ship_to_different_address').val('1');
-
-                // Copy visible shipping inputs (which lack name attributes) into the hidden named inputs
-                // so values typed by the user are included in the POST request.
                 $('input[name="shipping_first_name"]').val($('#shipping_first_name').val() || $('input[name="shipping_first_name"]').val());
                 $('input[name="shipping_last_name"]').val($('#shipping_last_name').val() || $('input[name="shipping_last_name"]').val());
                 $('input[name="shipping_phone"]').val($('#shipping_phone').val() || $('input[name="shipping_phone"]').val());
@@ -1480,12 +1625,13 @@
                 $('input[name="shipping_state"]').val($('#shipping_state').val() || $('input[name="shipping_state"]').val());
                 $('input[name="shipping_postcode"]').val($('#shipping_postcode').val() || $('input[name="shipping_postcode"]').val());
                 $('input[name="shipping_country"]').val($('#shipping_country').val() || $('input[name="shipping_country"]').val());
-
-                // If a saved address was selected, inject it too (injectShippingDataSilent will overwrite where appropriate)
                 injectShippingDataSilent();
             } else {
                 $('#ship_to_different_address').val('0');
             }
+
+            // Re-injectează câmpurile din afara formularului (safety net)
+            injectFieldsIntoForm();
             removeAllRequiredAttributes();
         });
         
@@ -1659,9 +1805,11 @@
         // Sincronizează custom terms checkbox → native WC terms (care e în form și ajunge la POST)
         $(document).on('change', '#terms', function() {
             var isChecked = $(this).is(':checked');
-            // Selectăm TOATE câmpurile #terms și le setăm la același state
             $('[name="terms"]').prop('checked', isChecked);
         });
+
+        // Payment/shipping sunt acum INSIDE form.checkout (integrateFormWithLayout),
+        // WC le gestionează nativ — nu mai e nevoie de sync manual.
 
         // MutationObserver pe câmpurile Packeta – actualizează info punct ridicare după selecție
         (function() {
@@ -1686,35 +1834,57 @@
 
         $(document.body).on('checkout_error', function() {});
 
+        // Salvăm starea Packeta ÎNAINTE de AJAX (fragment replacement resetează #payment)
+        $(document.body).on('update_checkout', function() {
+            savePacketaState();
+        });
+
         $(document.body).on('updated_checkout', function() {
             log('========== updated_checkout - RE-INIT ==========');
 
-            // Ascunde widget Packeta IMEDIAT dacă door-to-door – înainte de scriptul Packeta
             togglePacketaWidgetVisibility();
             ensurePickupPointInfoContainer();
-            updatePickupPointDisplay();
 
-            // Re-aplică toate setările
+            // Re-aplică mutările (dacă fragmentele au recreat #payment în alt loc)
             removeAllRequiredAttributes();
             movePaymentMethods();
             moveShippingSection();
+
+            // Restaurăm starea Packeta (inputuri resetate de fragment replacement)
+            restorePacketaState();
+
             setTimeout(function() {
                 replacePacketaLogosForCarriers();
                 togglePacketaWidgetVisibility();
                 updatePickupPointDisplay();
             }, 100);
 
-            // Re-injectează datele
             if (WebGSM.currentCustomerType === 'pf') {
                 injectPersonDataSilent();
             } else {
                 injectCompanyDataSilent();
             }
 
-            // Sincronizează selecția curier din sumar cu radio-urile WooCommerce
             syncSummaryShippingSelection();
 
-            // NU deschide automat widget Packeta – packeta_sender_XXX = toți curierii, nu putem distinge Box de door-to-door
+            // #region agent log
+            (function(){
+                var sc=$('#webgsm-shipping-container')[0];
+                var pm=$('.webgsm-payment-methods')[0];
+                var sr=$('.webgsm-native-shipping-sr')[0];
+                var pay=$('#payment')[0];
+                var form=$('form.checkout')[0];
+                function vis(el){if(!el)return'NOT_IN_DOM';var s=window.getComputedStyle(el);return{display:s.display,visibility:s.visibility,opacity:s.opacity,h:el.offsetHeight,w:el.offsetWidth,overflow:s.overflow};}
+                var shippingHTML='';
+                if(sr){shippingHTML=$(sr).html().substring(0,500);}
+                var payHTML='';
+                if(pay){payHTML=$(pay).find('.wc_payment_methods').html();if(payHTML)payHTML=payHTML.substring(0,500);else payHTML='NO_.wc_payment_methods';}
+                var shippingInContainer=$('#webgsm-shipping-container .webgsm-native-shipping-sr').length;
+                var paymentInContainer=$('.webgsm-payment-methods #payment').length;
+                fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:updatedCheckout',message:'Visual state after updated_checkout',data:{shippingContainer:vis(sc),shippingSR:vis(sr),paymentDiv:vis(pay),shippingInContainer:shippingInContainer,paymentInContainer:paymentInContainer,shippingHTMLsnippet:shippingHTML,paymentHTMLsnippet:payHTML,wcOrigDisplay:$('.webgsm-wc-original').css('display'),allShippingRadios:$('input[name^="shipping_method"]').length,checkedShipping:$('input[name^="shipping_method"]:checked').val()||'NONE'},timestamp:Date.now(),hypothesisId:'VISUAL_AFTER_UPDATE'})}).catch(function(){});
+            })();
+            // #endregion
+
             window._webgsm_open_packeta_after_update = false;
         });
         
@@ -1741,6 +1911,15 @@
         
         // Bind evenimente
         bindEvents();
+
+        // #region agent log
+        $(document).on('click', 'input[name="payment_method"], input[name^="shipping_method"], label[for^="payment_method_"], label[for^="shipping_method_"]', function(e) {
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:radioClick',message:'Radio/label clicked',data:{tagName:e.target.tagName,type:e.target.type,name:e.target.name||'label',id:e.target.id,value:e.target.value||$(e.target).attr('for'),checked:e.target.checked,insideForm:$(e.target).closest('form.checkout').length>0,parentClasses:$(e.target).parent().attr('class')||'',pointerEvents:window.getComputedStyle(e.target).pointerEvents,closestHidden:$(e.target).closest(':hidden').length>0},timestamp:Date.now(),hypothesisId:'INTERACTION'})}).catch(function(){});
+        });
+        $(document).on('change', 'input[name="payment_method"]', function() {
+            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d841f7'},body:JSON.stringify({sessionId:'d841f7',location:'checkout.js:paymentChange',message:'Payment method changed',data:{newValue:$(this).val(),allPaymentRadios:$('input[name="payment_method"]').length,checkedPayment:$('input[name="payment_method"]:checked').val()||'NONE'},timestamp:Date.now(),hypothesisId:'INTERACTION'})}).catch(function(){});
+        });
+        // #endregion
     });
     
     // =========================================

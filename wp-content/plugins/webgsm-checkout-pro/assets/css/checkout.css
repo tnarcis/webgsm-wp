@@ -265,6 +265,17 @@
     align-items: start;
 }
 
+/* form.checkout primește class .webgsm-checkout-wrapper via JS (integrateFormWithLayout) */
+form.checkout.webgsm-form-integrated {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Conținutul WC original e ascuns (billing, shipping etc. — avem propriile noastre) */
+.webgsm-wc-original {
+    display: none !important;
+}
+
 .webgsm-checkout-main { min-height: 100%; }
 
 .webgsm-checkout-sidebar {

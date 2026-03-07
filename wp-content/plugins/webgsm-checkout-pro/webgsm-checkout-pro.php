@@ -97,6 +97,15 @@ class WebGSM_Checkout_Pro {
         add_action('woocommerce_checkout_create_order', [$this, 'apply_custom_shipping_fields'], 999, 2);
         // Includem sumarul în fragmentele AJAX ca totalul și transportul să se actualizeze la schimbarea curierului
         add_filter('woocommerce_update_order_review_fragments', [$this, 'add_summary_to_checkout_fragments'], 10, 1);
+
+        // Invalidează cache-ul Packeta pickup IDs când se modifică zonele/metodele de livrare
+        add_action('woocommerce_shipping_zone_method_added', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
+        add_action('woocommerce_shipping_zone_method_deleted', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
+        add_action('woocommerce_shipping_zone_method_status_toggled', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
+    }
+
+    public static function clear_packeta_pickup_cache() {
+        delete_transient( 'webgsm_packeta_pickup_ids' );
     }
 
     /**
@@ -263,16 +272,33 @@ class WebGSM_Checkout_Pro {
         $companies = $user_id ? get_user_meta($user_id, 'webgsm_companies', true) : [];
         if (!is_array($persons)) $persons = [];
         if (!is_array($companies)) $companies = [];
+
+        // Auto-detectare tip client: verifică ultima preferință, meta PJ, sau dacă are firme salvate
+        $default_type = 'pf';
+        if ( $user_id ) {
+            $saved_type = get_user_meta( $user_id, 'webgsm_customer_type', true );
+            if ( $saved_type === 'pj' ) {
+                $default_type = 'pj';
+            } elseif ( empty( $saved_type ) ) {
+                $is_pj = get_user_meta( $user_id, '_is_pj', true );
+                $tip_client = get_user_meta( $user_id, '_tip_client', true );
+                if ( $is_pj === 'yes' || $tip_client === 'pj' || ( ! empty( $companies ) && empty( $persons ) ) ) {
+                    $default_type = 'pj';
+                }
+            }
+        }
+        $pf_checked = $default_type === 'pf' ? ' checked' : '';
+        $pj_checked = $default_type === 'pj' ? ' checked' : '';
         ?>
         <div class="webgsm-section">
             <div class="webgsm-section-header">Tip factură</div>
             <div class="webgsm-section-body">
                 <div class="webgsm-radio-group">
-                    <label class="webgsm-radio"><input type="radio" name="billing_customer_type" value="pf" checked><span class="radio-mark"></span><span class="radio-label">Persoană fizică</span></label>
-                    <label class="webgsm-radio"><input type="radio" name="billing_customer_type" value="pj"><span class="radio-mark"></span><span class="radio-label">Persoană juridică</span></label>
+                    <label class="webgsm-radio"><input type="radio" name="billing_customer_type" value="pf"<?php echo $pf_checked; ?>><span class="radio-mark"></span><span class="radio-label">Persoană fizică</span></label>
+                    <label class="webgsm-radio"><input type="radio" name="billing_customer_type" value="pj"<?php echo $pj_checked; ?>><span class="radio-mark"></span><span class="radio-label">Persoană juridică</span></label>
                 </div>
                 
-                <div class="webgsm-persons-list" id="pf_section">
+                <div class="webgsm-persons-list" id="pf_section"<?php if ($default_type === 'pj') echo ' style="display:none"'; ?>>
                     <div class="subsection-title">Date facturare PF:</div>
                     <div class="persons-list">
                     <?php if (!empty($persons)) : foreach ($persons as $i => $p) : ?>
@@ -302,7 +328,7 @@ class WebGSM_Checkout_Pro {
                     <button type="button" class="btn-add" id="add_person_btn">+ Adaugă persoană</button>
                 </div>
                 
-                <div class="webgsm-companies-list" id="pj_section" style="display:none;">
+                <div class="webgsm-companies-list" id="pj_section"<?php if ($default_type === 'pf') echo ' style="display:none"'; ?>>
                     <div class="subsection-title">Selectează firma:</div>
                     <div class="companies-list">
                     <?php if (!empty($companies)) : foreach ($companies as $i => $c) : ?>
@@ -1327,23 +1353,27 @@ class WebGSM_Checkout_Pro {
         static $cache = null;
         if ( $cache !== null ) return $cache;
 
+        $transient_key = 'webgsm_packeta_pickup_ids';
+        $cached = get_transient( $transient_key );
+        if ( is_array( $cached ) ) {
+            $cache = $cached;
+            return $cache;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'packetery_carrier';
-        // Carrier IDs interne Packeta care sunt pickup points
         $pickup_ids = $wpdb->get_col( "SELECT `id` FROM `{$table}` WHERE `is_pickup_points` = 1" );
-        // Adaugă și 'packeta' (internal pickup points ID)
         $pickup_ids[] = 'packeta';
 
         $result = [];
         $zones = WC_Shipping_Zones::get_zones();
-        $zones[0] = ( new WC_Shipping_Zone(0) )->get_data(); // zona "Rest of World"
+        $zones[0] = ( new WC_Shipping_Zone(0) )->get_data();
 
         foreach ( $zones as $zone_data ) {
-            $zone    = new WC_Shipping_Zone( $zone_data['id'] ?? 0 );
+            $zone = new WC_Shipping_Zone( $zone_data['id'] ?? 0 );
             foreach ( $zone->get_shipping_methods( true ) as $method ) {
                 $wc_method_id = strtolower( $method->id . ':' . $method->instance_id );
                 if ( strpos( $wc_method_id, 'packeta_method_' ) !== 0 ) continue;
-                // Extrage carrier ID numeric din "packeta_method_{ID}:{instance}"
                 if ( preg_match( '/^packeta_method_(\d+):/', $wc_method_id, $m ) ) {
                     if ( in_array( $m[1], $pickup_ids, false ) ) {
                         $result[] = $wc_method_id;
@@ -1352,6 +1382,7 @@ class WebGSM_Checkout_Pro {
             }
         }
 
+        set_transient( $transient_key, $result, 6 * HOUR_IN_SECONDS );
         $cache = $result;
         return $result;
     }
@@ -1398,22 +1429,15 @@ class WebGSM_Checkout_Pro {
         if ( self::is_packeta_pickup_point_method() ) {
             $order->update_meta_data( '_same_as_billing', '0' );
 
-            // Setează adresa lockerului ca adresă de livrare pe comandă
-            $locker_place  = sanitize_text_field( $_POST['packetery_point_place']  ?? '' );
-            $locker_street = sanitize_text_field( $_POST['packetery_point_street'] ?? '' );
-            $locker_city   = sanitize_text_field( $_POST['packetery_point_city']   ?? '' );
-            $locker_zip    = sanitize_text_field( $_POST['packetery_point_zip']    ?? '' );
-
-            if ( ! empty( $locker_street ) ) {
-                $order->set_shipping_first_name( '' );
-                $order->set_shipping_last_name( '' );
-                $order->set_shipping_company( $locker_place );
-                $order->set_shipping_address_1( $locker_street );
-                $order->set_shipping_address_2( '' );
-                $order->set_shipping_city( $locker_city );
-                $order->set_shipping_postcode( $locker_zip );
-                $order->set_shipping_country( 'RO' );
-                $order->set_shipping_state( '' );
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                $packetery_keys = array_filter( array_keys( $_POST ), function( $k ) {
+                    return is_string( $k ) && stripos( $k, 'packetery' ) !== false;
+                });
+                error_log( '[WebGSM] Packeta pickup detected – NOT setting shipping address (Packeta handles it)' );
+                error_log( '[WebGSM] Packeta POST keys: ' . implode( ', ', $packetery_keys ) );
+                foreach ( $packetery_keys as $pk ) {
+                    error_log( "[WebGSM] Packeta POST: {$pk} = " . ( $_POST[ $pk ] ?? '' ) );
+                }
             }
 
             return;

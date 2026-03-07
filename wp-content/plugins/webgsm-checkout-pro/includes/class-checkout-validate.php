@@ -47,6 +47,30 @@ class WebGSM_Checkout_Validate {
             error_log('[WebGSM] billing_j: ' . ($_POST['billing_j'] ?? 'NESETAT'));
             error_log('[WebGSM] selected_person: ' . ($_POST['selected_person'] ?? 'NESETAT'));
             error_log('[WebGSM] selected_company: ' . ($_POST['selected_company'] ?? 'NESETAT'));
+
+            // Packeta debug: shipping method + pickup point data
+            $shipping_method = $_POST['shipping_method'][0] ?? ($_POST['shipping_method'] ?? 'NESETAT');
+            error_log('[WebGSM] shipping_method: ' . (is_array($shipping_method) ? implode(',', $shipping_method) : $shipping_method));
+
+            $chosen = WC()->session ? WC()->session->get('chosen_shipping_methods') : [];
+            error_log('[WebGSM] session chosen_shipping_methods: ' . print_r($chosen, true));
+
+            $packetery_fields = [];
+            foreach ($_POST as $k => $v) {
+                if (is_string($k) && stripos($k, 'packetery') !== false) {
+                    $packetery_fields[$k] = $v;
+                }
+            }
+            if (!empty($packetery_fields)) {
+                error_log('[WebGSM] Packeta POST fields: ' . print_r($packetery_fields, true));
+            } else {
+                error_log('[WebGSM] Packeta POST fields: NICIUNA');
+            }
+
+            if (class_exists('WebGSM_Checkout_Pro')) {
+                $is_pickup = WebGSM_Checkout_Pro::is_packeta_pickup_point_method();
+                error_log('[WebGSM] is_packeta_pickup_point: ' . ($is_pickup ? 'DA' : 'NU'));
+            }
         }
     }
     
