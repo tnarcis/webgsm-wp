@@ -130,13 +130,13 @@ class WebGSM_Checkout_Pro {
         wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], $css_ver);
         wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], $js_ver, true);
         $sameday_logo = apply_filters('webgsm_sameday_logo_url', 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp');
-        $door_to_door_methods = apply_filters('webgsm_packeta_door_to_door_methods', ['packeta_sender_7397', 'packeta_sender_762']);
         wp_localize_script('webgsm-checkout', 'webgsm_checkout', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('webgsm_nonce'),
-            'is_logged_in' => is_user_logged_in(),
-            'sameday_logo_url' => $sameday_logo,
-            'door_to_door_methods' => array_map('strtolower', (array) $door_to_door_methods),
+            'ajax_url'              => admin_url('admin-ajax.php'),
+            'nonce'                 => wp_create_nonce('webgsm_nonce'),
+            'is_logged_in'          => is_user_logged_in(),
+            'sameday_logo_url'      => $sameday_logo,
+            // Lista exactă de method IDs care SUNT pickup point – generată din DB Packeta
+            'packeta_pickup_method_ids' => self::get_packeta_pickup_method_ids(),
         ]);
     }
 
@@ -206,24 +206,12 @@ class WebGSM_Checkout_Pro {
         ?>
             <div class="webgsm-mobile-submit">
                 <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
-                <button type="button" class="btn-submit-mobile" id="mobile_place_order" onclick="fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-click-raw',location:'php:mobile_place_order_onclick',message:'raw_click_fired',data:{ts:Date.now(),href:location.href},timestamp:Date.now()})}).catch(function(){});">Trimite comanda</button>
+                <button type="button" class="btn-submit-mobile" id="mobile_place_order">Trimite comanda</button>
             </div>
         <?php
         $this->render_address_popup();
         $this->render_company_popup();
         $this->render_person_popup();
-        // #region agent log – B2B DOM check
-        ?>
-        <script>
-        (function(){
-            var rrp=document.querySelector('.summary-row-rrp');
-            var b2b=document.querySelector('.summary-row-b2b-savings');
-            var summary=document.querySelector('#webgsm-checkout-summary');
-            fetch('http://127.0.0.1:7737/ingest/d4671e02-eb27-4a13-9c43-eddfef593936',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2901b8'},body:JSON.stringify({sessionId:'2901b8',hypothesisId:'H-dom',location:'webgsm-checkout-pro.php:checkout_start',message:'b2b_dom_check',data:{rrpExists:!!rrp,b2bSavingsExists:!!b2b,summaryExists:!!summary,rrpDisplay:rrp?window.getComputedStyle(rrp).display:'N/A',b2bDisplay:b2b?window.getComputedStyle(b2b).display:'N/A',viewport:window.innerWidth},timestamp:Date.now()})}).catch(function(){});
-        })();
-        </script>
-        <?php
-        // #endregion agent log
     }
     
     public function checkout_end() { echo '</div>'; }
@@ -358,7 +346,7 @@ class WebGSM_Checkout_Pro {
         $addresses = $user_id ? get_user_meta($user_id, 'webgsm_addresses', true) : [];
         if (!is_array($addresses)) $addresses = [];
         ?>
-        <div class="webgsm-section">
+        <div class="webgsm-section" id="webgsm-shipping-address-section">
             <div class="webgsm-section-header">Adresa de livrare</div>
             <div class="webgsm-section-body">
                 <div class="same-address-check" style="margin-bottom:15px;padding:12px 15px;background:#f5f5f5;border-radius:4px;">
@@ -592,6 +580,8 @@ class WebGSM_Checkout_Pro {
                         <ul class="summary-shipping-list">
                             <?php foreach ($packages[0]['rates'] as $rate_id => $rate): ?>
                                 <?php
+                                // Ascunde metoda WC "Free Shipping" – redundantă când curieri afișează deja GRATUIT
+                                if ($rate->get_method_id() === 'free_shipping') continue;
                                 $label = $rate->get_label();
                                 $cost  = $rate->get_cost();
                                 $is_chosen = ($rate_id === $chosen_method);
@@ -1328,23 +1318,75 @@ class WebGSM_Checkout_Pro {
      * Doar metode BOX (punct ridicare): Fanbox, Easybox, Sameday Box.
      * NU Sameday/Fan Courier (door-to-door). Când da, WebGSM nu suprascrie adresa – Packeta o setează.
      */
-    public static function is_packeta_pickup_point_method( $method_id = null ) {
-        if ( $method_id === null ) {
-            $chosen = WC()->session ? WC()->session->get( 'chosen_shipping_methods' ) : null;
-            $method_id = ( is_array( $chosen ) && ! empty( $chosen[0] ) ) ? $chosen[0] : '';
-            if ( empty( $method_id ) && ! empty( $_POST['shipping_method'] ) && is_array( $_POST['shipping_method'] ) ) {
-                $method_id = sanitize_text_field( $_POST['shipping_method'][0] ?? '' );
+    /**
+     * Returnează lista de WooCommerce shipping method IDs (format "packeta_method_ID:instance")
+     * care sunt pickup point (locker/box), bazată pe DB-ul Packeta (`is_pickup_points = 1`).
+     * Rezultatul e cached static per request.
+     */
+    public static function get_packeta_pickup_method_ids(): array {
+        static $cache = null;
+        if ( $cache !== null ) return $cache;
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'packetery_carrier';
+        // Carrier IDs interne Packeta care sunt pickup points
+        $pickup_ids = $wpdb->get_col( "SELECT `id` FROM `{$table}` WHERE `is_pickup_points` = 1" );
+        // Adaugă și 'packeta' (internal pickup points ID)
+        $pickup_ids[] = 'packeta';
+
+        $result = [];
+        $zones = WC_Shipping_Zones::get_zones();
+        $zones[0] = ( new WC_Shipping_Zone(0) )->get_data(); // zona "Rest of World"
+
+        foreach ( $zones as $zone_data ) {
+            $zone    = new WC_Shipping_Zone( $zone_data['id'] ?? 0 );
+            foreach ( $zone->get_shipping_methods( true ) as $method ) {
+                $wc_method_id = strtolower( $method->id . ':' . $method->instance_id );
+                if ( strpos( $wc_method_id, 'packeta_method_' ) !== 0 ) continue;
+                // Extrage carrier ID numeric din "packeta_method_{ID}:{instance}"
+                if ( preg_match( '/^packeta_method_(\d+):/', $wc_method_id, $m ) ) {
+                    if ( in_array( $m[1], $pickup_ids, false ) ) {
+                        $result[] = $wc_method_id;
+                    }
+                }
             }
         }
-        $method_id = (string) $method_id;
-        $id = strtolower( $method_id );
+
+        $cache = $result;
+        return $result;
+    }
+
+    /**
+     * Verifică dacă metoda de livrare curentă este un pickup point Packeta (Box/Easybox/Locker).
+     * Sursa de adevăr: DB-ul Packeta (`is_pickup_points`). POST ia prioritate față de sesiune.
+     */
+    public static function is_packeta_pickup_point_method( $method_id = null ) {
+        if ( $method_id === null ) {
+            // POST ia prioritate față de sesiune (sesiunea poate fi stale la schimbare metodă)
+            if ( ! empty( $_POST['shipping_method'] ) && is_array( $_POST['shipping_method'] ) ) {
+                $method_id = sanitize_text_field( $_POST['shipping_method'][0] ?? '' );
+            }
+            if ( empty( $method_id ) ) {
+                $chosen    = WC()->session ? WC()->session->get( 'chosen_shipping_methods' ) : null;
+                $method_id = ( is_array( $chosen ) && ! empty( $chosen[0] ) ) ? $chosen[0] : '';
+            }
+        }
+        $method_id = strtolower( (string) $method_id );
         if ( $method_id === '' ) return false;
-        $door_list = apply_filters( 'webgsm_packeta_door_to_door_methods', [ 'packeta_sender_7397', 'packeta_sender_762' ] );
-        $door_list = array_map( 'strtolower', (array) $door_list );
-        if ( in_array( $id, $door_list, true ) ) return false;  // door-to-door din listă
-        if ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) === false ) return false;  // Sameday Courier
-        if ( strpos( $id, 'fan' ) !== false && strpos( $id, 'fanbox' ) === false ) return false;   // Fan Courier
-        return strpos( $id, 'packeta' ) === 0 || strpos( $id, 'packeta_sender' ) !== false || strpos( $id, 'easybox' ) !== false || strpos( $id, 'fanbox' ) !== false || ( strpos( $id, 'sameday' ) !== false && strpos( $id, 'box' ) !== false );
+
+        // Verifică direct în lista generată din DB
+        $pickup_ids = self::get_packeta_pickup_method_ids();
+        if ( in_array( $method_id, $pickup_ids, true ) ) return true;
+
+        // Dacă nu e în lista exactă dar nu e nici un method standard packeta → false
+        if ( strpos( $method_id, 'packeta' ) !== 0 ) return false;
+
+        // Fallback pentru metode non-standard (easybox, fanbox, sameday box în alte formate)
+        if ( strpos( $method_id, 'easybox' ) !== false ) return true;
+        if ( strpos( $method_id, 'fanbox' ) !== false )  return true;
+        if ( strpos( $method_id, 'sameday' ) !== false && strpos( $method_id, 'box' ) !== false ) return true;
+
+        return false;
     }
 
     /**
@@ -1355,6 +1397,25 @@ class WebGSM_Checkout_Pro {
     public function apply_custom_shipping_fields( $order, $data ) {
         if ( self::is_packeta_pickup_point_method() ) {
             $order->update_meta_data( '_same_as_billing', '0' );
+
+            // Setează adresa lockerului ca adresă de livrare pe comandă
+            $locker_place  = sanitize_text_field( $_POST['packetery_point_place']  ?? '' );
+            $locker_street = sanitize_text_field( $_POST['packetery_point_street'] ?? '' );
+            $locker_city   = sanitize_text_field( $_POST['packetery_point_city']   ?? '' );
+            $locker_zip    = sanitize_text_field( $_POST['packetery_point_zip']    ?? '' );
+
+            if ( ! empty( $locker_street ) ) {
+                $order->set_shipping_first_name( '' );
+                $order->set_shipping_last_name( '' );
+                $order->set_shipping_company( $locker_place );
+                $order->set_shipping_address_1( $locker_street );
+                $order->set_shipping_address_2( '' );
+                $order->set_shipping_city( $locker_city );
+                $order->set_shipping_postcode( $locker_zip );
+                $order->set_shipping_country( 'RO' );
+                $order->set_shipping_state( '' );
+            }
+
             return;
         }
 
@@ -1479,26 +1540,41 @@ class WebGSM_Checkout_Pro {
                 </div>
                 <div class="webgsm-thankyou-box">
                     <h4>📦 Livrare</h4>
+                    <?php
+                    // Numele metodei de livrare (curier)
+                    $shipping_methods_list = $order->get_shipping_methods();
+                    $shipping_method_label = '';
+                    if ( ! empty( $shipping_methods_list ) ) {
+                        $sm = reset( $shipping_methods_list );
+                        $shipping_method_label = $sm->get_method_title() ?: $sm->get_name();
+                    }
+                    ?>
+                    <?php if ( $shipping_method_label ): ?>
+                        <p class="webgsm-shipping-method-label"><strong><?php echo esc_html( $shipping_method_label ); ?></strong></p>
+                    <?php endif; ?>
+
                     <?php if ($same==='1'): ?>
-                    <div class="webgsm-same-address">✓ La aceeași adresă</div>
-                    <?php else: 
-                        // Foloseste datele din order meta pentru a fi sigur ca sunt corecte
-                        $shipping_first = $order->get_meta('_shipping_first_name') ?: $order->get_shipping_first_name();
-                        $shipping_last = $order->get_meta('_shipping_last_name') ?: $order->get_shipping_last_name();
-                        $shipping_address = $order->get_meta('_shipping_address_1') ?: $order->get_shipping_address_1();
-                        $shipping_city = $order->get_meta('_shipping_city') ?: $order->get_shipping_city();
-                        $shipping_state = $order->get_meta('_shipping_state') ?: $order->get_shipping_state();
-                        $shipping_phone = $order->get_meta('_shipping_phone') ?: '';
+                    <div class="webgsm-same-address">✓ La aceeași adresă cu facturarea</div>
+                    <?php else:
+                        $shipping_company = $order->get_shipping_company();
+                        $shipping_first   = $order->get_meta('_shipping_first_name') ?: $order->get_shipping_first_name();
+                        $shipping_last    = $order->get_meta('_shipping_last_name')  ?: $order->get_shipping_last_name();
+                        $shipping_address = $order->get_meta('_shipping_address_1')  ?: $order->get_shipping_address_1();
+                        $shipping_city    = $order->get_meta('_shipping_city')        ?: $order->get_shipping_city();
+                        $shipping_state   = $order->get_meta('_shipping_state')       ?: $order->get_shipping_state();
+                        $shipping_phone   = $order->get_meta('_shipping_phone')       ?: '';
                     ?>
                     <p>
-                        <?php if ($shipping_first || $shipping_last): ?>
-                            <strong><?php echo esc_html(trim($shipping_first . ' ' . $shipping_last)); ?></strong><br>
+                        <?php if ( $shipping_company ): // Locker/Box – company = numele lockerului ?>
+                            <strong>📍 <?php echo esc_html( $shipping_company ); ?></strong><br>
+                        <?php elseif ( $shipping_first || $shipping_last ): ?>
+                            <strong><?php echo esc_html( trim( $shipping_first . ' ' . $shipping_last ) ); ?></strong><br>
                         <?php endif; ?>
-                        <?php if ($shipping_phone): ?>
-                            Tel: <?php echo esc_html($shipping_phone); ?><br>
+                        <?php if ( $shipping_phone ): ?>
+                            Tel: <?php echo esc_html( $shipping_phone ); ?><br>
                         <?php endif; ?>
-                        <?php echo esc_html($shipping_address); ?><br>
-                        <?php echo esc_html($shipping_city . ', ' . $shipping_state); ?>
+                        <?php echo esc_html( $shipping_address ); ?><br>
+                        <?php echo esc_html( trim( $shipping_city . ( $shipping_state ? ', ' . $shipping_state : '' ) ) ); ?>
                     </p>
                     <?php endif; ?>
                 </div>

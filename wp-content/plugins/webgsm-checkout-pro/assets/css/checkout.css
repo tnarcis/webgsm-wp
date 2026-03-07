@@ -221,6 +221,12 @@
     pointer-events: auto !important;
 }
 
+/* Ascunde metoda WC "Free Shipping" din radio-urile native – redundantă când curieri afișează deja GRATUIT */
+.webgsm-native-shipping-sr tr:has(input[value*="free_shipping"]),
+#webgsm-shipping-container tr:has(input[value*="free_shipping"]) {
+    display: none !important;
+}
+
 /* Ascunde heading-ul "Your order" și stilizarea #order_review – conținutul (.webgsm-native-shipping-sr) rămâne funcțional */
 .woocommerce-checkout #order_review_heading {
     display: none !important;
@@ -1978,5 +1984,11 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     }
     .webgsm-pui-name { font-size: 13px; }
     .webgsm-pui-addr { font-size: 12px; }
+}
+/* Curier pe thank you page */
+.webgsm-shipping-method-label {
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 6px;
 }
 /* Cache bust 1768066686 */
