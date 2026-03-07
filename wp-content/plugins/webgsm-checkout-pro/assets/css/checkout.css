@@ -33,6 +33,51 @@
     margin: 0 !important;
 }
 
+/* Secțiunea Metoda de plată – fill gri, gap mic, fără overflow */
+.webgsm-section:has(.webgsm-payment-methods) {
+    overflow: hidden;
+    border-radius: 8px;
+}
+.webgsm-section:has(.webgsm-payment-methods) .webgsm-section-body {
+    background: #f8fafc !important;
+    padding: 12px 14px !important;
+    border-radius: 0 0 8px 8px;
+}
+.webgsm-section:has(.webgsm-payment-methods) .wc_payment_method {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+}
+.webgsm-section:has(.webgsm-payment-methods) .wc_payment_method:last-child {
+    margin-bottom: 0 !important;
+}
+.webgsm-section:has(.webgsm-payment-methods) .wc_payment_method label {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+}
+.webgsm-section:has(.webgsm-payment-methods) #payment,
+.webgsm-section:has(.webgsm-payment-methods) .webgsm-payment-methods {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+.webgsm-section:has(.webgsm-payment-methods) .payment_box {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+/* Emoji reprezentativ la metode livrare/plată – fin, discret */
+.webgsm-method-emoji {
+    display: inline-block;
+    font-size: 0.92em;
+    opacity: 0.88;
+    margin-right: 12px;
+    vertical-align: -0.05em;
+}
+
 /* Ascunde widget Packeta când door-to-door e selectat – evită eroarea scriptului */
 .woocommerce-checkout .webgsm-packeta-hidden {
     display: none !important;
@@ -306,8 +351,41 @@ form.checkout.webgsm-form-integrated {
     border-radius: 8px 8px 0 0 !important;
 }
 
-.webgsm-section-body { padding: 20px; }
+.webgsm-section-body { padding: 20px; border-radius: 0 0 8px 8px; }
 .webgsm-section-small .webgsm-section-body { padding: 0; }
+
+/* Secțiunea Metoda de livrare – chenar continuu, linie neîntreruptă */
+.webgsm-section:has(#webgsm-shipping-container) {
+    overflow: hidden;
+    border-radius: 8px;
+}
+.webgsm-section:has(#webgsm-shipping-container) .webgsm-section-header {
+    border-radius: 8px 8px 0 0;
+}
+.webgsm-section:has(#webgsm-shipping-container) .webgsm-section-body {
+    border-radius: 0 0 8px 8px;
+}
+/* Tabel livrare – border subțire (1px), fără border mare */
+#webgsm-shipping-container table,
+#webgsm-shipping-container .woocommerce-checkout-review-order-table,
+.webgsm-native-shipping-sr table {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+}
+#webgsm-shipping-container table td,
+#webgsm-shipping-container .woocommerce-checkout-review-order-table td,
+.webgsm-native-shipping-sr table td {
+    border: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+#webgsm-shipping-container table tr:last-child td,
+.webgsm-native-shipping-sr table tr:last-child td {
+    border-bottom: none !important;
+}
+.woocommerce-checkout .webgsm-carrier-logo-fan {
+    max-height: 24px !important;
+}
 
 .subsection-title {
     font-weight: 500;

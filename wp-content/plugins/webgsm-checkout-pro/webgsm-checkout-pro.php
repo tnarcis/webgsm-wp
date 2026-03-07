@@ -102,10 +102,18 @@ class WebGSM_Checkout_Pro {
         add_action('woocommerce_shipping_zone_method_added', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
         add_action('woocommerce_shipping_zone_method_deleted', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
         add_action('woocommerce_shipping_zone_method_status_toggled', [ __CLASS__, 'clear_packeta_pickup_cache' ]);
+        add_action('update_option', [ __CLASS__, 'maybe_clear_packeta_free_shipping_cache' ], 10, 3 );
     }
 
     public static function clear_packeta_pickup_cache() {
         delete_transient( 'webgsm_packeta_pickup_ids' );
+        delete_transient( 'webgsm_packeta_free_shipping_threshold' );
+    }
+
+    public static function maybe_clear_packeta_free_shipping_cache( $option, $old_value, $value ) {
+        if ( strpos( (string) $option, 'packetery_carrier_' ) === 0 ) {
+            delete_transient( 'webgsm_packeta_free_shipping_threshold' );
+        }
     }
 
     /**
@@ -139,11 +147,13 @@ class WebGSM_Checkout_Pro {
         wp_enqueue_style('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/css/checkout.css', [], $css_ver);
         wp_enqueue_script('webgsm-checkout', WEBGSM_CHECKOUT_URL . 'assets/js/checkout.js', ['jquery'], $js_ver, true);
         $sameday_logo = apply_filters('webgsm_sameday_logo_url', 'https://www.sameday.ro/app/themes/samedaytwo/public/images/logo/sameday_logo_big.webp');
+        $fan_logo = apply_filters('webgsm_fanbox_logo_url', 'https://www.fancourier.ro/wp-content/uploads/2023/03/logo.svg');
         wp_localize_script('webgsm-checkout', 'webgsm_checkout', [
             'ajax_url'              => admin_url('admin-ajax.php'),
             'nonce'                 => wp_create_nonce('webgsm_nonce'),
             'is_logged_in'          => is_user_logged_in(),
             'sameday_logo_url'      => $sameday_logo,
+            'fan_logo_url'          => $fan_logo,
             // Lista exactă de method IDs care SUNT pickup point – generată din DB Packeta
             'packeta_pickup_method_ids' => self::get_packeta_pickup_method_ids(),
         ]);
@@ -505,7 +515,8 @@ class WebGSM_Checkout_Pro {
         
         $packages = WC()->shipping()->get_packages();
         $has_packages = !empty($packages[0]['rates']);
-        $free_shipping_threshold = apply_filters('webgsm_free_shipping_threshold', 250);
+        // Prag transport gratuit: citește din Packeta (free_shipping_limit per curier), fallback 200
+        $free_shipping_threshold = apply_filters('webgsm_free_shipping_threshold', self::get_packeta_free_shipping_threshold());
         $remaining = $free_shipping_threshold - $subtotal;
         
         $b2b_instance = class_exists('WebGSM_B2B_Pricing') ? WebGSM_B2B_Pricing::instance() : null;
@@ -1340,6 +1351,44 @@ class WebGSM_Checkout_Pro {
         <?php
     }
     
+    /**
+     * Citește pragul minim de transport gratuit din setările Packeta (free_shipping_limit per curier).
+     * Folosit pentru mesajul „Mai adaugă X pentru transport gratuit” – se sincronizează cu Packeta.
+     *
+     * @return float Pragul în lei (minimul dintre toți curierii), sau 200 dacă Packeta nu e activ.
+     */
+    public static function get_packeta_free_shipping_threshold(): float {
+        static $cache = null;
+        if ( $cache !== null ) return $cache;
+
+        $transient_key = 'webgsm_packeta_free_shipping_threshold';
+        $cached = get_transient( $transient_key );
+        if ( is_numeric( $cached ) ) {
+            $cache = (float) $cached;
+            return $cache;
+        }
+
+        global $wpdb;
+        $prefix = 'packetery_carrier_';
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
+            $wpdb->esc_like( $prefix ) . '%'
+        ) );
+
+        $thresholds = [];
+        foreach ( $rows as $row ) {
+            $data = maybe_unserialize( $row->option_value );
+            if ( is_array( $data ) && isset( $data['free_shipping_limit'] ) && is_numeric( $data['free_shipping_limit'] ) && (float) $data['free_shipping_limit'] > 0 ) {
+                $thresholds[] = (float) $data['free_shipping_limit'];
+            }
+        }
+
+        $result = ! empty( $thresholds ) ? min( $thresholds ) : 200.0;
+        $cache = $result;
+        set_transient( $transient_key, $result, 6 * HOUR_IN_SECONDS );
+        return $result;
+    }
+
     /**
      * Doar metode BOX (punct ridicare): Fanbox, Easybox, Sameday Box.
      * NU Sameday/Fan Courier (door-to-door). Când da, WebGSM nu suprascrie adresa – Packeta o setează.
