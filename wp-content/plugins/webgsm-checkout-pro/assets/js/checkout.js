@@ -1578,12 +1578,19 @@
             return chosenShippingMethod;
         }
 
-        // Click pe buton – validare + injectare, apoi lasă WooCommerce să facă submit-ul AJAX
-        $(document).on('click', '#place_order, #mobile_place_order', function(e) {
-            e.preventDefault();
-            // NU folosim stopPropagation() – lăsăm WooCommerce să primească event-ul
+        // Handler comun pentru plasare comandă – desktop (click) și mobile (touchend)
+        function handlePlaceOrder(e) {
+            if (e.type === 'touchend') {
+                e.preventDefault();
+            }
+            e.stopPropagation();
+            var now = Date.now();
+            if (handlePlaceOrder._lastRun && (now - handlePlaceOrder._lastRun) < 600) {
+                return false;
+            }
+            handlePlaceOrder._lastRun = now;
 
-            log('========== CLICK PLACE ORDER ==========');
+            log('========== CLICK/TOUCH PLACE ORDER ==========');
             removeAllRequiredAttributes();
 
             var isValid = validateBeforeSubmit();
@@ -1593,7 +1600,6 @@
 
             injectFieldsIntoForm();
 
-            // Deblocăm flag-ul .processing dacă a rămas de la un submit anterior eșuat
             $('form.checkout').removeClass('processing');
 
             log('TRIMITE FORM – form.checkout.submit()');
@@ -1608,7 +1614,9 @@
 
             $('form.checkout').submit();
             return false;
-        });
+        }
+        $(document).on('click', '#place_order, #mobile_place_order', handlePlaceOrder);
+        $(document).on('touchend', '#place_order, #mobile_place_order', handlePlaceOrder);
 
         // WooCommerce checkout_place_order – rulează INSIDE submit handler-ul WC
         $(document.body).on('checkout_place_order', function() {
@@ -1877,6 +1885,13 @@
         $(document).on('change', '#terms', function() {
             var isChecked = $(this).is(':checked');
             $('[name="terms"]').prop('checked', isChecked);
+            $('#terms_mobile').prop('checked', isChecked);
+        });
+        // Sincronizează terms mobile ↔ terms (pentru mobile)
+        $(document).on('change', '#terms_mobile', function() {
+            var isChecked = $(this).is(':checked');
+            $('#terms').prop('checked', isChecked);
+            $('[name="terms"]').prop('checked', isChecked);
         });
 
         // Payment/shipping sunt acum INSIDE form.checkout (integrateFormWithLayout),
@@ -1916,10 +1931,14 @@
         $(document.body).on('updated_checkout', function() {
             log('========== updated_checkout - RE-INIT ==========');
 
+            // Re-run init dacă formularul a fost înlocuit de fragmente (ex. mobile/AJAX)
+            if (!$('form.checkout').hasClass('webgsm-form-integrated')) {
+                init();
+            }
+
             togglePacketaWidgetVisibility();
             ensurePickupPointInfoContainer();
 
-            // Re-aplică mutările (dacă fragmentele au recreat #payment în alt loc)
             removeAllRequiredAttributes();
             movePaymentMethods();
             moveShippingSection();
@@ -1942,6 +1961,11 @@
             }
 
             syncSummaryShippingSelection();
+
+            // Sincronizează terms mobile cu #terms după fragment replace
+            if ($('#terms').is(':checked')) {
+                $('#terms_mobile').prop('checked', true);
+            }
 
             // #region agent log
             (function(){

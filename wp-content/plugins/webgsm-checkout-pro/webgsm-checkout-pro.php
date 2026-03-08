@@ -91,6 +91,8 @@ class WebGSM_Checkout_Pro {
         add_action('init', [$this, 'add_endpoints']);
         add_action('wp_head', [$this, 'cart_page_css']);
         add_action('woocommerce_thankyou', [$this, 'custom_thankyou_content'], 999);
+        add_filter('woocommerce_get_order_item_totals', [$this, 'filter_order_item_totals_ro'], 10, 3);
+        add_filter('gettext', [$this, 'filter_packeta_labels_ro'], 10, 3);
         // Output hidden billing/shipping inputs inside the checkout <form> so they get included in POST
         add_action('woocommerce_checkout_before_customer_details', [$this, 'render_hidden_form_fields']);
         // Apply our shipping fields on order creation if provided by our form (run late so WooCommerce core doesn't overwrite)
@@ -224,6 +226,12 @@ class WebGSM_Checkout_Pro {
         $total_formatted = wc_price(WC()->cart->get_total(''));
         ?>
             <div class="webgsm-mobile-submit">
+                <div class="webgsm-mobile-terms">
+                    <label class="terms-checkbox terms-checkbox-mobile">
+                        <input type="checkbox" id="terms_mobile" aria-label="Accept termenii">
+                        <span>Accept <a href="/termeni-si-conditii" target="_blank">termenii</a></span>
+                    </label>
+                </div>
                 <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
                 <button type="button" class="btn-submit-mobile" id="mobile_place_order">Trimite comanda</button>
             </div>
@@ -1608,6 +1616,48 @@ class WebGSM_Checkout_Pro {
         <?php
     }
     
+    /**
+     * Traduce etichetele Packeta în română pe order received.
+     */
+    public function filter_packeta_labels_ro($translated, $text, $domain) {
+        if ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url( 'order-received' ) ) {
+            return $translated;
+        }
+        $map = [
+            'Pickup point name' => 'Punct ridicare',
+            'Pickup point'      => 'Punct ridicare',
+            'Address'          => 'Adresă',
+            'Packeta'           => 'Livrare',
+        ];
+        return isset( $map[ $text ] ) ? $map[ $text ] : $translated;
+    }
+
+    /**
+     * Înlocuiește Packeta cu Livrare + emoji în sumarul comenzii (order overview).
+     */
+    public function filter_order_item_totals_ro($total_rows, $order, $tax_display) {
+        if ( ! is_wc_endpoint_url( 'order-received' ) ) {
+            return $total_rows;
+        }
+        if ( isset( $total_rows['shipping'] ) ) {
+            $total_rows['shipping']['label'] = 'Livrare';
+            $val = $total_rows['shipping']['value'] ?? '';
+            $method_id = '';
+            foreach ( $order->get_shipping_methods() as $sm ) {
+                $method_id = $sm->get_method_id() . ':' . $sm->get_instance_id();
+                break;
+            }
+            $is_box = self::is_packeta_pickup_point_method( $method_id ) || ! empty( $order->get_shipping_company() );
+            $emoji = $is_box ? '📦 ' : '🚚 ';
+            if ( stripos( $val, 'Packeta' ) !== false || stripos( $val, 'packeta' ) !== false ) {
+                $total_rows['shipping']['value'] = $emoji . preg_replace( '/\s*(Packeta|packeta)\s*/i', 'Livrare ', $val );
+            } else {
+                $total_rows['shipping']['value'] = $emoji . $val;
+            }
+        }
+        return $total_rows;
+    }
+
     public function custom_thankyou_content($order_id) {
         if (!$order_id) return;
         $order = wc_get_order($order_id);
@@ -1647,16 +1697,23 @@ class WebGSM_Checkout_Pro {
                 <div class="webgsm-thankyou-box">
                     <h4>📦 Livrare</h4>
                     <?php
-                    // Numele metodei de livrare (curier)
+                    // Numele metodei de livrare (curier) – înlocuim Packeta cu Livrare + emoji
                     $shipping_methods_list = $order->get_shipping_methods();
                     $shipping_method_label = '';
+                    $method_id = '';
                     if ( ! empty( $shipping_methods_list ) ) {
                         $sm = reset( $shipping_methods_list );
                         $shipping_method_label = $sm->get_method_title() ?: $sm->get_name();
+                        $method_id = $sm->get_method_id() . ':' . $sm->get_instance_id();
+                    }
+                    $is_box = self::is_packeta_pickup_point_method( $method_id ) || ! empty( $order->get_shipping_company() );
+                    $display_label = $shipping_method_label;
+                    if ( stripos( $shipping_method_label, 'Packeta' ) !== false || stripos( $shipping_method_label, 'packeta' ) !== false ) {
+                        $display_label = ( $is_box ? '📦 ' : '🚚 ' ) . 'Livrare';
                     }
                     ?>
-                    <?php if ( $shipping_method_label ): ?>
-                        <p class="webgsm-shipping-method-label"><strong><?php echo esc_html( $shipping_method_label ); ?></strong></p>
+                    <?php if ( $display_label ): ?>
+                        <p class="webgsm-shipping-method-label"><strong><?php echo esc_html( $display_label ); ?></strong></p>
                     <?php endif; ?>
 
                     <?php if ($same==='1'): ?>

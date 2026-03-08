@@ -1092,8 +1092,29 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     z-index: 99999;
+    pointer-events: auto;
 }
 
+.webgsm-mobile-terms {
+    margin-bottom: 12px;
+}
+.webgsm-mobile-terms .terms-checkbox-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+}
+.webgsm-mobile-terms .terms-checkbox-mobile input {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.webgsm-mobile-terms .terms-checkbox-mobile a {
+    color: #059669;
+    text-decoration: underline;
+}
 .webgsm-mobile-submit .mobile-total {
     display: flex;
     justify-content: space-between;
@@ -1103,6 +1124,7 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
 
 .webgsm-mobile-submit .btn-submit-mobile {
     width: 100%;
+    min-height: 48px;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
     color: #fff !important;
     border: none !important;
@@ -1113,6 +1135,9 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     cursor: pointer !important;
     transition: all 0.3s ease !important;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .webgsm-mobile-submit .btn-submit-mobile:hover {
