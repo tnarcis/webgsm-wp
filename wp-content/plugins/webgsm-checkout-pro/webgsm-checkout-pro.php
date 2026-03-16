@@ -1576,14 +1576,7 @@ class WebGSM_Checkout_Pro {
             $order->update_meta_data('_same_as_billing', '1');
         }
 
-        // #region agent log
-        $debug_log_path = ABSPATH . '.cursor/debug-d841f7.log';
-        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'webgsm-checkout-pro.php:apply_custom_shipping_fields','message'=>'BEFORE order->save()','data'=>['order_id'=>method_exists($order,'get_id')?$order->get_id():'N/A'],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
-        // #endregion
         $order->save();
-        // #region agent log
-        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'webgsm-checkout-pro.php:apply_custom_shipping_fields','message'=>'AFTER order->save()','data'=>[],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
-        // #endregion
     }
     
     public function cart_page_css() {
@@ -1596,8 +1589,10 @@ class WebGSM_Checkout_Pro {
         .webgsm-cart-buttons .btn-continue{display:inline-flex;align-items:center;gap:8px;background:#333;color:#fff;padding:10px 18px;border-radius:25px;text-decoration:none;font-size:13px}
         .webgsm-cart-buttons .btn-checkout{background:#4caf50;color:#fff;padding:12px 30px;border-radius:25px;font-size:14px;font-weight:600;text-decoration:none}
         .webgsm-cart-total-bar{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 20px;margin-top:20px}
+        .webgsm-cart-total-bar .wctb-left{display:flex;flex-direction:column;gap:2px}
         .webgsm-cart-total-bar .wctb-label{font-size:15px;font-weight:600;color:#374151}
         .webgsm-cart-total-bar .wctb-count{font-size:13px;color:#6b7280;margin-left:8px}
+        .webgsm-cart-total-bar .wctb-transport-inclus{font-size:11px;color:#9ca3af;font-weight:400}
         .webgsm-cart-total-bar .wctb-amount{font-size:22px;font-weight:800;color:#3b82f6}
         </style>
         <script>
@@ -1611,7 +1606,7 @@ class WebGSM_Checkout_Pro {
                 var total=getAmount('.order-total .amount');
                 var count=getCount();
                 var totalBar='<div class="webgsm-cart-total-bar">'
-                    +'<div><span class="wctb-label">Total coș</span><span class="wctb-count">('+count+' bucăți)</span></div>'
+                    +'<div class="wctb-left"><div><span class="wctb-label">Total coș</span><span class="wctb-count">('+count+' bucăți)</span></div><div class="wctb-transport-inclus">Transport inclus</div></div>'
                     +'<div class="wctb-amount">'+total+'</div>'
                     +'</div>';
                 var buttons='<div class="webgsm-cart-buttons"><a href="'+shop+'" class="btn-continue">← Continuă</a><a href="'+chk+'" class="btn-checkout">Finalizare →</a></div>';

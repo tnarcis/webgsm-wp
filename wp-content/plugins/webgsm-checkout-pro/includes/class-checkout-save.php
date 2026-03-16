@@ -279,14 +279,7 @@ class WebGSM_Checkout_Save {
      * Salvare meta pentru HPOS (High-Performance Order Storage)
      */
     public function webgsm_save_order_meta_hpos($order, $data) {
-        // #region agent log
-        $debug_log_path = ABSPATH . '.cursor/debug-d841f7.log';
-        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'class-checkout-save.php:save_order_meta_hpos','message'=>'START save_order_meta_hpos','data'=>['order_id'=>method_exists($order,'get_id')?$order->get_id():'N/A'],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
-        // #endregion
         $this->webgsm_save_fields_to_order($order);
-        // #region agent log
-        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'class-checkout-save.php:save_order_meta_hpos','message'=>'END save_order_meta_hpos','data'=>[],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
-        // #endregion
     }
     
     /**
@@ -428,10 +421,6 @@ class WebGSM_Checkout_Save {
      * Rulează DUPĂ plasarea comenzii
      */
     public function webgsm_sync_to_user_profile($order_id, $posted_data, $order) {
-        // #region agent log
-        $debug_log_path = ABSPATH . '.cursor/debug-d841f7.log';
-        file_put_contents($debug_log_path, json_encode(['sessionId'=>'d841f7','location'=>'class-checkout-save.php:sync_to_user_profile','message'=>'START sync_to_user_profile (order_processed hook)','data'=>['order_id'=>$order_id],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'SERVER_FLOW'])."\n", FILE_APPEND);
-        // #endregion
         $user_id = $order->get_customer_id();
         
         // Nu sincroniza pentru guest

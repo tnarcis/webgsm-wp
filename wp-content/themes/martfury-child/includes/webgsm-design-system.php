@@ -55,6 +55,58 @@ function webgsm_minimal_css() {
 /* NU ascunde butoanele din mini-cart (hover pe icon coș) */
 
 /* ============================================
+   CATALOG - ALINIERE PRODUSE (înălțime egală, butoane pe aceeași linie)
+   ============================================ */
+/* Asigură că cardurile se întind pe înălțime (compatibil cu grid/flex) */
+ul.products {
+    align-items: stretch !important;
+}
+ul.products li.product {
+    display: flex !important;
+    flex-direction: column !important;
+}
+/* product-inner ocupă tot spațiul și folosește flex */
+ul.products li.product .product-inner {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+/* mf-product-details: flex column, ocupă spațiul rămas */
+ul.products li.product .mf-product-details {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+/* mf-product-content: crește și împinge butoanele jos */
+ul.products li.product .mf-product-content {
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+/* Titlul: limită înălțime (2-3 linii) pentru consistență */
+ul.products li.product .mf-product-content .woocommerce-loop-product__title,
+ul.products li.product .mf-product-content .product-title,
+ul.products li.product .mf-product-details .woocommerce-loop-product__title,
+ul.products li.product .mf-product-details .product-title {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    line-height: 1.35 !important;
+    min-height: 3.05em !important;
+}
+/* footer-button și add_to_cart: fixate jos */
+ul.products li.product .footer-button,
+ul.products li.product .mf-product-details > .button,
+ul.products li.product .mf-product-details > a.button,
+ul.products li.product .mf-product-details > .add_to_cart_button {
+    margin-top: auto !important;
+    flex-shrink: 0 !important;
+}
+
+/* ============================================
    CATALOG / CATEGORII - butoane pill (ca la checkout)
    ============================================ */
 ul.products .product .button,
