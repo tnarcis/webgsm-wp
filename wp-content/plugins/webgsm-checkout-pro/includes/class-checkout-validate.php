@@ -102,7 +102,7 @@ class WebGSM_Checkout_Validate {
         // Termeni și condiții – obligatoriu
         if (empty($_POST['terms'])) {
             wc_add_notice(
-                __('Trebuie să accepți termenii și condițiile pentru a continua.', 'webgsm-checkout-pro'),
+                __('Te rugăm să bifezi că ai citit și ești de acord cu Termenii și Condițiile, Politica de Confidențialitate și condițiile de garanție.', 'webgsm-checkout-pro'),
                 'error'
             );
         }

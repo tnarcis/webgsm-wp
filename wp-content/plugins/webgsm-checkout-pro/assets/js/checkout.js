@@ -859,9 +859,9 @@
             }
         }
         
-        // Validare termeni și condiții – obligatoriu
+        // Legal Check – Hard Stop (obligatoriu)
         if (!$('#terms').is(':checked')) {
-            errors.push('Trebuie să accepți termenii și condițiile.');
+            errors.push('Te rugăm să bifezi că ai citit și ești de acord cu Termenii și Condițiile, Politica de Confidențialitate și condițiile de garanție.');
         }
         
         // Validare punct ridicare – când Box e selectat, utilizatorul trebuie să aleagă locker-ul

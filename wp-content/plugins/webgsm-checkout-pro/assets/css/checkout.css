@@ -803,30 +803,55 @@ form.checkout.webgsm-form-integrated {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
 }
 
-.webgsm-summary-box .summary-terms {
-    margin: 10px 20px 12px;
+/* Legal Check (Hard Stop) – curat, obligatoriu */
+.webgsm-summary-box .summary-terms.webgsm-legal-check,
+.webgsm-legal-check {
+    margin: 14px 20px 16px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
 }
-.webgsm-summary-box .terms-checkbox {
+.webgsm-summary-box .terms-checkbox,
+.webgsm-legal-check .terms-checkbox {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #111827;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #374151;
     cursor: pointer;
 }
-.webgsm-summary-box .terms-checkbox input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    min-height: 18px;
+.webgsm-summary-box .terms-checkbox input[type="checkbox"],
+.webgsm-legal-check .terms-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
     flex-shrink: 0;
-    margin: 0;
-    border-radius: 3px;
-    vertical-align: middle;
+    margin: 2px 0 0;
+    border: 2px solid #94a3b8;
+    border-radius: 4px;
+    accent-color: #059669;
+    cursor: pointer;
 }
-.webgsm-summary-box .terms-checkbox a {
-    color: #2196f3;
+.webgsm-summary-box .terms-checkbox input[type="checkbox"]:checked,
+.webgsm-legal-check .terms-checkbox input[type="checkbox"]:checked {
+    border-color: #059669;
+}
+.webgsm-summary-box .terms-checkbox a,
+.webgsm-legal-check .terms-checkbox a {
+    color: #059669;
     text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.webgsm-summary-box .terms-checkbox a:hover,
+.webgsm-legal-check .terms-checkbox a:hover {
+    color: #047857;
+}
+.webgsm-summary-box .terms-checkbox .terms-text,
+.webgsm-legal-check .terms-checkbox .terms-text {
+    flex: 1;
 }
 
 .webgsm-summary-box .summary-shipping-list {
@@ -1095,25 +1120,36 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     pointer-events: auto;
 }
 
-.webgsm-mobile-terms {
+.webgsm-mobile-terms.webgsm-legal-check {
     margin-bottom: 12px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
 }
 .webgsm-mobile-terms .terms-checkbox-mobile {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.5;
     color: #374151;
     cursor: pointer;
 }
 .webgsm-mobile-terms .terms-checkbox-mobile input {
     width: 20px;
     height: 20px;
+    min-width: 20px;
     flex-shrink: 0;
+    margin: 2px 0 0;
+    border: 2px solid #94a3b8;
+    border-radius: 4px;
+    accent-color: #059669;
 }
 .webgsm-mobile-terms .terms-checkbox-mobile a {
     color: #059669;
     text-decoration: underline;
+    text-underline-offset: 2px;
 }
 .webgsm-mobile-submit .mobile-total {
     display: flex;

@@ -226,10 +226,10 @@ class WebGSM_Checkout_Pro {
         $total_formatted = wc_price(WC()->cart->get_total(''));
         ?>
             <div class="webgsm-mobile-submit">
-                <div class="webgsm-mobile-terms">
+                <div class="webgsm-mobile-terms webgsm-legal-check">
                     <label class="terms-checkbox terms-checkbox-mobile">
-                        <input type="checkbox" id="terms_mobile" aria-label="Accept termenii">
-                        <span>Accept <a href="/termeni-si-conditii" target="_blank">termenii</a></span>
+                        <input type="checkbox" id="terms_mobile" aria-label="Accept termenii și condițiile">
+                        <span class="terms-text">Am citit și sunt de acord cu <a href="<?php echo esc_url( $this->get_terms_url() ); ?>" target="_blank" rel="noopener">Termenii și Condițiile</a> și <a href="<?php echo esc_url( $this->get_privacy_url() ); ?>" target="_blank" rel="noopener">Politica de Confidențialitate</a>. Confirm că am înțeles condițiile specifice de garanție pentru piesele de schimb.</span>
                     </label>
                 </div>
                 <div class="mobile-total webgsm-mobile-total-fragment"><span>Total:</span><strong><?php echo $total_formatted; ?></strong></div>
@@ -242,6 +242,15 @@ class WebGSM_Checkout_Pro {
     }
     
     public function checkout_end() { echo '</div>'; }
+
+    private function get_terms_url() {
+        $page_id = (int) get_option( 'woocommerce_terms_page_id' );
+        return $page_id ? get_permalink( $page_id ) : home_url( '/termeni-si-conditii' );
+    }
+
+    private function get_privacy_url() {
+        return get_privacy_policy_url() ?: home_url( '/politica-confidentialitate' );
+    }
     
     private function render_products_section() {
         ?>
@@ -690,10 +699,10 @@ class WebGSM_Checkout_Pro {
             <?php endif; ?>
             
             <div class="summary-total"><span>TOTAL:</span><span class="total-value"><?php echo wc_price($total); ?></span></div>
-            <div class="summary-terms">
+            <div class="summary-terms webgsm-legal-check">
                 <label class="terms-checkbox">
-                    <input type="checkbox" name="terms" id="terms" required>
-                    <span>Accept <a href="/termeni-si-conditii" target="_blank">termenii și condițiile</a></span>
+                    <input type="checkbox" name="terms" id="terms" required aria-required="true">
+                    <span class="terms-text">Am citit și sunt de acord cu <a href="<?php echo esc_url( $this->get_terms_url() ); ?>" target="_blank" rel="noopener">Termenii și Condițiile</a> și <a href="<?php echo esc_url( $this->get_privacy_url() ); ?>" target="_blank" rel="noopener">Politica de Confidențialitate</a>. Confirm că am înțeles condițiile specifice de garanție pentru piesele de schimb.</span>
                 </label>
             </div>
             <button type="submit" class="btn-submit" id="place_order">Trimite comanda</button>
