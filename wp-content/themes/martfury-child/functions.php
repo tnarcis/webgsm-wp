@@ -134,6 +134,7 @@ require_once get_stylesheet_directory() . '/includes/n8n-webhooks.php';
 require_once get_stylesheet_directory() . '/includes/facturare-pj.php';
 require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
+require_once get_stylesheet_directory() . '/includes/fix-catalog-duplicate-add-to-cart.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-header-primary-menu.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
 require_once get_stylesheet_directory() . '/includes/setup-categories.php';

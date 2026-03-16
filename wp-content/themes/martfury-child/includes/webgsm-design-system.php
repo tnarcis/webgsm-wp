@@ -15,7 +15,7 @@ function webgsm_minimal_css() {
 ?>
 <style id="webgsm-minimal">
 /* ============================================
-   BUTOANE ALBASTRE (nu negre)
+   BUTOANE ALBASTRE - PILL (rotunjite ca la checkout)
    ============================================ */
 .woocommerce .button,
 .woocommerce a.button,
@@ -23,6 +23,14 @@ function webgsm_minimal_css() {
 .woocommerce input.button {
     background-color: #3b82f6 !important;
     color: #fff !important;
+    border-radius: 25px !important;
+    padding: 10px 25px !important;
+    font-size: 13px !important;
+    border: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.4 !important;
 }
 
 .woocommerce .button:hover,
@@ -45,6 +53,29 @@ function webgsm_minimal_css() {
 }
 
 /* NU ascunde butoanele din mini-cart (hover pe icon coș) */
+
+/* ============================================
+   CATALOG / CATEGORII - butoane pill (ca la checkout)
+   ============================================ */
+ul.products .product .button,
+ul.products .product a.button,
+ul.products .product .add_to_cart_button,
+ul.products .product .footer-button .button,
+ul.products .product .footer-button a,
+ul.products .product .action-button a,
+ul.products .product .mf-product-details-hover .button,
+ul.products .product .mf-product-details-hover a.add_to_cart_button,
+ul.products .product .mf-compare-button a,
+ul.products .product .compare-button a,
+ul.products .product .yith-wcwl-add-to-wishlist a,
+ul.products .product a.add_to_wishlist {
+    border-radius: 25px !important;
+    padding: 10px 25px !important;
+    font-size: 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 
 /* ============================================
    PAGINA PRODUSULUI - Martfury specific

@@ -20,9 +20,9 @@ if (get_option('webgsm_categories_installed')) {
  * Ierarhia corespunde cu get_woo_category() din scriptul Python.
  */
 function webgsm_get_category_structure() {
-    $brands = array('iPhone', 'Samsung', 'Huawei', 'Xiaomi', 'Google', 'OnePlus', 'Oppo', 'Motorola');
+    $brands = array('iPhone', 'Samsung', 'Huawei', 'Xiaomi', 'Ipad', 'Macbook', 'Google', 'OnePlus', 'Oppo', 'Motorola');
     $piese_sub = array(
-        'Ecrane', 'Baterii', 'Mufe Incarcare', 'Camere', 'Flexuri', 'Difuzoare',
+        'Ecrane', 'Baterii', 'Baterii Piese', 'Mufe Incarcare', 'Camere', 'Flexuri', 'Difuzoare',
         'Butoane', 'Sticla', 'Carcase', 'Vibratoare', 'Sertare SIM', 'Alte Piese'
     );
 
@@ -66,6 +66,8 @@ function webgsm_get_category_structure() {
         'Samsung' => 'piese-samsung',
         'Huawei' => 'piese-huawei',
         'Xiaomi' => 'piese-xiaomi',
+        'Ipad' => 'piese-ipad',
+        'Macbook' => 'piese-macbook',
         'Google' => 'piese-google',
         'OnePlus' => 'piese-oneplus',
         'Oppo' => 'piese-oppo',
@@ -159,10 +161,44 @@ function webgsm_setup_product_categories() {
 
 add_action('init', function() {
     if (!defined('WEBGSM_FORCE_CATEGORIES_SETUP') && get_option('webgsm_categories_installed')) {
+        webgsm_ensure_piese_extra_categories();
         return;
     }
     webgsm_setup_product_categories();
 }, 10);
+
+/**
+ * Adaugă categoriile Piese Ipad, Piese Macbook și Baterii Piese dacă lipsesc.
+ */
+function webgsm_ensure_piese_extra_categories() {
+    if (!class_exists('WooCommerce')) return;
+    $piese = get_term_by('slug', 'piese', 'product_cat');
+    if (!$piese || is_wp_error($piese)) return;
+
+    $extra = [
+        ['name' => 'Piese Ipad', 'slug' => 'piese-ipad', 'parent' => $piese->term_id],
+        ['name' => 'Piese Macbook', 'slug' => 'piese-macbook', 'parent' => $piese->term_id],
+    ];
+    foreach ($extra as $cat) {
+        if (!term_exists($cat['slug'], 'product_cat')) {
+            wp_insert_term($cat['name'], 'product_cat', ['slug' => $cat['slug'], 'parent' => $cat['parent']]);
+        }
+    }
+
+    $piese_sub = ['Ecrane', 'Baterii', 'Baterii Piese', 'Mufe Incarcare', 'Camere', 'Flexuri', 'Difuzoare'];
+    $brand_slugs = ['piese-iphone' => 'iphone', 'piese-samsung' => 'samsung', 'piese-huawei' => 'huawei', 'piese-xiaomi' => 'xiaomi', 'piese-ipad' => 'ipad', 'piese-macbook' => 'macbook'];
+    foreach ($brand_slugs as $pslug => $brand) {
+        $parent_term = get_term_by('slug', $pslug, 'product_cat');
+        if (!$parent_term || is_wp_error($parent_term)) continue;
+        foreach ($piese_sub as $sub) {
+            $sub_slug = str_replace(' ', '-', strtolower(remove_accents_simple($sub))) . '-' . strtolower($brand);
+            $sub_slug = preg_replace('/[^a-z0-9\-]/', '-', preg_replace('/\-+/', '-', trim($sub_slug, '-')));
+            if (!term_exists($sub_slug, 'product_cat')) {
+                wp_insert_term($sub . ' ' . $brand, 'product_cat', ['slug' => $sub_slug, 'parent' => $parent_term->term_id]);
+            }
+        }
+    }
+}
 
 add_action('admin_notices', function() {
     $result = get_option('webgsm_categories_setup_result');
