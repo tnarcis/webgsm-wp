@@ -492,15 +492,23 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
      * Găsește slug-ul categoriei de nivel 3 (ex: ecrane-iphone) din subcat (piese-iphone) și tip (ecrane).
      */
     public static function find_level3_slug($subcat_slug, $tip_slug) {
+        // PHP 8.1+: preg_quote()/str_replace() must not receive null.
+        $subcat_slug = (string) ($subcat_slug ?? '');
+        $tip_slug = (string) ($tip_slug ?? '');
+        if ($subcat_slug === '') {
+            return null;
+        }
         $subcat_term = get_term_by('slug', $subcat_slug, 'product_cat');
         if (!$subcat_term || is_wp_error($subcat_term)) return null;
         $brand = str_replace('piese-', '', $subcat_slug);
         $children = get_terms(['taxonomy' => 'product_cat', 'parent' => $subcat_term->term_id, 'hide_empty' => false]);
         if (is_wp_error($children) || empty($children)) return null;
+        $tip_q = preg_quote($tip_slug, '/');
+        $brand_q = preg_quote($brand, '/');
         foreach ($children as $c) {
             if ($c->slug === $tip_slug || strpos($c->slug, $tip_slug . '-') === 0) return $c->slug;
-            if (preg_match('/^' . preg_quote($tip_slug, '/') . '-.*-' . preg_quote($brand, '/') . '$/', $c->slug)) return $c->slug;
-            if (preg_match('/^' . preg_quote($tip_slug, '/') . '-' . preg_quote($brand, '/') . '$/', $c->slug)) return $c->slug;
+            if (preg_match('/^' . $tip_q . '-.*-' . $brand_q . '$/', $c->slug)) return $c->slug;
+            if (preg_match('/^' . $tip_q . '-' . $brand_q . '$/', $c->slug)) return $c->slug;
         }
         return $tip_slug . '-' . $brand;
     }
