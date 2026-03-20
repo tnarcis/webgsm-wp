@@ -315,7 +315,10 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
                     $href = $base_url;
 
                     if (count($selected) === 1 && count($new_vals) === 1) {
-                        $child_slug = WebGSM_Widget_Piese_Filter::find_level3_slug($selected[0], $new_vals[0]);
+                        // $selected poate avea 1 element cu cheie ≠ 0 (ex. după filtrări) — nu folosi [0] direct.
+                        $sub_one = (string) reset($selected);
+                        $tip_one = (string) reset($new_vals);
+                        $child_slug = WebGSM_Widget_Piese_Filter::find_level3_slug($sub_one, $tip_one);
                         if ($child_slug) {
                             $child = get_term_by('slug', $child_slug, 'product_cat');
                             if ($child && !is_wp_error($child)) {
