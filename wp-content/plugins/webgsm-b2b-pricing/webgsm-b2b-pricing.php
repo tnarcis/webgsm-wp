@@ -1045,6 +1045,29 @@ class WebGSM_B2B_Pricing {
     private static $req_tier = array();
     private static $req_discount_pj = array();
     private static $req_pret_minim = array();
+
+    /** Dedupe log B2B pricing: o intrare per cheie per request HTTP */
+    private static $req_b2b_price_logged = array();
+
+    /**
+     * WooCommerce apelează get_price / get_regular_price de foarte multe ori per produs într-un singur request.
+     * Fără deduplicare, același mesaj se scrie în debug.log de zeci/ori → I/O mare, log-uri inutilizabile.
+     *
+     * @param string $key Cheie unică per request (ex. floor_12345).
+     * @param bool   $only_when_debug_log Dacă true, log doar cu WP_DEBUG + WP_DEBUG_LOG (mesaje verbose).
+     */
+    private function log_b2b_price_once($key, $message, $only_when_debug_log = false) {
+        if (isset(self::$req_b2b_price_logged[$key])) {
+            return;
+        }
+        if ($only_when_debug_log) {
+            if (!defined('WP_DEBUG') || !WP_DEBUG || !defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
+                return;
+            }
+        }
+        self::$req_b2b_price_logged[$key] = true;
+        error_log($message);
+    }
     
     public static function instance() {
         if (is_null(self::$instance)) {
@@ -1929,32 +1952,82 @@ class WebGSM_B2B_Pricing {
         
         return $this->calculate_b2b_price($price, $product);
     }
+
+    /**
+     * Valoare numerică pozitivă pentru prețuri Woo (string gol / null = invalid).
+     */
+    private function b2b_is_positive_price_amount($val) {
+        if ($val === null || $val === '' || false === $val) {
+            return false;
+        }
+        if (!is_numeric($val)) {
+            return false;
+        }
+        return (float) wc_format_decimal($val) > 0;
+    }
+
+    /**
+     * Baza pentru discount B2B: NU folosim $price din filtru (poate fi deja alterat).
+     * Folosim get_*('edit') = date brute din produs, fără să treacă prin filtrele noastre.
+     *
+     * Multe importuri lasă _regular_price gol dar au _price / preț în datastore — atunci
+     * încă putem aplica discount pe prețul de catalog.
+     */
+    private function resolve_b2b_base_price_from_product($product) {
+        if (!is_object($product) || !method_exists($product, 'get_regular_price')) {
+            return null;
+        }
+
+        $reg = $product->get_regular_price('edit');
+        if ($this->b2b_is_positive_price_amount($reg)) {
+            return (float) wc_format_decimal($reg);
+        }
+
+        if ($product->is_type('variation')) {
+            $parent = wc_get_product($product->get_parent_id());
+            if ($parent) {
+                $reg = $parent->get_regular_price('edit');
+                if ($this->b2b_is_positive_price_amount($reg)) {
+                    return (float) wc_format_decimal($reg);
+                }
+            }
+        }
+
+        $active = $product->get_price('edit');
+        if ($this->b2b_is_positive_price_amount($active)) {
+            return (float) wc_format_decimal($active);
+        }
+
+        if ($product->is_type('variation')) {
+            $parent = wc_get_product($product->get_parent_id());
+            if ($parent) {
+                $active = $parent->get_price('edit');
+                if ($this->b2b_is_positive_price_amount($active)) {
+                    return (float) wc_format_decimal($active);
+                }
+            }
+        }
+
+        return null;
+    }
     
     public function calculate_b2b_price($price, $product) {
         $product_id = $product->get_id();
         
         // ========================================
-        // PROTECȚIE 1: Ia prețul ORIGINAL din meta (NICIODATĂ din $price!)
+        // PROTECȚIE 1: Preț de bază din produs (regular → fallback preț catalog Woo)
         // ========================================
-        $original_price = get_post_meta($product_id, '_regular_price', true);
+        $original_price = $this->resolve_b2b_base_price_from_product($product);
         
-        // Fallback pentru variații
-        if (empty($original_price) && $product->is_type('variation')) {
-            $original_price = get_post_meta($product_id, '_regular_price', true);
-            if (empty($original_price)) {
-                $parent_id = $product->get_parent_id();
-                $original_price = get_post_meta($parent_id, '_regular_price', true);
-            }
-        }
-        
-        // SECURITY: Dacă nu avem preț original valid, NU aplica discount!
-        if (empty($original_price) || $original_price <= 0) {
-            // Altfel, dacă $price e deja redus de alt plugin, pierdem bani
-            error_log('[WebGSM B2B] EROARE: Preț original lipsă pentru produs #' . $product_id . ' - discount NU aplicat');
+        // SECURITY: Dacă nu avem nicio bază validă, NU aplica discount!
+        if ($original_price === null || $original_price <= 0) {
+            $this->log_b2b_price_once(
+                'missing_regular_' . $product_id,
+                '[WebGSM B2B] EROARE: Fără preț regular/catalog valid pentru produs #' . $product_id . ' (verifică în admin / import) — discount NU aplicat',
+                false
+            );
             return $price; // Returnează prețul așa cum e, fără discount
         }
-        
-        $original_price = (float) $original_price;
         
         // ========================================
         // PROTECȚIE 2: HARD LIMIT - preț minim
@@ -1964,8 +2037,9 @@ class WebGSM_B2B_Pricing {
         // ========================================
         // PROTECȚIE 3: Verifică promoție (sale price)
         // ========================================
-        $sale_price = get_post_meta($product_id, '_sale_price', true);
-        $is_on_sale = !empty($sale_price) && (float)$sale_price < $original_price;
+        $sale_raw = $product->get_sale_price('edit');
+        $is_on_sale = $this->b2b_is_positive_price_amount($sale_raw) && (float) wc_format_decimal($sale_raw) < $original_price;
+        $sale_price = $is_on_sale ? (float) wc_format_decimal($sale_raw) : 0.0;
         
         // ========================================
         // CALCUL DISCOUNT
@@ -1998,10 +2072,12 @@ class WebGSM_B2B_Pricing {
         // ========================================
         if ($pret_minim > 0 && $pret_final < $pret_minim) {
             $pret_final = $pret_minim;
-            // Log doar în debug ca să nu umple log-ul pe live
-            if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
-                error_log("[WebGSM B2B] Preț corectat la minim pentru produs #{$product_id}: {$pret_final}");
-            }
+            // O singură linie per produs per request (Woo apelează filtrul de multe ori)
+            $this->log_b2b_price_once(
+                'floor_' . $product_id,
+                "[WebGSM B2B] Preț corectat la minim pentru produs #{$product_id}: {$pret_final}",
+                true
+            );
         }
         
         return round($pret_final, 2);
