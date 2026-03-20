@@ -291,7 +291,7 @@ add_action('wp_head', function() {
     }
     </style>
     
-    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+    <?php if (webgsm_is_debug_mode()): ?>
     <script>
     jQuery(document).ready(function($) {
         // Debug tier doar pe My Account și doar pentru utilizatori autentificați

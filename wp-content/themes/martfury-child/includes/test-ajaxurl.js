@@ -1,1 +1,0 @@
-console.log('ajaxurl:', typeof ajaxurl !== 'undefined' ? ajaxurl : 'undefined');

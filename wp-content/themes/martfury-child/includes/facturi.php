@@ -199,24 +199,6 @@ function webgsm_bulk_generate_skus() {
 }
 
 // =============================================
-// AUTO-GENERARE SKU — DEZACTIVATĂ (SKU vine din API / sync script)
-// =============================================
-// add_action('save_post_product', 'webgsm_auto_generate_sku', 10, 1); // nu mai rulăm la save
-function webgsm_auto_generate_sku($product_id) {
-    $product = wc_get_product($product_id);
-    if (!$product) return;
-    $current_sku = $product->get_sku();
-    if (empty($current_sku)) {
-        $auto_sku = 'WEBGSM-' . $product_id;
-        $product->set_sku($auto_sku);
-        $product->save();
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Auto-generated SKU for product #' . $product_id . ': ' . $auto_sku);
-        }
-    }
-}
-
-// =============================================
 // FUNCȚII SMARTBILL
 // =============================================
 
@@ -287,7 +269,36 @@ function genereaza_factura_smartbill($order_id) {
     // Verifică dacă factura există deja
     $factura_existenta = get_post_meta($order_id, '_smartbill_invoice_number', true);
     if($factura_existenta) {
-        return array('number' => $factura_existenta);
+        $series_existenta = get_post_meta($order_id, '_smartbill_invoice_series', true);
+        return array(
+            'number' => $factura_existenta,
+            'series' => $series_existenta
+        );
+    }
+
+    // Prevent concurrent SmartBill invoice generations for the same order.
+    // This avoids duplicate external calls when Woo hooks or admin actions overlap.
+    $lock_key = 'webgsm_smartbill_invoice_lock_' . (int) $order_id;
+    $lock_group = 'webgsm_smartbill_locks';
+    $lock_acquired = false;
+    if (function_exists('wp_cache_add')) {
+        $lock_acquired = wp_cache_add($lock_key, 1, $lock_group, 300);
+    }
+    if (!$lock_acquired) {
+        if (!get_transient($lock_key)) {
+            set_transient($lock_key, 1, 300);
+            $lock_acquired = true;
+        }
+    }
+
+    if (!$lock_acquired) {
+        // Another worker might have finished while we were trying to acquire the lock.
+        $num = get_post_meta($order_id, '_smartbill_invoice_number', true);
+        if ($num) {
+            $series = get_post_meta($order_id, '_smartbill_invoice_series', true);
+            return array('number' => $num, 'series' => $series);
+        }
+        return false;
     }
     
     $cif = get_option('smartbill_cif', 'RO31902941');

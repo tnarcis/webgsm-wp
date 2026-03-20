@@ -116,7 +116,7 @@ add_action('wp_footer', function() {
         function insertHeaders() {
             var nav = document.querySelector('.woocommerce-MyAccount-navigation ul');
             if (!nav) {
-                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                <?php if (webgsm_is_debug_mode()): ?>
                 console.warn('Nav ul not found');
                 <?php endif; ?>
                 return;
@@ -124,13 +124,13 @@ add_action('wp_footer', function() {
             
             // Verifică dacă headerele au fost deja inserate
             if (nav.querySelector('.menu-group-header')) {
-                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                <?php if (webgsm_is_debug_mode()): ?>
                 console.log('Headers already inserted');
                 <?php endif; ?>
                 return;
             }
             
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('Inserting menu headers...');
             <?php endif; ?>
             
@@ -181,7 +181,7 @@ add_action('wp_footer', function() {
                 }
             });
             
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('✅ Menu headers inserted successfully!');
             <?php endif; ?>
         }

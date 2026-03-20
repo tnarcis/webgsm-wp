@@ -160,7 +160,7 @@
             var skuCell = sku ? sku : '<span class="missing">Lipsă</span>';
             var row = '<tr class="row-' + product._validation.status + '" data-index="' + index + '">' +
                 '<td>' + (index + 1) + '</td>' +
-                '<td><img src="' + imgUrl + '" alt="" class="thumb-img"></td>' +
+                '<td><img src="' + imgUrl + '" alt="' + (product['Name'] || 'Produs').replace(/"/g, '&quot;') + '" class="thumb-img"></td>' +
                 '<td class="sku-cell" title="' + (sku || '').replace(/"/g, '&quot;') + '">' + skuCell + '</td>' +
                 '<td class="name-cell" title="' + (product['Name'] || '').replace(/"/g, '&quot;') + '">' + truncate(product['Name'] || '', 30) + '</td>' +
                 '<td class="category-cell">' + formatCategory(product['Categories']) + '</td>' +

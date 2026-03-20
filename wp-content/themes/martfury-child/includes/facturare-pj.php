@@ -597,21 +597,29 @@ function cauta_cui_anaf_callback() {
         wp_send_json_error('Eroare ANAF - nu s-a primit ID');
     }
     
-    // Pas 2: Așteptăm și cerem rezultatul
-    sleep(2);
-    
+    // Pas 2: cerem rezultatul (evităm sleep(2) care crește durata request-ului și implicit concurența DB).
     $url_result = 'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva?id=' . $data['correlationId'];
-    
-    $response2 = wp_remote_get($url_result, array(
-        'timeout' => 30
-    ));
-    
-    if(is_wp_error($response2)) {
-        wp_send_json_error('Eroare la preluare rezultat');
+
+    $result = null;
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        $response2 = wp_remote_get($url_result, array(
+            'timeout' => 30
+        ));
+
+        if (is_wp_error($response2)) {
+            wp_send_json_error('Eroare la preluare rezultat');
+        }
+
+        $candidate = json_decode(wp_remote_retrieve_body($response2), true);
+        if (isset($candidate['found'][0]['date_generale'])) {
+            $result = $candidate;
+            break;
+        }
+
+        // Mic backoff; ANAF poate avea procesare asincronă.
+        usleep(400000); // 400ms
     }
-    
-    $result = json_decode(wp_remote_retrieve_body($response2), true);
-    
+
     if(isset($result['found'][0]['date_generale'])) {
         $firma = $result['found'][0]['date_generale'];
         $adresa_sediu = $result['found'][0]['adresa_sediu_social'] ?? array();
@@ -636,5 +644,5 @@ function cauta_cui_anaf_callback() {
         ));
     }
     
-    wp_send_json_error('CUI negăsit în baza ANAF');
+    wp_send_json_error('Procesare ANAF in curs sau CUI negăsit. Reîncearcă in cateva minute.');
 }

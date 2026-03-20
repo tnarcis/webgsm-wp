@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) exit;
 add_action('woocommerce_account_adrese-salvate_endpoint', function() {
     // Set flag for JavaScript - popupurile sunt pe pagina
     echo '<script>window.webgsm_is_myaccount = true;';
-    if (defined('WP_DEBUG') && WP_DEBUG) {
+    if (function_exists('webgsm_is_debug_mode') && webgsm_is_debug_mode()) {
         echo ' console.log("[WebGSM] My Account page detected");';
     }
     echo '</script>';

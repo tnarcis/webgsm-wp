@@ -1257,18 +1257,21 @@ class WebGSM_B2B_Pricing {
             <?php
         }
         
-        ?>
-        <script>
-        console.group('🔧 WebGSM B2B Pricing v2.0 - DEBUG');
-        console.log('📌 User ID:', <?php echo $user_id; ?>);
-        console.log('🏢 Is PJ:', <?php echo $is_pj; ?>);
-        console.log('⭐ Tier:', '<?php echo $tier; ?>');
-        console.log('💰 Total Value:', '<?php echo number_format($total_value, 2); ?> RON');
-        console.log('📊 Discount Implicit:', '<?php echo $discount_implicit; ?>%');
-        console.log('🏆 Tiers Config:', <?php echo json_encode($tiers); ?>);
-        console.groupEnd();
-        </script>
-        <?php
+        if (function_exists('webgsm_is_debug_mode') && webgsm_is_debug_mode()) {
+            ?>
+            <script>
+            (function(){if(window.location.search.indexOf('webgsm_b2b_debug=1')===-1)return;
+            console.group('🔧 WebGSM B2B Pricing v2.0 - DEBUG');
+            console.log('📌 User ID:', <?php echo (int) $user_id; ?>);
+            console.log('🏢 Is PJ:', <?php echo $is_pj; ?>);
+            console.log('⭐ Tier:', '<?php echo esc_js($tier); ?>');
+            console.log('💰 Total Value:', '<?php echo esc_js(number_format($total_value, 2)); ?> RON');
+            console.log('📊 Discount Implicit:', '<?php echo esc_js($discount_implicit); ?>%');
+            console.log('🏆 Tiers Config:', <?php echo wp_json_encode($tiers); ?>);
+            console.groupEnd();})();
+            </script>
+            <?php
+        }
     }
     
     public function debug_set_pj_button() {
@@ -1297,12 +1300,64 @@ class WebGSM_B2B_Pricing {
     // CACHE MANAGEMENT
     // =========================================
     
+    /**
+     * Acquire a short-lived lock to prevent stampedes for expensive recalculations.
+     *
+     * Notes:
+     * - Uses wp_cache_add when object caching is enabled.
+     * - Falls back to transients otherwise.
+     */
+    private function acquire_lock(string $lock_suffix, int $ttl_seconds = 120): bool {
+        $lock_key = 'webgsm_b2b_lock_' . $lock_suffix;
+        $group = 'webgsm_b2b_locks';
+
+        // IMPORTANT: do not chain object-cache + transients. If wp_cache_add fails, falling through
+        // to set_transient() can grant a second "lock" in parallel → double tier recalcs / races.
+        if (function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache()) {
+            return (bool) wp_cache_add($lock_key, 1, $group, $ttl_seconds);
+        }
+
+        // Default PHP-FPM / no shared in-memory cache: use transients (DB) for cross-process locking.
+        if (get_transient($lock_key)) {
+            return false;
+        }
+        set_transient($lock_key, 1, $ttl_seconds);
+        return true;
+    }
+
+    /**
+     * Release lock acquired by acquire_lock() (same backend).
+     */
+    private function release_lock(string $lock_suffix): void {
+        $lock_key = 'webgsm_b2b_lock_' . $lock_suffix;
+        $group = 'webgsm_b2b_locks';
+        if (function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache()) {
+            wp_cache_delete($lock_key, $group);
+            return;
+        }
+        delete_transient($lock_key);
+    }
+
+    /**
+     * Wait briefly for another worker to finish tier recalculation.
+     * Prevents "empty tier" situations during concurrent invalidations.
+     */
+    private function wait_for_user_tier(int $user_id, int $max_wait_ms = 3000): ?string {
+        $start = microtime(true);
+        while ((microtime(true) - $start) * 1000 < $max_wait_ms) {
+            $tier = get_user_meta($user_id, '_pj_tier', true);
+            if (!empty($tier)) {
+                return (string) $tier;
+            }
+            usleep(150000); // 150ms
+        }
+        return null;
+    }
+
     public function clear_all_price_cache() {
-        global $wpdb;
-        wp_cache_flush();
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '%_transient_wc_%'");
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '%_transient_timeout_wc_%'");
-        
+        // DO NOT flush global caches and DO NOT wipe all WC transients:
+        // under concurrent order updates this can create cache stampedes and MySQL contention.
+        // We only clear cart totals for the current request context (if available).
         if (function_exists('WC') && WC()->session) {
             WC()->session->set('cart_totals', null);
         }
@@ -1574,11 +1629,27 @@ class WebGSM_B2B_Pricing {
         }
         
         $tier = get_user_meta($user_id, '_pj_tier', true);
-        
+
         if (empty($tier)) {
-            $tier = $this->calculate_user_tier($user_id);
-            update_user_meta($user_id, '_pj_tier', $tier);
-            update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+            // Prevent concurrent recalculation stampedes for the same user.
+            $lock_acquired = $this->acquire_lock('tier_calc_' . (int) $user_id, 120);
+
+            if ($lock_acquired) {
+                $tier = $this->calculate_user_tier($user_id);
+                update_user_meta($user_id, '_pj_tier', $tier);
+                update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+                $this->release_lock('tier_calc_' . (int) $user_id);
+            } else {
+                $waited = $this->wait_for_user_tier((int) $user_id, 3000);
+                if (!empty($waited)) {
+                    $tier = $waited;
+                } else {
+                    // Fallback to preserve business correctness in edge cases.
+                    $tier = $this->calculate_user_tier($user_id);
+                    update_user_meta($user_id, '_pj_tier', $tier);
+                    update_user_meta($user_id, '_pj_tier_achieved_date', current_time('mysql'));
+                }
+            }
         }
         
         self::$req_tier[$user_id] = $tier;
@@ -1676,7 +1747,10 @@ class WebGSM_B2B_Pricing {
         if (!$user_id || !$this->is_user_pj($user_id)) return;
         
         delete_user_meta($user_id, '_pj_value_calculated');
-        
+
+        // Do not wrap this hook in the same lock as get_user_tier(): returning early when the lock
+        // is held would leave _pj_tier stale while totals refresh → wrong tier discount until manual invalidation.
+
         $old_tier = get_user_meta($user_id, '_pj_tier', true);
         $new_tier = $this->calculate_user_tier($user_id);
         
@@ -1716,15 +1790,12 @@ class WebGSM_B2B_Pricing {
         delete_user_meta($user_id, '_pj_value_calculated');
         delete_user_meta($user_id, '_pj_tier');
         
-        // Recalculează tier-ul
-        $new_tier = $this->calculate_user_tier($user_id);
-        update_user_meta($user_id, '_pj_tier', $new_tier);
-        
-        // Marchează invalidare
+        // Mark invalidation.
+        // Do NOT recalculate synchronously here: it triggers expensive `wc_get_orders(... limit => -1)`
+        // under concurrent order status changes.
         update_user_meta($user_id, '_pj_last_invalidation', time());
-        
-        // Forțează reîmprospătare prețuri (cache WooCommerce)
-        $this->clear_all_price_cache();
+
+        // If we deleted the tier meta above, pricing will recalculate lazily on the next request for the user.
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă anulată #' . $order_id);
@@ -1751,7 +1822,7 @@ class WebGSM_B2B_Pricing {
         delete_user_meta($user_id, '_pj_value_calculated');
         delete_user_meta($user_id, '_pj_tier');
         update_user_meta($user_id, '_pj_last_invalidation', time());
-        $this->clear_all_price_cache();
+        // Lazy recalculation on next tier lookup to avoid concurrent heavy queries.
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Comandă ștearsă #' . $post_id);
@@ -1777,10 +1848,8 @@ class WebGSM_B2B_Pricing {
             delete_user_meta($user_id, '_pj_value_calculated');
             delete_user_meta($user_id, '_pj_tier');
             
-            $new_tier = $this->calculate_user_tier($user_id);
-            update_user_meta($user_id, '_pj_tier', $new_tier);
             update_user_meta($user_id, '_pj_last_invalidation', time());
-            $this->clear_all_price_cache();
+            // Lazy recalculation on next tier lookup to avoid concurrent heavy queries.
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('WebGSM: Cache invalidat pentru user ' . $user_id . ' - Status schimbat: ' . $old_status . ' → ' . $new_status);

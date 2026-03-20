@@ -1939,10 +1939,12 @@ class WebGSM_Setup_Wizard_V2 {
         (function() {
             try {
                 window.webgsmFilterDebugPayload = <?php echo wp_json_encode($payload); ?>;
-                console.group('WebGSM Filter Debug');
-                console.log(window.webgsmFilterDebugPayload);
-                console.log('WebGSM Filter Debug JSON:', JSON.stringify(window.webgsmFilterDebugPayload, null, 2));
-                console.groupEnd();
+                if (window.location.search.indexOf('webgsm_b2b_debug=1') !== -1 && window.console) {
+                    console.group('WebGSM Filter Debug');
+                    console.log(window.webgsmFilterDebugPayload);
+                    console.log('WebGSM Filter Debug JSON:', JSON.stringify(window.webgsmFilterDebugPayload, null, 2));
+                    console.groupEnd();
+                }
             } catch (e) {}
         })();
         </script>

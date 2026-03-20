@@ -76,7 +76,7 @@ add_action('wp_footer', function() {
     ?>
     <script type="text/javascript">
     jQuery(document).ready(function($) {
-        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+        <?php if (webgsm_is_debug_mode()): ?>
         console.log('[WebGSM] Card handlers initialized');
         <?php endif; ?>
         
@@ -87,7 +87,7 @@ add_action('wp_footer', function() {
         // Adrese - buton + și buton empty state
         $(document).on('click', '#btn-add-address, #btn-add-address-empty', function(e) {
             e.preventDefault();
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Opening address modal for ADD');
             <?php endif; ?>
             
@@ -109,7 +109,7 @@ add_action('wp_footer', function() {
         // Firme - buton + și buton empty state
         $(document).on('click', '#btn-add-company, #btn-add-company-empty', function(e) {
             e.preventDefault();
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Opening company modal for ADD');
             <?php endif; ?>
             
@@ -133,7 +133,7 @@ add_action('wp_footer', function() {
         // Persoane - buton + și buton empty state
         $(document).on('click', '#btn-add-person, #btn-add-person-empty', function(e) {
             e.preventDefault();
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Opening person modal for ADD');
             <?php endif; ?>
             
@@ -165,7 +165,7 @@ add_action('wp_footer', function() {
             var type = $btn.data('type');
             var index = $btn.data('index');
             
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Edit clicked - Type:', type, 'Index:', index);
             <?php endif; ?>
             
@@ -184,7 +184,9 @@ add_action('wp_footer', function() {
                     index: index
                 },
                 success: function(response) {
+                    <?php if (webgsm_is_debug_mode()): ?>
                     console.log('[WebGSM] Edit response:', response);
+                    <?php endif; ?>
                     
                     if (response.success && response.data) {
                         var data = response.data;
@@ -235,7 +237,7 @@ add_action('wp_footer', function() {
                     $btn.html('✏️ Editează').prop('disabled', false);
                 },
                 error: function(xhr, status, error) {
-                    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                    <?php if (webgsm_is_debug_mode()): ?>
                     console.error('[WebGSM] Edit AJAX error:', error);
                     <?php endif; ?>
                     alert('Eroare de conexiune: ' + error);
@@ -264,7 +266,7 @@ add_action('wp_footer', function() {
                 return;
             }
             
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Delete - Type:', type, 'Index:', index);
             <?php endif; ?>
             
@@ -495,14 +497,14 @@ add_action('wp_footer', function() {
         function deleteItem($btn, action, confirmMsg, itemType) {
             var index = $btn.data('index');
             
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+            <?php if (webgsm_is_debug_mode()): ?>
             console.log('[WebGSM] Delete ' + itemType + ', index:', index);
             console.log('[WebGSM] Button element:', $btn[0]);
             console.log('[WebGSM] Button HTML:', $btn[0].outerHTML);
             <?php endif; ?>
             
             if (index === undefined || index === null) {
-                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                <?php if (webgsm_is_debug_mode()): ?>
                 console.error('[WebGSM] No index found on button');
                 <?php endif; ?>
                 alert('Eroare: butonul nu are index valid. Verifică că butonul are atributul data-index.');
@@ -527,7 +529,7 @@ add_action('wp_footer', function() {
             
             if (!nonce || !ajax_url) {
                 alert('Eroare: configurație AJAX lipsă');
-                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                <?php if (webgsm_is_debug_mode()): ?>
                 console.error('[WebGSM] Missing nonce or ajax_url');
                 <?php endif; ?>
                 return false;
@@ -544,7 +546,7 @@ add_action('wp_footer', function() {
                     nonce: nonce
                 },
                 success: function(response) {
-                    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                    <?php if (webgsm_is_debug_mode()): ?>
                     console.log('[WebGSM] Response:', response);
                     <?php endif; ?>
                     if (response.success) {
@@ -560,7 +562,7 @@ add_action('wp_footer', function() {
                     }
                 },
                 error: function(xhr, status, error) {
-                    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                    <?php if (webgsm_is_debug_mode()): ?>
                     console.error('[WebGSM] AJAX error:', status, error);
                     <?php endif; ?>
                     alert('Eroare la comunicarea cu serverul');

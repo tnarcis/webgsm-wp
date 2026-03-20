@@ -18,7 +18,7 @@ add_action('wp_footer', function() {
     ?>
     <script>
     // Override console.log în producție
-    if (typeof console !== 'undefined' && !window.location.hostname.includes('local')) {
+    if (typeof console !== 'undefined' && !window.location.hostname.includes('local') && window.location.search.indexOf('webgsm_b2b_debug=1') === -1) {
         console.log = function() {};
         console.warn = function() {};
         console.info = function() {};

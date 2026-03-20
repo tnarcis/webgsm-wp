@@ -23,7 +23,7 @@
     var WebGSM = {
         initialized: false,
         currentCustomerType: 'pf',
-        debug: true
+        debug: window.location.search.indexOf('webgsm_b2b_debug=1') !== -1
     };
     // Ultimul CUI căutat (pentru a evita duplicatele)
     var lastANAFcui = ''; 
@@ -1301,7 +1301,7 @@
             
             if (response.success) {
                 var d = response.data;
-                console.log('ANAF Response:', d);
+                if (WebGSM.debug && window.console) console.log('ANAF Response:', d);
                 
                 // Completează câmpurile
                 $('#company_name').val(d.name || '');
@@ -1311,7 +1311,7 @@
                 
                 // Setează select-ul cu codul județului
                 var countyCode = getStateCode(d.county);
-                console.log('County Code:', countyCode);
+                if (WebGSM.debug && window.console) console.log('County Code:', countyCode);
                 $('#company_county').val(countyCode || '');
                 $('#company_city').val(d.city || '');
                 
@@ -1328,7 +1328,7 @@
                        .html('✓ ' + d.name + (d.is_tva ? ' (Plătitor TVA)' : ''))
                        .show();
                        
-                console.log('Câmpuri completate cu succes');
+                if (WebGSM.debug && window.console) console.log('Câmpuri completate cu succes');
             } else {
                 // Permite retry (sterge lastANAFcui astfel încât următoarea intrare să re-trigger-eze)
                 lastANAFcui = '';
@@ -1500,6 +1500,14 @@
          */
         function injectFieldsIntoForm() {
             var $form = $('form.checkout');
+
+            // Observații (order_comments) – asigură că ajung la server
+            var orderComments = $('textarea[name="order_comments"]').val() || '';
+            $form.find('input[name="order_comments"][type="hidden"].webgsm-order-comments-backup').remove();
+            if (orderComments) {
+                var $oc = $('<input type="hidden" name="order_comments" class="webgsm-order-comments-backup">').val(orderComments);
+                $form.append($oc);
+            }
 
             // Termeni — checkbox-ul #terms e acum INSIDE form (integrateFormWithLayout).
             // Asigurăm doar că valoarea ajunge la server (checkbox unchecked nu se serializează).

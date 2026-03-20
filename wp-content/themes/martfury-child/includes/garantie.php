@@ -86,35 +86,47 @@ function produs_in_garantie($delivery_timestamp, $product_id) {
 
 // Calculează cantitatea deja trimisă în garanție (cu cereri active)
 function get_qty_in_garantie_activa($order_id, $product_id, $customer_id) {
-    $garantii = get_posts(array(
-        'post_type' => 'cerere_garantie',
-        'author' => $customer_id,
-        'meta_query' => array(
-            'relation' => 'AND',
-            array(
-                'key' => '_order_id',
-                'value' => $order_id
-            ),
-            array(
-                'key' => '_product_id',
-                'value' => $product_id
-            ),
-            array(
-                'key' => '_status_garantie',
-                'value' => array('finalizat', 'respins'),
-                'compare' => 'NOT IN'
-            )
-        ),
-        'numberposts' => -1
-    ));
-    
-    $total = 0;
-    foreach($garantii as $garantie) {
-        $qty = get_post_meta($garantie->ID, '_qty_garantie', true);
-        $total += $qty ? intval($qty) : 1;
-    }
-    
-    return $total;
+    // Avoid N+1: compute SUM(_qty_garantie) directly in SQL.
+    // Preserve the original fallback: when _qty_garantie is empty, treat as 1.
+    global $wpdb;
+
+    $sql = "
+        SELECT
+            COALESCE(SUM(
+                CASE
+                    WHEN pm_qty.meta_value IS NULL OR pm_qty.meta_value = '' OR pm_qty.meta_value = '0' THEN 1
+                    ELSE CAST(pm_qty.meta_value AS SIGNED)
+                END
+            ), 0) AS total_qty
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm_order
+            ON pm_order.post_id = p.ID
+            AND pm_order.meta_key = '_order_id'
+            AND pm_order.meta_value = %d
+        INNER JOIN {$wpdb->postmeta} pm_product
+            ON pm_product.post_id = p.ID
+            AND pm_product.meta_key = '_product_id'
+            AND pm_product.meta_value = %d
+        INNER JOIN {$wpdb->postmeta} pm_status
+            ON pm_status.post_id = p.ID
+            AND pm_status.meta_key = '_status_garantie'
+            AND pm_status.meta_value NOT IN ('finalizat', 'respins')
+        LEFT JOIN (
+            SELECT post_id, MAX(meta_value) AS meta_value
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = '_qty_garantie'
+            GROUP BY post_id
+        ) pm_qty
+            ON pm_qty.post_id = p.ID
+        WHERE p.post_type = 'cerere_garantie'
+          AND p.post_author = %d
+          AND p.post_status = 'publish'
+    ";
+
+    $prepared = $wpdb->prepare($sql, (int) $order_id, (int) $product_id, (int) $customer_id);
+    $total = $wpdb->get_var($prepared);
+
+    return $total !== null ? (int) $total : 0;
 }
 
 // Funcție helper: upload poze garanție
@@ -680,7 +692,7 @@ function render_garantie_metabox($post) {
                     if($url):
                 ?>
                     <a href="<?php echo $url; ?>" target="_blank">
-                        <img src="<?php echo $url; ?>" style="max-width:150px; max-height:150px; border:1px solid #ddd; border-radius:4px;">
+                        <img src="<?php echo $url; ?>" alt="Poza atașată cerere garanție" style="max-width:150px; max-height:150px; border:1px solid #ddd; border-radius:4px;">
                     </a>
                 <?php endif; endforeach; ?>
                 </div>

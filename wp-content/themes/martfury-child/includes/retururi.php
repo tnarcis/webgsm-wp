@@ -48,30 +48,43 @@ add_action('init', function() {
 
 // Funcție helper: calculează cantitatea deja returnată dintr-un produs
 function get_qty_returned($order_id, $product_id, $customer_id) {
-    $retururi = get_posts(array(
-        'post_type' => 'cerere_retur',
-        'author' => $customer_id,
-        'meta_query' => array(
-            'relation' => 'AND',
-            array(
-                'key' => '_order_id',
-                'value' => $order_id
-            ),
-            array(
-                'key' => '_product_id',
-                'value' => $product_id
-            )
-        ),
-        'numberposts' => -1
-    ));
-    
-    $total_returned = 0;
-    foreach($retururi as $retur) {
-        $qty = get_post_meta($retur->ID, '_qty_retur', true);
-        $total_returned += $qty ? intval($qty) : 1;
-    }
-    
-    return $total_returned;
+    // Avoid N+1: compute SUM(_qty_retur) directly in SQL.
+    // Preserve the original fallback: when _qty_retur is empty, treat as 1.
+    global $wpdb;
+
+    $sql = "
+        SELECT
+            COALESCE(SUM(
+                CASE
+                    WHEN pm_qty.meta_value IS NULL OR pm_qty.meta_value = '' OR pm_qty.meta_value = '0' THEN 1
+                    ELSE CAST(pm_qty.meta_value AS SIGNED)
+                END
+            ), 0) AS total_qty
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm_order
+            ON pm_order.post_id = p.ID
+            AND pm_order.meta_key = '_order_id'
+            AND pm_order.meta_value = %d
+        INNER JOIN {$wpdb->postmeta} pm_product
+            ON pm_product.post_id = p.ID
+            AND pm_product.meta_key = '_product_id'
+            AND pm_product.meta_value = %d
+        LEFT JOIN (
+            SELECT post_id, MAX(meta_value) AS meta_value
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = '_qty_retur'
+            GROUP BY post_id
+        ) pm_qty
+            ON pm_qty.post_id = p.ID
+        WHERE p.post_type = 'cerere_retur'
+          AND p.post_author = %d
+          AND p.post_status = 'publish'
+    ";
+
+    $prepared = $wpdb->prepare($sql, (int) $order_id, (int) $product_id, (int) $customer_id);
+    $total = $wpdb->get_var($prepared);
+
+    return $total !== null ? (int) $total : 0;
 }
 
 // Funcție helper: ia data livrării (când comanda a devenit "completed")
@@ -157,7 +170,34 @@ function genereaza_storno_retur($retur_id) {
     // Verifică dacă storno-ul a fost deja generat
     $storno_existent = get_post_meta($retur_id, '_smartbill_storno_number', true);
     if($storno_existent) {
-        return array('number' => $storno_existent);
+        $series_existenta = get_post_meta($retur_id, '_smartbill_storno_series', true);
+        return array(
+            'number' => $storno_existent,
+            'series' => $series_existenta
+        );
+    }
+
+    // Prevent concurrent SmartBill storno generations for the same retur.
+    $lock_key = 'webgsm_smartbill_storno_lock_' . (int) $retur_id;
+    $lock_group = 'webgsm_smartbill_locks';
+    $lock_acquired = false;
+    if (function_exists('wp_cache_add')) {
+        $lock_acquired = wp_cache_add($lock_key, 1, $lock_group, 300);
+    }
+    if (!$lock_acquired) {
+        if (!get_transient($lock_key)) {
+            set_transient($lock_key, 1, 300);
+            $lock_acquired = true;
+        }
+    }
+
+    if (!$lock_acquired) {
+        $num = get_post_meta($retur_id, '_smartbill_storno_number', true);
+        if ($num) {
+            $series = get_post_meta($retur_id, '_smartbill_storno_series', true);
+            return array('number' => $num, 'series' => $series);
+        }
+        return false;
     }
     
     // Verifică dacă comanda are factură
@@ -846,7 +886,7 @@ function render_retur_metabox($post) {
                     if($url):
                 ?>
                     <a href="<?php echo $url; ?>" target="_blank">
-                        <img src="<?php echo $url; ?>" style="max-width:150px; max-height:150px; border:1px solid #ddd; border-radius:4px;">
+                        <img src="<?php echo $url; ?>" alt="Poza atașată cerere retur" style="max-width:150px; max-height:150px; border:1px solid #ddd; border-radius:4px;">
                     </a>
                 <?php endif; endforeach; ?>
                 </div>

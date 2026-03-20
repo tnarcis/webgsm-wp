@@ -1,4 +1,14 @@
 <?php
+/**
+ * Helper: verifică dacă modul debug WebGSM este activ (URL conține webgsm_b2b_debug=1).
+ * Folosit pentru a afișa console.log doar când e necesar debugging.
+ */
+if (!function_exists('webgsm_is_debug_mode')) {
+    function webgsm_is_debug_mode() {
+        return isset($_GET['webgsm_b2b_debug']) && sanitize_text_field($_GET['webgsm_b2b_debug']) === '1';
+    }
+}
+
 // Înarcă stilurile temei părinte
 add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('martfury-parent', get_template_directory_uri() . '/style.css');

@@ -44,13 +44,17 @@ function webgsm_pret_achizitie_fallback_for_import($value, $object_id, $meta_key
     if ($meta_key !== '_pret_achizitie') {
         return $value;
     }
+    // Only do the fallback query when meta is actually missing/empty.
+    if ($value !== null && $value !== '') {
+        return $value;
+    }
     global $wpdb;
     $stored = $wpdb->get_var($wpdb->prepare(
         "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = '_pret_achizitie' LIMIT 1",
         (int) $object_id
     ));
     if ($stored !== null && $stored !== '' && is_numeric($stored)) {
-        return $value;
+        return $single ? $stored : array($stored);
     }
     $from_import = $wpdb->get_var($wpdb->prepare(
         "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = 'pret_achizitie' LIMIT 1",
@@ -70,13 +74,17 @@ function webgsm_source_url_fallback_for_import($value, $object_id, $meta_key, $s
     if ($meta_key !== '_source_url') {
         return $value;
     }
+    // Only do the fallback query when meta is actually missing/empty.
+    if ($value !== null && $value !== '') {
+        return $value;
+    }
     global $wpdb;
     $stored = $wpdb->get_var($wpdb->prepare(
         "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = '_source_url' LIMIT 1",
         (int) $object_id
     ));
     if ($stored !== null && $stored !== '') {
-        return $value;
+        return $single ? $stored : array($stored);
     }
     $from_import = $wpdb->get_var($wpdb->prepare(
         "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = 'source_url' LIMIT 1",

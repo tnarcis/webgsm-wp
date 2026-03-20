@@ -286,6 +286,11 @@ class WebGSM_Checkout_Save {
      * Salvează toate câmpurile în comandă
      */
     private function webgsm_save_fields_to_order($order) {
+        // Notă client (Observații)
+        if (isset($_POST['order_comments']) && !empty(trim($_POST['order_comments']))) {
+            $order->set_customer_note(sanitize_textarea_field($_POST['order_comments']));
+        }
+
         // Tip client
         $customer_type = isset($_POST['billing_customer_type']) ? sanitize_text_field($_POST['billing_customer_type']) : 'pf';
         $order->update_meta_data('_customer_type', $customer_type);

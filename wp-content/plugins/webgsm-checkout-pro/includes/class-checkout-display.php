@@ -12,8 +12,10 @@ if (!defined('ABSPATH')) exit;
 class WebGSM_Checkout_Display {
     
     public function __construct() {
+        add_action('admin_head', [$this, 'admin_customer_note_css']);
         // Admin - afișare în detalii comandă
         add_action('woocommerce_admin_order_data_after_billing_address', [$this, 'admin_display'], 10, 1);
+        add_action('woocommerce_admin_order_data_after_billing_address', [$this, 'admin_display_customer_note'], 5, 1);
         
         // Email - afișare în email-uri
         add_action('woocommerce_email_after_order_table', [$this, 'email_display'], 10, 4);
@@ -32,8 +34,41 @@ class WebGSM_Checkout_Display {
         
         // Ascunde adresa de facturare default pe thank you page pentru PJ
         add_filter('woocommerce_order_get_formatted_billing_address', [$this, 'filter_billing_address'], 10, 3);
+        // Traduce eticheta "Customer provided note" în admin
+        add_filter('gettext', [$this, 'filter_customer_note_label'], 10, 3);
+    }
+
+    public function filter_customer_note_label($translated, $text, $domain) {
+        if (!is_admin()) return $translated;
+        if ($text === 'Customer provided note' && $domain === 'woocommerce') {
+            return 'Observații client';
+        }
+        return $translated;
     }
     
+    /**
+     * CSS pentru notă client – roșu în admin
+     */
+    public function admin_customer_note_css() {
+        $screen = get_current_screen();
+        if (!$screen) return;
+        $id = $screen->id ?? '';
+        if (strpos($id, 'shop_order') === false && strpos($id, 'wc-orders') === false && strpos($id, 'woocommerce') === false) return;
+        echo '<style>.order_data_column:nth-child(3) .order_note{display:none!important}</style>';
+    }
+
+    /**
+     * Notă client (Observații) – scris roșu, vizibil pentru cine preia comanda
+     */
+    public function admin_display_customer_note($order) {
+        $note = $order->get_customer_note();
+        if (empty(trim($note))) return;
+        echo '<div style="background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #dc2626;padding:12px;margin-bottom:12px;border-radius:4px;">';
+        echo '<p style="margin:0 0 6px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#991b1b;font-weight:600;">Observații client</p>';
+        echo '<p style="margin:0;color:#dc2626;font-weight:600;font-size:14px;line-height:1.5;">' . nl2br(esc_html($note)) . '</p>';
+        echo '</div>';
+    }
+
     /**
      * Afișare în admin - detalii comandă
      */
