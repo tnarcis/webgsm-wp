@@ -20,6 +20,7 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
         <a href="#tab-security" class="wsa-tab" data-tab="tab-security">Securitate</a>
         <a href="#tab-performance" class="wsa-tab" data-tab="tab-performance">Performanță</a>
         <a href="#tab-seo" class="wsa-tab" data-tab="tab-seo">SEO</a>
+        <a href="#tab-slow-log" class="wsa-tab" data-tab="tab-slow-log">Jurnal lent</a>
         <a href="#tab-debug" class="wsa-tab" data-tab="tab-debug">Debug Log</a>
         <a href="#tab-gsc" class="wsa-tab" data-tab="tab-gsc">GSC</a>
     </nav>
@@ -185,7 +186,34 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
     </div>
 
     <!-- DEBUG LOG -->
+    <div class="wsa-tab-content" id="tab-slow-log" style="display:none">
+        <p class="description" style="margin-bottom:12px;">
+            Afișează <code>wp-content/webgsm-perf-audit.log</code> (requesturi mai lente decât pragul).
+            <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-site-audit-settings')); ?>">Activează / prag în Setări</a>.
+            <span id="wsa-slow-log-status" class="wsa-status"></span>
+        </p>
+        <div class="wsa-actions">
+            <select id="wsa-slow-lines">
+                <option value="100">100 linii</option>
+                <option value="300" selected>300</option>
+                <option value="500">500</option>
+                <option value="1000">1000</option>
+            </select>
+            <input type="text" id="wsa-slow-filter" placeholder="Filtrează text..." style="width:220px">
+            <button type="button" class="button button-primary" id="wsa-slow-refresh">Reîncarcă</button>
+            <button type="button" class="button" id="wsa-slow-clear" style="color:#d63638;">Golește jurnal</button>
+            <span class="wsa-status" id="wsa-slow-size"></span>
+        </div>
+        <div class="wsa-debug-log" id="wsa-slow-output"><pre style="max-height:520px;overflow:auto;background:#1a2332;color:#a8d4ff;padding:15px;font-size:11px;line-height:1.45;border-radius:4px;"></pre></div>
+    </div>
+
     <div class="wsa-tab-content" id="tab-debug" style="display:none">
+        <div class="notice notice-info" style="margin:12px 0;padding:12px 14px;">
+            <p style="margin:0 0 8px;"><strong>Acest tab = doar <code>wp-content/debug.log</code></strong> (erori PHP, <code>error_log</code> de la pluginuri).</p>
+            <p style="margin:0 0 8px;">Pentru <strong>requesturi lente</strong> (durată, query-uri, pluginuri) folosește tab-ul <strong>Jurnal lent</strong> sau
+                <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-site-audit-settings')); ?>">Setări</a>.</p>
+            <p style="margin:0;">Jurnalul lent se scrie în <code>wp-content/webgsm-perf-audit.log</code>.</p>
+        </div>
         <div class="wsa-actions">
             <select id="wsa-debug-lines"><option value="200">200 linii</option><option value="500" selected>500</option><option value="1000">1000</option></select>
             <select id="wsa-debug-severity"><option value="">Toate</option><option value="fatal_error">Fatal</option><option value="parse_error">Parse</option><option value="warning">Warning</option><option value="notice">Notice</option><option value="deprecated">Deprecated</option></select>

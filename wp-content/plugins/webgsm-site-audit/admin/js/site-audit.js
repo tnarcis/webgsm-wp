@@ -37,6 +37,7 @@
         $('.wsa-tab-content').hide();
         $(target).show();
         if (target === '#tab-debug') loadDebugLog();
+        if (target === '#tab-slow-log') loadSlowLog();
     });
 
     // --- LINK FILTERS ---
@@ -230,6 +231,50 @@
         });
         $el.html(html);
     }
+
+    // --- JURNAL LENT (webgsm-perf-audit.log) ---
+    function loadSlowLog() {
+        var $out = $('#wsa-slow-output pre');
+        var $st = $('#wsa-slow-log-status');
+        $out.html(spinner() + ' Se încarcă...');
+        $st.text('');
+        post('webgsm_audit_get_slow_log', {
+            lines: $('#wsa-slow-lines').val(),
+            filter: $('#wsa-slow-filter').val()
+        })
+        .done(function(res) {
+            if (!res.success) {
+                $out.text('Eroare: ' + (res.data || ''));
+                return;
+            }
+            var d = res.data;
+            $('#wsa-slow-size').text(d.size ? 'Dimensiune: ' + d.size : '');
+            if (!d.enabled) {
+                $st.text('Jurnalul nu e activ în Setări (sau lipsește WEBGSM_PERF_AUDIT).').css('color', '#dba617');
+            } else {
+                $st.text('');
+            }
+            if (!d.exists) {
+                $out.text('Fișierul ' + (d.path || 'webgsm-perf-audit.log') + ' nu există încă. După ce activezi jurnalul, apar linii când un request depășește pragul.');
+                return;
+            }
+            if (d.lines && d.lines.length) {
+                $out.text(d.lines.join('\n'));
+            } else {
+                $out.text($('#wsa-slow-filter').val() ? 'Nicio linie nu se potrivește filtrului.' : 'Fișier gol sau fără linii returnate.');
+            }
+        })
+        .fail(function() { $out.text('Eroare de rețea.'); });
+    }
+
+    $('#wsa-slow-refresh').on('click', loadSlowLog);
+    $('#wsa-slow-clear').on('click', function() {
+        if (!confirm('Golești jurnalul lent (webgsm-perf-audit.log)?')) return;
+        post('webgsm_audit_clear_slow_log').done(function(r) {
+            if (r.success) loadSlowLog();
+            else alert(r.data || 'Eroare');
+        });
+    });
 
     // --- DEBUG LOG ---
     function loadDebugLog() {

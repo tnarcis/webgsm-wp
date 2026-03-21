@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Site Audit – Super Tool
  * Description: Audit complet: linkuri moarte, SEO, securitate, performanță, conflicte CSS/JS, robots.txt, sitemap, debug log, Google Search Console.
- * Version: 3.1.2
+ * Version: 3.2.0
  * Author: WebGSM
  * Requires at least: 6.0
  * Requires PHP: 7.2
@@ -17,7 +17,7 @@ if (version_compare(PHP_VERSION, '7.2', '<')) {
     return;
 }
 
-define('WEBGSM_SITE_AUDIT_VERSION', '3.1.2');
+define('WEBGSM_SITE_AUDIT_VERSION', '3.2.0');
 define('WEBGSM_SITE_AUDIT_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_SITE_AUDIT_URL', plugin_dir_url(__FILE__));
 
@@ -28,6 +28,7 @@ require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-gsc.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-debug-log.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-security-audit.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-performance-audit.php';
+require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-slow-request-log.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-seo-audit.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-robots-sitemap.php';
 require_once WEBGSM_SITE_AUDIT_PATH . 'includes/class-conflict-detector.php';
@@ -40,6 +41,7 @@ add_action('plugins_loaded', function() {
     new WebGSM_Site_Audit_Debug_Log();
     new WebGSM_Site_Audit_Security();
     new WebGSM_Site_Audit_Performance();
+    new WebGSM_Site_Audit_Slow_Request_Log();
     new WebGSM_Site_Audit_SEO();
     new WebGSM_Site_Audit_Robots_Sitemap();
     new WebGSM_Site_Audit_Conflict_Detector();
