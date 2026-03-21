@@ -24,6 +24,10 @@ class WebGSM_Site_Audit_Settings {
             'gsc_json' => '',
             'schedule_enabled' => false,
             'schedule_frequency' => 'weekly',
+            /** Jurnal requesturi lente (performanță) – scrie în wp-content/webgsm-perf-audit.log */
+            'slow_request_log_enabled' => false,
+            'slow_request_threshold_seconds' => 2.0,
+            'slow_request_log_ajax' => false,
         ];
     }
 
@@ -58,6 +62,10 @@ class WebGSM_Site_Audit_Settings {
                     $out[$key] = wp_kses_post($input[$key]);
                 } elseif ($key === 'batch_size') {
                     $out[$key] = max(5, min(100, (int) $input[$key]));
+                } elseif ($key === 'slow_request_threshold_seconds') {
+                    $out[$key] = max(0.5, min(30.0, (float) $input[$key]));
+                } elseif ($key === 'slow_request_log_enabled' || $key === 'slow_request_log_ajax') {
+                    $out[$key] = !empty($input[$key]);
                 } else {
                     $out[$key] = is_int($default) ? (int) $input[$key] : sanitize_text_field($input[$key]);
                 }

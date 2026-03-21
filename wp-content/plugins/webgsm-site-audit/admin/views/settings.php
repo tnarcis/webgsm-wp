@@ -45,6 +45,20 @@ if (!defined('ABSPATH')) exit;
                     <input type="number" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[max_redirects]" value="<?php echo esc_attr($settings['max_redirects']); ?>" min="1" max="10" /> max redirect-uri
                 </td>
             </tr>
+            <tr>
+                <th scope="row">Jurnal requesturi lente</th>
+                <td>
+                    <input type="hidden" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[slow_request_log_enabled]" value="0" />
+                    <label><input type="checkbox" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[slow_request_log_enabled]" value="1" <?php checked(!empty($settings['slow_request_log_enabled'])); ?> /> Activează log performanță (frontend)</label>
+                    <p class="description">Scrie în <code>wp-content/webgsm-perf-audit.log</code> requesturile peste prag, cu: <strong>listă pluginuri active</strong> (folder), <strong>Cloudflare</strong> (cf_ray dacă există), REST/AJAX/xmlrpc, IP, user-agent scurt, object cache, versiune WP. Pentru <strong>care query SQL</strong> e lent, folosiți tot <strong>Query Monitor</strong> pe aceeași pagină.</p>
+                    <p>
+                        <label>Prag secunde: <input type="number" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[slow_request_threshold_seconds]" value="<?php echo esc_attr($settings['slow_request_threshold_seconds']); ?>" min="0.5" max="30" step="0.5" /></label>
+                    </p>
+                    <input type="hidden" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[slow_request_log_ajax]" value="0" />
+                    <label><input type="checkbox" name="<?php echo WebGSM_Site_Audit_Settings::OPTION_KEY; ?>[slow_request_log_ajax]" value="1" <?php checked(!empty($settings['slow_request_log_ajax'])); ?> /> Include și cereri AJAX (poate umple logul)</label>
+                    <p class="description">Opțional în <code>wp-config.php</code>: <code>define('WEBGSM_PERF_AUDIT', true);</code> forțează același jurnal chiar dacă bifa de mai sus e off (util pe staging).</p>
+                </td>
+            </tr>
         </table>
 
         <?php submit_button('Salvează setările'); ?>

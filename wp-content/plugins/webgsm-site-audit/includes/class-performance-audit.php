@@ -3,8 +3,174 @@ if (!defined('ABSPATH')) exit;
 
 class WebGSM_Site_Audit_Performance {
 
+    /** @var string */
+    const SLOW_LOG_FILE = 'webgsm-perf-audit.log';
+
     public function __construct() {
         add_action('wp_ajax_webgsm_audit_performance_scan', [$this, 'ajax_scan']);
+        add_action('shutdown', [$this, 'maybe_log_slow_request'], 99999);
+    }
+
+    /**
+     * Jurnal requesturi lente: activ din Setări Site Audit sau define('WEBGSM_PERF_AUDIT', true).
+     */
+    public function maybe_log_slow_request() {
+        $settings = WebGSM_Site_Audit_Settings::get();
+        $enabled    = !empty($settings['slow_request_log_enabled'])
+            || (defined('WEBGSM_PERF_AUDIT') && WEBGSM_PERF_AUDIT);
+
+        if (!$enabled) {
+            return;
+        }
+
+        if (defined('DOING_AJAX') && DOING_AJAX && empty($settings['slow_request_log_ajax'])) {
+            return;
+        }
+
+        if (defined('DOING_CRON') && DOING_CRON) {
+            return;
+        }
+
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
+
+        $threshold = isset($settings['slow_request_threshold_seconds'])
+            ? (float) $settings['slow_request_threshold_seconds']
+            : 2.0;
+        $threshold = max(0.5, min(30.0, $threshold));
+
+        $duration = (float) timer_stop(0, 6);
+        if ($duration < $threshold) {
+            return;
+        }
+
+        $queries = function_exists('get_num_queries') ? (int) get_num_queries() : 0;
+        $mem_mb  = function_exists('memory_get_peak_usage')
+            ? round(memory_get_peak_usage(true) / 1048576, 2)
+            : 0.0;
+
+        $uri    = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+        $method = isset($_SERVER['REQUEST_METHOD']) ? (string) $_SERVER['REQUEST_METHOD'] : '';
+        $host   = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+
+        $ctx = $this->build_slow_request_context_line();
+
+        $line = sprintf(
+            "[%s] dur=%.3fs | queries=%d | mem=%sMB | %s %s%s | admin=%s | uid=%d | %s\n",
+            gmdate('Y-m-d H:i:s'),
+            $duration,
+            $queries,
+            $mem_mb,
+            $method,
+            $host,
+            $uri,
+            is_admin() ? '1' : '0',
+            get_current_user_id(),
+            $ctx
+        );
+
+        $path = WP_CONTENT_DIR . '/' . self::SLOW_LOG_FILE;
+
+        if (file_exists($path) && filesize($path) > 5242880) {
+            $chunk = file_get_contents($path, false, null, -2097152);
+            if ($chunk !== false) {
+                file_put_contents($path, $chunk, LOCK_EX);
+            }
+        }
+
+        @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+    }
+
+    /**
+     * Context diagnostic pe o linie (grep / ticket hosting).
+     * Nu înlocuiește Query Monitor pentru „care SQL exact”; arată pluginuri încărcate, Cloudflare, tip request.
+     */
+    private function build_slow_request_context_line() {
+        global $wpdb;
+
+        $parts = [];
+
+        $parts[] = 'wp=' . (defined('WP_VERSION') ? WP_VERSION : '?');
+
+        $oc = file_exists(WP_CONTENT_DIR . '/object-cache.php') ? '1' : '0';
+        $oc_ext = (function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache()) ? '1' : '0';
+        $parts[] = 'objcache_file=' . $oc . ' objcache_ext=' . $oc_ext;
+
+        $cf_ray = isset($_SERVER['HTTP_CF_RAY']) ? (string) $_SERVER['HTTP_CF_RAY'] : '';
+        $cf_country = isset($_SERVER['HTTP_CF_IPCOUNTRY']) ? (string) $_SERVER['HTTP_CF_IPCOUNTRY'] : '';
+        if ($cf_ray !== '') {
+            $parts[] = 'cf_ray=' . $cf_ray;
+            if ($cf_country !== '') {
+                $parts[] = 'cf_country=' . $cf_country;
+            }
+        } else {
+            $parts[] = 'cf_proxy=0';
+        }
+
+        $ajax = (defined('DOING_AJAX') && DOING_AJAX) ? '1' : '0';
+        $rest = (defined('REST_REQUEST') && REST_REQUEST) ? '1' : '0';
+        $xmlrpc = (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST) ? '1' : '0';
+        $parts[] = 'ajax=' . $ajax . ' rest=' . $rest . ' xmlrpc=' . $xmlrpc;
+
+        $action = isset($_REQUEST['action']) ? sanitize_key((string) wp_unslash($_REQUEST['action'])) : '';
+        if ($action !== '') {
+            $parts[] = 'req_action=' . $action;
+        }
+
+        if (isset($_SERVER['REMOTE_ADDR'])) {
+            $parts[] = 'ip=' . preg_replace('/[^0-9a-fA-F:.,]/', '', (string) $_SERVER['REMOTE_ADDR']);
+        }
+
+        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+        if ($ua !== '') {
+            $ua_short = substr(preg_replace('/\s+/', ' ', $ua), 0, 120);
+            $parts[] = 'ua=' . $ua_short;
+        }
+
+        $active = (array) get_option('active_plugins', []);
+        $mu_slugs = [];
+        if (defined('WPMU_PLUGIN_DIR') && is_dir(WPMU_PLUGIN_DIR)) {
+            $mu_files = glob(WPMU_PLUGIN_DIR . '/*.php');
+            if (is_array($mu_files)) {
+                foreach ($mu_files as $mu_file) {
+                    $mu_slugs[] = basename((string) $mu_file, '.php');
+                }
+            }
+        }
+        sort($active);
+        $slugs = [];
+        foreach ($active as $p) {
+            $p = (string) $p;
+            if ($p === '') {
+                continue;
+            }
+            $slugs[] = dirname($p) === '.' ? $p : dirname($p);
+        }
+        $slugs = array_values(array_unique($slugs));
+        sort($slugs);
+        $parts[] = 'plugins_n=' . count($slugs);
+
+        $list = implode(',', $slugs);
+        $max  = 1800;
+        if (strlen($list) > $max) {
+            $list = substr($list, 0, $max) . '...(trunc)';
+        }
+        $parts[] = 'plugins=' . $list;
+
+        if (!empty($mu_slugs)) {
+            $parts[] = 'mu=' . implode(',', array_slice($mu_slugs, 0, 20));
+        }
+
+        if (is_object($wpdb) && isset($wpdb->num_queries)) {
+            $parts[] = 'wpdb_count=' . (int) $wpdb->num_queries;
+        }
+
+        if (class_exists('QM', false)) {
+            $parts[] = 'query_monitor=1';
+        }
+
+        return implode(' | ', $parts);
     }
 
     public function ajax_scan() {

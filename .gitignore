@@ -1,8 +1,9 @@
 # Ignorăm tot WordPress-ul
 /*
 
-# Permitem fișierele necesare pentru deploy
+# Permitem fișierele necesare pentru deploy (YAML)
 !cpanel.yml
+!.cpanel.yml
 !.gitignore
 
 # Permitem wp-content
@@ -44,8 +45,8 @@ docs/*
 .DS_Store
 **/.DS_Store
 
-# Logs & debug (WordPress)
+# Logs & debug (WordPress) – nu în repo
 debug.log
 wp-content/debug.log
- 
-!.cpanel.yml
+wp-content/webgsm-perf-audit.log
+**/webgsm-perf-audit.log
