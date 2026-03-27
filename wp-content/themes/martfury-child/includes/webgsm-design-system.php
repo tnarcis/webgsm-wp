@@ -24,7 +24,7 @@ function webgsm_get_product_section_elementor_bg_css() {
 .e-con:has(ul.products),
 .e-con:has(div.products),
 .e-con:has(.woocommerce) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
     box-shadow: none !important;
 }
@@ -35,7 +35,7 @@ function webgsm_get_product_section_elementor_bg_css() {
 .elementor-widget-wrap:has(.woocommerce),
 .elementor-widget-container:has(ul.products),
 .elementor-widget-container:has(.woocommerce) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
     box-shadow: none !important;
 }
@@ -52,34 +52,34 @@ function webgsm_get_product_section_elementor_bg_css() {
 }
 body.home .elementor-section:has(.woocommerce),
 body.home .elementor-inner-section:has(.woocommerce) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 body.home .elementor-column:has(.woocommerce) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
 }
 body.home .elementor-widget-woocommerce,
 body.home .elementor-widget-wc-products,
 body.home .elementor-widget-woocommerce-products {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 .e-con:has(ul.products),
 .e-con:has(div.products),
 .e-con:has(.wc-block-grid__products) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 .wgsm-section-has-products.elementor-section,
 .wgsm-section-has-products.elementor-inner-section {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
     box-shadow: none !important;
 }
 .wgsm-section-has-products.elementor-column,
 .wgsm-section-has-products.elementor-widget-wrap,
 .wgsm-section-has-products.elementor-widget-container {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 .wgsm-section-has-products .elementor-background-overlay {
@@ -90,7 +90,7 @@ body.home .elementor-widget-woocommerce-products {
 .wgsm-section-has-products.vc_row,
 .wgsm-section-has-products.wpb_row,
 .wgsm-section-has-products.e-con {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 /* Martfury – „Nou în stoc”: .cat-header (titlu + .extra-links) + wrapper + listă dedesubt */
@@ -99,11 +99,11 @@ div:has(> .cat-header):has(ul.products),
 div:has(> .cat-header):has(.woocommerce),
 .mf-section:has(.cat-header),
 [class*="mf-"]:has(.cat-header) {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 .cat-header {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
     padding: 0.95rem 1rem 1rem !important;
     box-sizing: border-box !important;
@@ -133,8 +133,20 @@ div:has(> .cat-header):has(.woocommerce),
 .cat-header ~ .woocommerce,
 .cat-header ~ .mf-products,
 .cat-header ~ div.woocommerce {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
+}
+/* Mobil / live: gri hex direct (cache, variabile, Elementor după JS) */
+@media (max-width: 768px) {
+    body .cat-header,
+    body .mf-section .cat-header,
+    .cat-header ~ ul.products,
+    .cat-header ~ .woocommerce,
+    .cat-header ~ .mf-products,
+    .cat-header ~ div.woocommerce {
+        background-color: #f5f6f8 !important;
+        background-image: none !important;
+    }
 }
 ';
 }
@@ -183,10 +195,10 @@ function webgsm_product_section_bg_force_script() {
         return;
     }
     ?>
-    <script>
+    <script data-cfasync="false">
     (function() {
         var BG = '#f5f6f8';
-        var LAYOUT = ['elementor-section', 'elementor-inner-section', 'elementor-column', 'elementor-widget-wrap', 'elementor-widget-container', 'e-con', 'elementor-container', 'elementor-element'];
+        var LAYOUT = ['elementor-section', 'elementor-inner-section', 'elementor-column', 'elementor-widget-wrap', 'elementor-widget-container', 'e-con', 'elementor-container', 'elementor-element', 'mf-section'];
         function isLayout(el) {
             if (!el || !el.classList) return false;
             for (var i = 0; i < LAYOUT.length; i++) {
@@ -268,6 +280,11 @@ function webgsm_product_section_bg_force_script() {
         }
         /** Martfury: .cat-header (Nou în stoc) – nu e structură Elementor clasică */
         function paintMartfuryCatHeader() {
+            document.querySelectorAll('.mf-section').forEach(function(sec) {
+                if (!sec.querySelector || !sec.querySelector('.cat-header')) return;
+                if (sec.closest('.woocommerce-mini-cart')) return;
+                forceBg(sec);
+            });
             document.querySelectorAll('.cat-header').forEach(function(h) {
                 if (h.closest('.woocommerce-mini-cart')) return;
                 forceBg(h);
@@ -301,15 +318,29 @@ function webgsm_product_section_bg_force_script() {
         } else {
             run();
         }
-        [0, 30, 100, 300, 800, 2000].forEach(function(t) { setTimeout(run, t); });
+        [0, 30, 100, 300, 800, 2000, 4000, 6500].forEach(function(t) { setTimeout(run, t); });
         var n = 0;
         var iv = setInterval(function() {
             run();
             n++;
-            if (n >= 8) clearInterval(iv);
+            if (n >= 12) clearInterval(iv);
         }, 400);
+        window.addEventListener('pageshow', function() { run(); });
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) run();
+        });
+        document.addEventListener('touchstart', function once() { run(); document.removeEventListener('touchstart', once); }, { passive: true });
+        var moTimer;
+        function scheduleRun() {
+            clearTimeout(moTimer);
+            moTimer = setTimeout(run, 80);
+        }
+        if (typeof MutationObserver !== 'undefined' && document.body) {
+            var mo = new MutationObserver(function() { scheduleRun(); });
+            mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+        }
         if (window.jQuery) {
-            jQuery(window).on('elementor/frontend/init', run);
+            jQuery(window).on('elementor/frontend/init', function() { setTimeout(run, 0); });
         }
     })();
     </script>
@@ -346,7 +377,7 @@ function webgsm_minimal_css() {
    Header: aliniat la --wgsm-page-bg; footer rămâne tema (Customizer)
    ============================================ */
 body {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
 }
 #page,
 .site,
@@ -364,7 +395,7 @@ body {
 .search #primary,
 .blog #primary,
 .page #primary {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
 }
 /* Pagină produs (PDP): fundal alb – detalii/specificații mai lizibile */
 body.single-product,
@@ -399,12 +430,12 @@ body.single-product .widget-area {
 .topbar,
 .mobile-header-v2,
 .header-mobile {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
 }
 .site-header,
 #masthead,
 .site-header .header-main {
-    border-bottom: 1px solid var(--wgsm-page-bg) !important;
+    border-bottom: 1px solid var(--wgsm-page-bg, #f5f6f8) !important;
     box-shadow: none !important;
 }
 /* Bandă meniu: overflow visible doar desktop (full-bleed 100vw); mobil evită scroll lateral */
@@ -889,7 +920,7 @@ ul.breadcrumbs::before {
     width: 100vw;
     top: 0;
     bottom: 0;
-    background-color: var(--wgsm-page-bg);
+    background-color: var(--wgsm-page-bg, #f5f6f8);
     z-index: -1;
     pointer-events: none;
 }
@@ -916,7 +947,7 @@ nav.woocommerce-breadcrumb::before,
     width: 100vw;
     top: 0;
     bottom: 0;
-    background-color: var(--wgsm-page-bg);
+    background-color: var(--wgsm-page-bg, #f5f6f8);
     z-index: -1;
     pointer-events: none;
 }
@@ -927,7 +958,7 @@ nav.woocommerce-breadcrumb > *,
 }
 .breadcrumb:not(ul):not(nav),
 .breadcrumb-trail {
-    background-color: var(--wgsm-page-bg) !important;
+    background-color: var(--wgsm-page-bg, #f5f6f8) !important;
     background-image: none !important;
 }
 .mf-breadcrumb,
@@ -944,7 +975,7 @@ nav.woocommerce-breadcrumb > *,
     width: 100vw;
     top: 0;
     bottom: 0;
-    background-color: var(--wgsm-page-bg);
+    background-color: var(--wgsm-page-bg, #f5f6f8);
     z-index: -1;
     pointer-events: none;
 }
