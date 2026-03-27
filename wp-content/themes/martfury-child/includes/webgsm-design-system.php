@@ -8,8 +8,316 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// CSS minimal
-add_action('wp_head', 'webgsm_minimal_css', 999);
+/**
+ * CSS pentru fundal gri în secțiunile Elementor cu grid / WooCommerce („Nou în stoc”).
+ * Include :has(.woocommerce) – multe template-uri nu au ul.products în DOM la fel ca în catalog.
+ */
+function webgsm_get_product_section_elementor_bg_css() {
+    return '
+.elementor-section:has(ul.products),
+.elementor-section:has(div.products),
+.elementor-inner-section:has(ul.products),
+.elementor-inner-section:has(div.products),
+.elementor-section:has(.wc-block-grid__products),
+.elementor-section:has(.woocommerce),
+.elementor-inner-section:has(.woocommerce),
+.e-con:has(ul.products),
+.e-con:has(div.products),
+.e-con:has(.woocommerce) {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+.elementor-column:has(ul.products),
+.elementor-column:has(div.products),
+.elementor-column:has(.woocommerce),
+.elementor-widget-wrap:has(ul.products),
+.elementor-widget-wrap:has(.woocommerce),
+.elementor-widget-container:has(ul.products),
+.elementor-widget-container:has(.woocommerce) {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+.elementor-section:has(ul.products) .elementor-background-overlay,
+.elementor-section:has(div.products) .elementor-background-overlay,
+.elementor-section:has(.woocommerce) .elementor-background-overlay,
+.elementor-inner-section:has(ul.products) .elementor-background-overlay,
+.elementor-inner-section:has(.woocommerce) .elementor-background-overlay,
+.elementor-column:has(ul.products) .elementor-background-overlay,
+.elementor-column:has(.woocommerce) .elementor-background-overlay {
+    opacity: 0 !important;
+    background: transparent !important;
+    display: none !important;
+}
+body.home .elementor-section:has(.woocommerce),
+body.home .elementor-inner-section:has(.woocommerce) {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+body.home .elementor-column:has(.woocommerce) {
+    background-color: var(--wgsm-page-bg) !important;
+}
+body.home .elementor-widget-woocommerce,
+body.home .elementor-widget-wc-products,
+body.home .elementor-widget-woocommerce-products {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+.e-con:has(ul.products),
+.e-con:has(div.products),
+.e-con:has(.wc-block-grid__products) {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+.wgsm-section-has-products.elementor-section,
+.wgsm-section-has-products.elementor-inner-section {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+.wgsm-section-has-products.elementor-column,
+.wgsm-section-has-products.elementor-widget-wrap,
+.wgsm-section-has-products.elementor-widget-container {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+.wgsm-section-has-products .elementor-background-overlay {
+    opacity: 0 !important;
+    background: transparent !important;
+    display: none !important;
+}
+.wgsm-section-has-products.vc_row,
+.wgsm-section-has-products.wpb_row,
+.wgsm-section-has-products.e-con {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+/* Martfury – „Nou în stoc”: .cat-header (titlu + .extra-links) + wrapper + listă dedesubt */
+div:has(> .cat-header),
+div:has(> .cat-header):has(ul.products),
+div:has(> .cat-header):has(.woocommerce),
+.mf-section:has(.cat-header),
+[class*="mf-"]:has(.cat-header) {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+.cat-header {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+    padding: 0.95rem 1rem 1rem !important;
+    box-sizing: border-box !important;
+}
+/* Titlu lizibil – mărime decentă, fără h2 uriaș din temă */
+.cat-header .cat-title,
+.cat-header h2.cat-title {
+    font-size: 1.875rem !important;
+    font-weight: 600 !important;
+    color: #3a3f4d !important;
+    letter-spacing: -0.01em !important;
+    margin: 0 !important;
+    line-height: 1.28 !important;
+    text-transform: none !important;
+    background-color: transparent !important;
+}
+.cat-header .extra-links {
+    background-color: transparent !important;
+}
+.cat-header .extra-links a {
+    color: #4b5563 !important;
+    font-weight: 600 !important;
+    font-size: 1.125rem !important;
+}
+/* Zona de „body” (grid) imediat sub bara de titlu – frați ai lui .cat-header */
+.cat-header ~ ul.products,
+.cat-header ~ .woocommerce,
+.cat-header ~ .mf-products,
+.cat-header ~ div.woocommerce {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+';
+}
+
+/**
+ * Inline la ultimul stylesheet Elementor din coadă (include elementor-post-XXX de pe home).
+ */
+add_action('wp_enqueue_scripts', 'webgsm_inline_product_section_after_elementor', 99999);
+function webgsm_inline_product_section_after_elementor() {
+    if (is_admin()) {
+        return;
+    }
+    global $wp_styles;
+    if (!$wp_styles instanceof WP_Styles || empty($wp_styles->queue)) {
+        return;
+    }
+    $css = webgsm_get_product_section_elementor_bg_css();
+    $last_elementor = null;
+    foreach ($wp_styles->queue as $handle) {
+        if (stripos($handle, 'elementor') !== false) {
+            $last_elementor = $handle;
+        }
+    }
+    if ($last_elementor) {
+        wp_add_inline_style($last_elementor, $css);
+    }
+}
+
+/**
+ * Ultimul <style> din head – bate orice CSS Elementor încărcat înainte.
+ */
+add_action('wp_head', 'webgsm_product_section_bg_head_override', 9999999);
+function webgsm_product_section_bg_head_override() {
+    if (is_admin()) {
+        return;
+    }
+    echo '<style id="webgsm-elementor-bg-override">' . webgsm_get_product_section_elementor_bg_css() . '</style>';
+}
+
+/**
+ * Fallback JS: Elementor poate scrie fundal în style="" (inclusiv !important) – doar JS îl suprascrie.
+ */
+add_action('wp_footer', 'webgsm_product_section_bg_force_script', 1);
+function webgsm_product_section_bg_force_script() {
+    if (is_admin()) {
+        return;
+    }
+    ?>
+    <script>
+    (function() {
+        var BG = '#f5f6f8';
+        var LAYOUT = ['elementor-section', 'elementor-inner-section', 'elementor-column', 'elementor-widget-wrap', 'elementor-widget-container', 'e-con', 'elementor-container', 'elementor-element'];
+        function isLayout(el) {
+            if (!el || !el.classList) return false;
+            for (var i = 0; i < LAYOUT.length; i++) {
+                if (el.classList.contains(LAYOUT[i])) return true;
+            }
+            return false;
+        }
+        /** Elementor folosește shorthand background – trebuie șters înainte de background-color */
+        function forceBg(el) {
+            if (!el || !el.style) return;
+            ['background', 'background-color', 'background-image', 'background-size', 'background-repeat', 'background-position'].forEach(function(p) {
+                try { el.style.removeProperty(p); } catch (e) {}
+            });
+            el.style.setProperty('background-color', BG, 'important');
+            el.style.setProperty('background-image', 'none', 'important');
+        }
+        function paintAncestors(node) {
+            var el = node;
+            var depth = 0;
+            while (el && el !== document.body && depth < 56) {
+                if (isLayout(el)) {
+                    forceBg(el);
+                }
+                el = el.parentElement;
+                depth++;
+            }
+        }
+        function hasProductGridContext(sec) {
+            if (!sec || !sec.querySelector) return false;
+            return !!sec.querySelector('ul.products, div.products, .wc-block-grid__products, li.product, .woocommerce .products, .cat-header');
+        }
+        function paintSectionsFromDom() {
+            var scope = document.querySelector('#primary, .site-content, .elementor-location-content') || document.body;
+            scope.querySelectorAll('.elementor-section, .e-con').forEach(function(sec) {
+                if (sec.closest('.woocommerce-mini-cart, .widget_shopping_cart')) return;
+                if (!hasProductGridContext(sec)) return;
+                forceBg(sec);
+                sec.querySelectorAll('.elementor-inner-section, .elementor-column, .elementor-widget-wrap, .elementor-widget-container').forEach(function(inner) {
+                    if (hasProductGridContext(inner)) forceBg(inner);
+                });
+            });
+        }
+        function hideOverlays() {
+            document.querySelectorAll('.elementor-background-overlay').forEach(function(ov) {
+                var sec = ov.closest('.elementor-section, .elementor-inner-section, .e-con');
+                if (!sec) return;
+                if (hasProductGridContext(sec)) {
+                    ov.style.setProperty('opacity', '0', 'important');
+                    ov.style.setProperty('display', 'none', 'important');
+                }
+            });
+        }
+        function roots() {
+            var out = [];
+            var seen = new Set();
+            function add(n) {
+                if (n && !seen.has(n)) { seen.add(n); out.push(n); }
+            }
+            document.querySelectorAll('ul.products').forEach(function(ul) {
+                if (ul.closest('.woocommerce-mini-cart')) return;
+                add(ul);
+            });
+            document.querySelectorAll('div.products').forEach(function(d) {
+                if (d.closest('.woocommerce-mini-cart')) return;
+                if (d.querySelector('.product')) add(d);
+            });
+            document.querySelectorAll('.wc-block-grid__products').forEach(add);
+            document.querySelectorAll('[class*="elementor-widget-woo"], [class*="elementor-widget-wc"]').forEach(function(w) {
+                if (w.querySelector('.product, ul.products, .woocommerce')) add(w);
+            });
+            document.querySelectorAll('[class*="mf-product"]').forEach(function(el) {
+                if (el.querySelector && el.querySelector('.product, li.product')) add(el);
+            });
+            document.querySelectorAll('.woocommerce .products').forEach(function(el) {
+                if (el.closest('.woocommerce-mini-cart')) return;
+                if (el.querySelector('.product')) add(el);
+            });
+            return out;
+        }
+        /** Martfury: .cat-header (Nou în stoc) – nu e structură Elementor clasică */
+        function paintMartfuryCatHeader() {
+            document.querySelectorAll('.cat-header').forEach(function(h) {
+                if (h.closest('.woocommerce-mini-cart')) return;
+                forceBg(h);
+                var s = h.nextElementSibling;
+                var g = 0;
+                while (s && g < 10) {
+                    if (s.matches && (s.matches('ul.products') || s.classList.contains('woocommerce') || s.classList.contains('products') || s.classList.contains('mf-products') || s.querySelector('ul.products'))) {
+                        forceBg(s);
+                    }
+                    s = s.nextElementSibling;
+                    g++;
+                }
+                var el = h.parentElement;
+                var depth = 0;
+                while (el && el !== document.body && depth < 30) {
+                    if (el.tagName === 'HEADER' || (el.classList && el.classList.contains('site-header'))) break;
+                    forceBg(el);
+                    el = el.parentElement;
+                    depth++;
+                }
+            });
+        }
+        function run() {
+            paintMartfuryCatHeader();
+            roots().forEach(paintAncestors);
+            paintSectionsFromDom();
+            hideOverlays();
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', run);
+        } else {
+            run();
+        }
+        [0, 30, 100, 300, 800, 2000].forEach(function(t) { setTimeout(run, t); });
+        var n = 0;
+        var iv = setInterval(function() {
+            run();
+            n++;
+            if (n >= 8) clearInterval(iv);
+        }, 400);
+        if (window.jQuery) {
+            jQuery(window).on('elementor/frontend/init', run);
+        }
+    })();
+    </script>
+    <?php
+}
+
+// CSS minimal – foarte târziu în head; fundal secțiuni: CSS + JS mai sus (inline Elementor)
+add_action('wp_head', 'webgsm_minimal_css', 999999);
 function webgsm_minimal_css() {
 ?>
 <style id="webgsm-minimal">
@@ -23,10 +331,19 @@ function webgsm_minimal_css() {
     --wgsm-radius-pill: 999px;
     /* Fundal pagină – gri foarte deschis (low contrast vs. carduri albe, gen eMAG) */
     --wgsm-page-bg: #f5f6f8;
+    /* Bandă meniu: sus→jos; sus = aceeași intrare ca butoanele Woo (#3b82f6 → --wgsm-cta), apoi ușor mai închis */
+    --wgsm-header-nav-strip-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 42%);
+    --wgsm-header-nav-strip: linear-gradient(
+        180deg,
+        #3b82f6 0%,
+        var(--wgsm-cta) 38%,
+        #1d4ed8 72%,
+        #1e40af 100%
+    );
 }
 /* ============================================
    FUNDAL SITE – gri murdar; cardurile de produs rămân albe (mai jos)
-   Header/footer: lăsăm tema (Customizer); zona principală = --wgsm-page-bg
+   Header: aliniat la --wgsm-page-bg; footer rămâne tema (Customizer)
    ============================================ */
 body {
     background-color: var(--wgsm-page-bg) !important;
@@ -41,7 +358,6 @@ body {
 .martfury-container,
 .woocommerce-page #primary,
 .woocommerce-page .content-area,
-.single-product #primary,
 .tax-product_cat #primary,
 .tax-product_tag #primary,
 .post-type-archive-product #primary,
@@ -50,6 +366,18 @@ body {
 .page #primary {
     background-color: var(--wgsm-page-bg) !important;
 }
+/* Pagină produs (PDP): fundal alb – detalii/specificații mai lizibile */
+body.single-product,
+body.single-product #page,
+body.single-product .site,
+body.single-product .site-main,
+body.single-product .site-content,
+body.single-product #content,
+body.single-product #primary,
+body.single-product .content-area,
+body.single-product .martfury-container {
+    background-color: #fff !important;
+}
 /* Sidebar / widget-uri: același fundal (fără „fâșie albă”) */
 #secondary,
 .widget-area,
@@ -57,6 +385,86 @@ body {
 .woocommerce-sidebar {
     background-color: transparent !important;
 }
+/* PDP: sidebar alb (după regula transparent, ca să nu rămână gri) */
+body.single-product #secondary,
+body.single-product .widget-area {
+    background-color: #fff !important;
+}
+/* Header + linie sub header: același gri ca pagina */
+.site-header,
+#masthead,
+.header-sticky,
+.site-header .header-main,
+.site-header .topbar,
+.topbar,
+.mobile-header-v2,
+.header-mobile {
+    background-color: var(--wgsm-page-bg) !important;
+}
+.site-header,
+#masthead,
+.site-header .header-main {
+    border-bottom: 1px solid var(--wgsm-page-bg) !important;
+    box-shadow: none !important;
+}
+/* Bandă meniu: overflow visible doar desktop (full-bleed 100vw); mobil evită scroll lateral */
+@media (min-width: 992px) {
+    .site-header,
+    #masthead,
+    .site-header .header-main,
+    .site-header .header-main .container,
+    .site-header .header-main .martfury-container,
+    .site-header .header-main .row {
+        overflow-x: visible !important;
+    }
+}
+.site-header .header-main .row:has(.col-header-menu) {
+    flex-wrap: wrap !important;
+    align-items: center !important;
+}
+.site-header .col-header-menu {
+    position: relative;
+    z-index: 1;
+    background: transparent !important;
+    padding: 0.28rem 0.5rem 0.32rem;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+.site-header .col-header-menu::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    top: 0;
+    bottom: 0;
+    background: var(--wgsm-header-nav-strip-shine), var(--wgsm-header-nav-strip);
+    box-shadow:
+        0 2px 12px rgba(15, 23, 42, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    z-index: 0;
+    pointer-events: none;
+}
+.site-header .col-header-menu > * {
+    position: relative;
+    z-index: 1;
+}
+/* Mobil: fără 100vw pe bandă (evită scroll orizontal / iOS); coloana e deja full-width */
+@media (max-width: 991px) {
+    .site-header .col-header-menu {
+        padding: 0.22rem 0.4rem 0.26rem;
+    }
+    .site-header .col-header-menu::before {
+        width: 100%;
+        left: 0;
+        right: 0;
+        transform: none;
+    }
+}
+/* Grid Elementor „Nou în stoc”: webgsm_get_product_section_elementor_bg_css() → inline ultimul handle Elementor + wp_head 9999999 */
+
 /* ============================================
    BUTOANE WOOCOMMERCE – CTA principal (vibrant, retail)
    ============================================ */
@@ -193,9 +601,8 @@ ul.products li.product .mf-product-details > .add_to_cart_button {
     margin-top: auto !important;
     flex-shrink: 0 !important;
 }
-
 /* ============================================
-   CATALOG – Adaugă în coș: clar, ocupă lățimea cardului; acțiuni secundare discrete
+   CATALOG – Adaugă în coș: clar, pe lățimea cardului (layout clasic Martfury)
    ============================================ */
 ul.products .product .add_to_cart_button,
 ul.products .product .footer-button .button.add_to_cart_button,
@@ -256,7 +663,7 @@ ul.products .product a.add_to_wishlist::before {
     display: none !important;
 }
 
-/* Mobil: zone de atingere ≥44px, CTA clar pe lățime utilă */
+/* Mobil: zone de atingere ≥44px */
 @media (max-width: 768px) {
     ul.products .product .add_to_cart_button,
     ul.products .product .footer-button .button.add_to_cart_button,
@@ -445,6 +852,114 @@ input.qty {
 /* ============================================
    CULORI UNIFORME LINK-URI
    ============================================ */
+/* Breadcrumb – full-bleed desktop; mobil = 100% (fără 100vw) */
+@media (min-width: 992px) {
+    #page:has(ul.breadcrumbs),
+    .site:has(ul.breadcrumbs),
+    #primary:has(ul.breadcrumbs),
+    .site-content:has(ul.breadcrumbs),
+    .content-area:has(ul.breadcrumbs),
+    .martfury-container:has(ul.breadcrumbs),
+    .page-header:has(ul.breadcrumbs) {
+        overflow-x: visible !important;
+    }
+}
+.page-header:has(ul.breadcrumbs),
+.page-header:has(.woocommerce-breadcrumb),
+body.woocommerce .page-header:has(ul.breadcrumbs),
+body.tax-product_cat .page-header:has(ul.breadcrumbs),
+body.tax-product_tag .page-header:has(ul.breadcrumbs) {
+    background: transparent !important;
+    background-image: none !important;
+}
+ul.breadcrumbs,
+.site-content ul.breadcrumbs,
+#primary ul.breadcrumbs {
+    position: relative !important;
+    z-index: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+ul.breadcrumbs::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    top: 0;
+    bottom: 0;
+    background-color: var(--wgsm-page-bg);
+    z-index: -1;
+    pointer-events: none;
+}
+ul.breadcrumbs > li,
+ul.breadcrumbs > .sep {
+    position: relative;
+    z-index: 1;
+}
+/* WooCommerce nav breadcrumb (fără ul.breadcrumbs) */
+nav.woocommerce-breadcrumb,
+.woocommerce-breadcrumb:not(ul) {
+    position: relative !important;
+    z-index: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+nav.woocommerce-breadcrumb::before,
+.woocommerce-breadcrumb:not(ul)::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    top: 0;
+    bottom: 0;
+    background-color: var(--wgsm-page-bg);
+    z-index: -1;
+    pointer-events: none;
+}
+nav.woocommerce-breadcrumb > *,
+.woocommerce-breadcrumb:not(ul) > * {
+    position: relative;
+    z-index: 1;
+}
+.breadcrumb:not(ul):not(nav),
+.breadcrumb-trail {
+    background-color: var(--wgsm-page-bg) !important;
+    background-image: none !important;
+}
+.mf-breadcrumb,
+.mf-breadcrumb-wrap {
+    position: relative !important;
+    background: transparent !important;
+}
+.mf-breadcrumb::before,
+.mf-breadcrumb-wrap::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    top: 0;
+    bottom: 0;
+    background-color: var(--wgsm-page-bg);
+    z-index: -1;
+    pointer-events: none;
+}
+@media (max-width: 991px) {
+    ul.breadcrumbs::before,
+    nav.woocommerce-breadcrumb::before,
+    .woocommerce-breadcrumb:not(ul)::before,
+    .mf-breadcrumb::before,
+    .mf-breadcrumb-wrap::before {
+        width: 100%;
+        left: 0;
+        right: 0;
+        transform: none;
+    }
+}
 /* Breadcrumb - calea de sus */
 .woocommerce-breadcrumb,
 .woocommerce-breadcrumb a,
@@ -1053,6 +1568,7 @@ input.mc4wp-submit,
 .woocommerce-mini-cart__buttons a:first-child:hover {
     background-color: #eff6ff !important;
     color: var(--wgsm-cta-hover) !important;
+    -webkit-text-fill-color: var(--wgsm-cta-hover) !important;
     border-color: var(--wgsm-cta) !important;
 }
 
@@ -1062,6 +1578,7 @@ input.mc4wp-submit,
 .widget_shopping_cart .buttons a.checkout {
     background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
     color: #fff !important;
+    -webkit-text-fill-color: #ffffff !important;
     border: 1px solid rgba(29, 78, 216, 0.45) !important;
     box-shadow: 0 2px 10px var(--wgsm-cta-glow) !important;
 }
@@ -1069,7 +1586,43 @@ input.mc4wp-submit,
 .mini-cart .buttons a.checkout:hover,
 .woocommerce-mini-cart__buttons a.checkout:hover {
     background: linear-gradient(180deg, var(--wgsm-cta) 0%, var(--wgsm-cta-hover) 100%) !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #ffffff !important;
     border-color: rgba(29, 78, 216, 0.65) !important;
+}
+
+/* „Vezi coșul” (wc-forward) pe gradient albastru: text alb – tema poate lăsa negru */
+.woocommerce-mini-cart__buttons a.wc-forward,
+.mini-cart .buttons a.wc-forward,
+.widget_shopping_cart .buttons a.wc-forward,
+.cart-panel .woocommerce-mini-cart__buttons a.wc-forward {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+/* Când „Vezi coșul” e primul buton = outline (text albastru pe alb), nu gradient */
+.woocommerce-mini-cart__buttons a.wc-forward:first-child,
+.mini-cart .buttons a.wc-forward:first-child,
+.widget_shopping_cart .buttons a.wc-forward:first-child {
+    color: var(--wgsm-cta) !important;
+    -webkit-text-fill-color: var(--wgsm-cta) !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 2px solid #bfdbfe !important;
+    box-shadow: none !important;
+}
+.woocommerce-mini-cart__buttons a.wc-forward:first-child:hover,
+.mini-cart .buttons a.wc-forward:first-child:hover,
+.widget_shopping_cart .buttons a.wc-forward:first-child:hover {
+    color: var(--wgsm-cta-hover) !important;
+    -webkit-text-fill-color: var(--wgsm-cta-hover) !important;
+    background-color: #eff6ff !important;
+    border-color: var(--wgsm-cta) !important;
+}
+.woocommerce-mini-cart__buttons a.wc-forward:hover,
+.mini-cart .buttons a.wc-forward:hover,
+.widget_shopping_cart .buttons a.wc-forward:hover {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 /* FIX ALINIERE TEXT ÎN TOATE BUTOANELE */
