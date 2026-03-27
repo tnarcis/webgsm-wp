@@ -1,8 +1,7 @@
 <?php
 /**
- * WEBGSM DESIGN SYSTEM - VERSIUNE MINIMALĂ
- * Modifică DOAR: logo mobil, search mobil, badge stoc
- * NU modifică: butoane, badge discount, hover effects
+ * WEBGSM DESIGN SYSTEM – fundal pagină gri, carduri albe, CTA retail etc.
+ * Ajustează --wgsm-page-bg dacă vrei exact culoarea din Customizer (header).
  */
 
 if (!defined('ABSPATH')) {
@@ -14,29 +13,103 @@ add_action('wp_head', 'webgsm_minimal_css', 999);
 function webgsm_minimal_css() {
 ?>
 <style id="webgsm-minimal">
+/* Token-uri – albastru vibrant (retail / site), nu slate mort */
+:root {
+    --wgsm-cta: #2563eb;
+    --wgsm-cta-hover: #1d4ed8;
+    --wgsm-cta-active: #1e40af;
+    --wgsm-cta-glow: rgba(37, 99, 235, 0.28);
+    --wgsm-radius: 10px;
+    --wgsm-radius-pill: 999px;
+    /* Fundal pagină – gri foarte deschis (low contrast vs. carduri albe, gen eMAG) */
+    --wgsm-page-bg: #f5f6f8;
+}
 /* ============================================
-   BUTOANE ALBASTRE - PILL (rotunjite ca la checkout)
+   FUNDAL SITE – gri murdar; cardurile de produs rămân albe (mai jos)
+   Header/footer: lăsăm tema (Customizer); zona principală = --wgsm-page-bg
+   ============================================ */
+body {
+    background-color: var(--wgsm-page-bg) !important;
+}
+#page,
+.site,
+.site-main,
+.site-content,
+#content,
+#primary,
+.content-area,
+.martfury-container,
+.woocommerce-page #primary,
+.woocommerce-page .content-area,
+.single-product #primary,
+.tax-product_cat #primary,
+.tax-product_tag #primary,
+.post-type-archive-product #primary,
+.search #primary,
+.blog #primary,
+.page #primary {
+    background-color: var(--wgsm-page-bg) !important;
+}
+/* Sidebar / widget-uri: același fundal (fără „fâșie albă”) */
+#secondary,
+.widget-area,
+.mf-catalog-sidebar,
+.woocommerce-sidebar {
+    background-color: transparent !important;
+}
+/* ============================================
+   BUTOANE WOOCOMMERCE – CTA principal (vibrant, retail)
    ============================================ */
 .woocommerce .button,
 .woocommerce a.button,
 .woocommerce button.button,
 .woocommerce input.button {
-    background-color: #3b82f6 !important;
+    background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
     color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 10px 18px !important;
     font-size: 13px !important;
-    border: none !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    border: 1px solid rgba(29, 78, 216, 0.45) !important;
+    box-shadow: 0 2px 8px var(--wgsm-cta-glow), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    line-height: 1.4 !important;
+    line-height: 1.35 !important;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease !important;
 }
 
 .woocommerce .button:hover,
 .woocommerce a.button:hover,
-.woocommerce button.button:hover {
-    background-color: #2563eb !important;
+.woocommerce button.button:hover,
+.woocommerce input.button:hover {
+    background: linear-gradient(180deg, var(--wgsm-cta) 0%, var(--wgsm-cta-hover) 100%) !important;
+    border-color: rgba(29, 78, 216, 0.65) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 20px var(--wgsm-cta-glow) !important;
+    transform: translateY(-1px) !important;
+}
+.woocommerce .button:active,
+.woocommerce a.button:active,
+.woocommerce button.button:active {
+    transform: translateY(0) !important;
+}
+
+/* Icon coș (siluetă clară, line-art feel) – mask + culoare buton */
+.woocommerce a.add_to_cart_button::before,
+.woocommerce button.add_to_cart_button::before,
+button.single_add_to_cart_button::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px !important;
+    flex-shrink: 0 !important;
+    background: currentColor !important;
+    opacity: 0.92 !important;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E") center / contain no-repeat !important;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E") center / contain no-repeat !important;
 }
 
 /* ============================================
@@ -58,12 +131,16 @@ function webgsm_minimal_css() {
    CATALOG - ALINIERE PRODUSE (înălțime egală, butoane pe aceeași linie)
    ============================================ */
 /* Asigură că cardurile se întind pe înălțime (compatibil cu grid/flex) */
+/* Fără gap pe listă: gap-ul flex/grid rupe 4 coloane (25%×4 + spații > 100%) */
 ul.products {
     align-items: stretch !important;
 }
 ul.products li.product {
     display: flex !important;
     flex-direction: column !important;
+    /* Spațiu vizual între carduri – doar padding în celulă (nu schimbă numărul de coloane) */
+    padding: 6px !important;
+    box-sizing: border-box !important;
 }
 /* product-inner ocupă tot spațiul și folosește flex */
 ul.products li.product .product-inner {
@@ -72,6 +149,17 @@ ul.products li.product .product-inner {
     flex: 1 !important;
     width: 100% !important;
     height: 100% !important;
+    /* Chenar discret – delimitare între produse în listă */
+    border: 1px solid #e5e7eb !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    padding: 12px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    box-sizing: border-box !important;
+}
+ul.products li.product .product-inner:hover {
+    border-color: #d1d5db !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
 }
 /* mf-product-details: flex column, ocupă spațiul rămas */
 ul.products li.product .mf-product-details {
@@ -107,8 +195,18 @@ ul.products li.product .mf-product-details > .add_to_cart_button {
 }
 
 /* ============================================
-   CATALOG / CATEGORII - butoane pill (ca la checkout)
+   CATALOG – Adaugă în coș: clar, ocupă lățimea cardului; acțiuni secundare discrete
    ============================================ */
+ul.products .product .add_to_cart_button,
+ul.products .product .footer-button .button.add_to_cart_button,
+ul.products .product .mf-product-details-hover a.add_to_cart_button,
+ul.products .product .mf-product-details-hover .button.add_to_cart_button,
+ul.products .product .footer-button .add_to_cart_button {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+}
 ul.products .product .button,
 ul.products .product a.button,
 ul.products .product .add_to_cart_button,
@@ -121,12 +219,71 @@ ul.products .product .mf-compare-button a,
 ul.products .product .compare-button a,
 ul.products .product .yith-wcwl-add-to-wishlist a,
 ul.products .product a.add_to_wishlist {
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
-    font-size: 13px !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 10px 14px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    min-height: 40px !important;
+    box-sizing: border-box !important;
+}
+/* Wishlist / compare: outline, accent discret albastru */
+ul.products .product .mf-compare-button a,
+ul.products .product .compare-button a,
+ul.products .product .yith-wcwl-add-to-wishlist a,
+ul.products .product a.add_to_wishlist {
+    background: #fff !important;
+    color: #475569 !important;
+    border: 1px solid #bfdbfe !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+ul.products .product .mf-compare-button a:hover,
+ul.products .product .compare-button a:hover,
+ul.products .product .yith-wcwl-add-to-wishlist a:hover,
+ul.products .product a.add_to_wishlist:hover {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border-color: #93c5fd !important;
+}
+/* Wishlist: fără icon coș fals */
+ul.products .product .yith-wcwl-add-to-wishlist a::before,
+ul.products .product a.add_to_wishlist::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* Mobil: zone de atingere ≥44px, CTA clar pe lățime utilă */
+@media (max-width: 768px) {
+    ul.products .product .add_to_cart_button,
+    ul.products .product .footer-button .button.add_to_cart_button,
+    ul.products .product .mf-product-details-hover a.add_to_cart_button {
+        min-height: 44px !important;
+        padding: 12px 14px !important;
+        font-size: 13px !important;
+    }
+    .entry-summary form.cart,
+    .product-summary form.cart,
+    .summary form.cart {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .entry-summary .single_add_to_cart_button,
+    .product-summary .single_add_to_cart_button,
+    .summary .single_add_to_cart_button {
+        width: 100% !important;
+        max-width: 100% !important;
+        justify-content: center !important;
+    }
+    .entry-summary .quantity,
+    .product-summary .quantity,
+    .summary .quantity {
+        justify-content: center !important;
+    }
 }
 
 /* ============================================
@@ -193,7 +350,7 @@ ul.products .product a.add_to_wishlist {
 .quantity .minus:hover,
 .quantity .increase:hover,
 .quantity .decrease:hover {
-    color: #3b82f6 !important;
+    color: var(--wgsm-cta) !important;
 }
 
 /* Input cantitate - minimalist */
@@ -217,7 +374,7 @@ input.qty {
 }
 
 .quantity input.qty:focus {
-    border-bottom-color: #3b82f6 !important;
+    border-bottom-color: var(--wgsm-cta) !important;
 }
 
 /* Ascunde săgețile din input number */
@@ -227,20 +384,36 @@ input.qty {
     margin: 0 !important;
 }
 
-/* Buton "Adaugă în coș" - aceeași înălțime */
+/* Buton "Adaugă în coș" – pagina produs */
 .entry-summary .single_add_to_cart_button,
 .product-summary .single_add_to_cart_button,
 .summary .single_add_to_cart_button {
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 0 25px !important;
-    font-size: 13px !important;
-    border-radius: 25px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 24px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    border-radius: var(--wgsm-radius) !important;
+    background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
+    color: #fff !important;
+    border: 1px solid rgba(29, 78, 216, 0.45) !important;
+    box-shadow: 0 2px 10px var(--wgsm-cta-glow), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     vertical-align: middle !important;
     margin: 0 !important;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease !important;
+}
+.entry-summary .single_add_to_cart_button:hover,
+.product-summary .single_add_to_cart_button:hover,
+.summary .single_add_to_cart_button:hover {
+    background: linear-gradient(180deg, var(--wgsm-cta) 0%, var(--wgsm-cta-hover) 100%) !important;
+    border-color: rgba(29, 78, 216, 0.65) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 22px var(--wgsm-cta-glow) !important;
+    transform: translateY(-1px) !important;
 }
 /* Wishlist - aliniat */
 .entry-summary .yith-wcwl-add-to-wishlist,
@@ -663,7 +836,7 @@ body.search .product .byline {
 .woocommerce-cart table.shop_table.cart .quantity {
     justify-content: center !important;
 }
-/* Toate butoanele din coș - rotunjite albastre */
+/* Butoane coș – gradient CTA + touch-friendly */
 .woocommerce-cart .woocommerce .button,
 .woocommerce-cart .button,
 .woocommerce-cart a.button,
@@ -673,29 +846,45 @@ body.search .product .byline {
 .woocommerce-cart .actions .button,
 .cart-collaterals .button,
 .wc-proceed-to-checkout a.button {
-    background-color: #3b82f6 !important;
+    background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
     color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
-    font-size: 13px !important;
-    border: none !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border: 1px solid rgba(29, 78, 216, 0.45) !important;
+    box-shadow: 0 2px 10px var(--wgsm-cta-glow), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    min-height: 44px !important;
 }
 
 .woocommerce-cart .button:hover,
 .woocommerce-cart a.button:hover {
-    background-color: #2563eb !important;
+    background: linear-gradient(180deg, var(--wgsm-cta) 0%, var(--wgsm-cta-hover) 100%) !important;
+    border-color: rgba(29, 78, 216, 0.65) !important;
 }
 
-/* Buton "Continua cumpărăturile" */
+/* Buton "Continua cumpărăturile" – secundar, outline */
 .woocommerce-cart .wc-continue-shopping,
 .woocommerce-cart a.wc-continue-shopping,
 a.wc-continue-shopping,
 .continue-shopping,
 a.continue-shopping {
-    background-color: #3b82f6 !important;
-    color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
+    background: #fff !important;
+    color: var(--wgsm-cta) !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 12px 20px !important;
+    border: 2px solid #bfdbfe !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+.woocommerce-cart .wc-continue-shopping:hover,
+.woocommerce-cart a.wc-continue-shopping:hover,
+a.wc-continue-shopping:hover,
+.continue-shopping:hover,
+a.continue-shopping:hover {
+    background: #eff6ff !important;
+    border-color: var(--wgsm-cta) !important;
+    color: var(--wgsm-cta-hover) !important;
 }
 
 /* Quantity în pagina coș */
@@ -753,10 +942,13 @@ a.continue-shopping {
 /* Update cart button */
 .woocommerce-cart button[name="update_cart"],
 .woocommerce-cart input[name="update_cart"] {
-    background-color: #6b7280 !important;
+    background: #64748b !important;
     color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 20px !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 10px 18px !important;
+    border: 1px solid #64748b !important;
+    box-shadow: none !important;
+    background-image: none !important;
 }
 
 .woocommerce-cart button[name="update_cart"]:hover {
@@ -765,8 +957,9 @@ a.continue-shopping {
 
 /* Coupon button */
 .woocommerce-cart .coupon .button {
-    background-color: #3b82f6 !important;
-    border-radius: 25px !important;
+    background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
+    border-radius: var(--wgsm-radius) !important;
+    border: 1px solid rgba(29, 78, 216, 0.45) !important;
 }
 
 /* Checkout button mare */
@@ -777,31 +970,30 @@ a.continue-shopping {
     font-weight: 600 !important;
 }
 
-/* Buton "Continua cumpărăturile" - negru dar rotunjit */
-.woocommerce-cart .wc-continue-shopping,
-.woocommerce-cart a.wc-continue-shopping,
-a.wc-continue-shopping,
-.continue-shopping,
-a.continue-shopping,
+/* Return to shop / înapoi – outline (nu dublează regulile de mai sus pe același selector) */
 .woocommerce .return-to-shop a,
 a.wc-backward {
-    background-color: #1f2937 !important;
-    color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
-    font-size: 13px !important;
+    background: #fff !important;
+    color: var(--wgsm-cta) !important;
+    border-radius: var(--wgsm-radius) !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     line-height: 1.4 !important;
     height: auto !important;
     min-height: 44px !important;
+    border: 2px solid #bfdbfe !important;
+    box-shadow: none !important;
+    background-image: none !important;
 }
 
-.woocommerce-cart .wc-continue-shopping:hover,
-a.wc-continue-shopping:hover,
-a.continue-shopping:hover {
-    background-color: #374151 !important;
+.woocommerce .return-to-shop a:hover,
+a.wc-backward:hover {
+    background: #eff6ff !important;
+    border-color: var(--wgsm-cta) !important;
+    color: var(--wgsm-cta-hover) !important;
 }
 
 /* Buton "Abonează-te" - negru dar rotunjit */
@@ -813,8 +1005,8 @@ input.mc4wp-submit,
 .newsletter input[type="submit"] {
     background-color: #1f2937 !important;
     color: #fff !important;
-    border-radius: 25px !important;
-    padding: 10px 25px !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
     font-size: 13px !important;
     border: none !important;
     display: inline-flex !important;
@@ -837,7 +1029,7 @@ input.mc4wp-submit,
 .widget_shopping_cart .buttons a,
 .cart-panel .button,
 .cart-panel a.button {
-    border-radius: 25px !important;
+    border-radius: 8px !important;
     padding: 10px 20px !important;
     font-size: 12px !important;
     display: inline-flex !important;
@@ -848,33 +1040,36 @@ input.mc4wp-submit,
     min-height: 40px !important;
 }
 
-/* Vezi coșul - outline style */
+/* Vezi coșul - outline albastru */
 .mini-cart .buttons a.wc-forward:first-child,
 .woocommerce-mini-cart__buttons a:first-child,
 .widget_shopping_cart .buttons a:first-child {
-    background-color: transparent !important;
-    color: #1f2937 !important;
-    border: 2px solid #1f2937 !important;
+    background-color: #fff !important;
+    color: var(--wgsm-cta) !important;
+    border: 2px solid #bfdbfe !important;
 }
 
 .mini-cart .buttons a.wc-forward:first-child:hover,
 .woocommerce-mini-cart__buttons a:first-child:hover {
-    background-color: #1f2937 !important;
-    color: #fff !important;
+    background-color: #eff6ff !important;
+    color: var(--wgsm-cta-hover) !important;
+    border-color: var(--wgsm-cta) !important;
 }
 
-/* Finalizare comandă - albastru */
+/* Finalizare comandă – CTA vibrant */
 .mini-cart .buttons a.checkout,
 .woocommerce-mini-cart__buttons a.checkout,
 .widget_shopping_cart .buttons a.checkout {
-    background-color: #3b82f6 !important;
+    background: linear-gradient(180deg, #3b82f6 0%, var(--wgsm-cta) 100%) !important;
     color: #fff !important;
-    border: none !important;
+    border: 1px solid rgba(29, 78, 216, 0.45) !important;
+    box-shadow: 0 2px 10px var(--wgsm-cta-glow) !important;
 }
 
 .mini-cart .buttons a.checkout:hover,
 .woocommerce-mini-cart__buttons a.checkout:hover {
-    background-color: #2563eb !important;
+    background: linear-gradient(180deg, var(--wgsm-cta) 0%, var(--wgsm-cta-hover) 100%) !important;
+    border-color: rgba(29, 78, 216, 0.65) !important;
 }
 
 /* FIX ALINIERE TEXT ÎN TOATE BUTOANELE */
