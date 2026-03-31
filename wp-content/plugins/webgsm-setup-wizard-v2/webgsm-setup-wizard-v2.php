@@ -1079,6 +1079,7 @@ class WebGSM_Setup_Wizard_V2 {
                 'Microscoape' => 'microscoape',
                 'Programatoare' => 'programatoare',
                 'Kituri Complete' => 'kituri-complete',
+                'Consumabile' => 'consumabile',
             ]
         ],
         'Accesorii' => [
@@ -1282,7 +1283,7 @@ class WebGSM_Setup_Wizard_V2 {
         'Unelte' => [
             'icon' => '🛠️',
             'columns' => [
-                'Unelte' => ['Șurubelnițe', 'Pensete', 'Stații Lipit', 'Separatoare Ecrane', 'Microscoape', 'Programatoare', 'Kituri Complete'],
+                'Unelte' => ['Șurubelnițe', 'Pensete', 'Stații Lipit', 'Separatoare Ecrane', 'Microscoape', 'Programatoare', 'Kituri Complete', 'Consumabile'],
             ]
         ],
         'Accesorii' => [
