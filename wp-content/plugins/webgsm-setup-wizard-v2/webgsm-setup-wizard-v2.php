@@ -2576,7 +2576,8 @@ Dispozitive / Servicii → Dropdown simplu</div>
         }
         
         update_option('webgsm_v2_categories', true);
-        wp_send_json_success(['message' => "Au fost create {$created} categorii!"]);
+        flush_rewrite_rules();
+        wp_send_json_success(['message' => "Au fost create {$created} categorii! Regulile de permalink au fost reîmprospătate."]);
     }
     
     private function create_category($name, $slug, $parent = 0, $desc = '') {
@@ -2778,6 +2779,44 @@ Dispozitive / Servicii → Dropdown simplu</div>
                     $items_count++;
                 }
             }
+
+            // Subcategorii în WooCommerce care nu sunt în $this->categories (ex. adăugate manual sau meniu generat cu versiune veche PHP).
+            if (!is_wp_error($parent_menu_id) && !empty($parent_data['children'])) {
+                $wizard_flat_slugs = [];
+                foreach ($parent_data['children'] as $child_name => $child_value) {
+                    if (is_array($child_value) && isset($child_value['slug'])) {
+                        $wizard_flat_slugs = null;
+                        break;
+                    }
+                    $wizard_flat_slugs[] = is_string($child_value) ? $child_value : sanitize_title($child_name);
+                }
+                if (is_array($wizard_flat_slugs)) {
+                    $wc_children = get_terms([
+                        'taxonomy'   => 'product_cat',
+                        'parent'     => (int) $parent_term->term_id,
+                        'hide_empty' => false,
+                        'orderby'    => 'name',
+                        'order'      => 'ASC',
+                    ]);
+                    if (!is_wp_error($wc_children)) {
+                        foreach ($wc_children as $wc_term) {
+                            if (in_array($wc_term->slug, $wizard_flat_slugs, true)) {
+                                continue;
+                            }
+                            wp_update_nav_menu_item($menu_id, 0, [
+                                'menu-item-title'     => $wc_term->name,
+                                'menu-item-object'    => 'product_cat',
+                                'menu-item-object-id' => $wc_term->term_id,
+                                'menu-item-type'      => 'taxonomy',
+                                'menu-item-status'    => 'publish',
+                                'menu-item-parent-id' => (int) $parent_menu_id,
+                                'menu-item-position'  => $order++,
+                            ]);
+                            $items_count++;
+                        }
+                    }
+                }
+            }
         }
         
         // Asociază la locații
@@ -2785,6 +2824,8 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $locations['primary'] = $menu_id;
         $locations['primary-menu'] = $menu_id;
         $locations['shop-department'] = $menu_id;
+        $locations['shop_department'] = $menu_id;
+        $locations['mobile'] = $menu_id;
         set_theme_mod('nav_menu_locations', $locations);
         
         update_option('webgsm_v2_menu', true);
