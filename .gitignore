@@ -35,6 +35,8 @@ wp-content/plugins/packeta/
 !wp-content/plugins/webgsm-tools/
 !wp-content/plugins/webgsm-woo-sync/
 !wp-content/plugins/webgsm-site-audit/
+!wp-content/plugins/webgsm-packeta-admin/
+!wp-content/plugins/webgsm-back-in-stock/
 
 # webgsm-checkout-pro: exclude backup, dev artifacts, tests
 wp-content/plugins/webgsm-checkout-pro.disabled/
