@@ -1331,6 +1331,10 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('wp_ajax_webgsm_v2_save_brand_piesa_extra', [$this, 'ajax_save_brand_piesa_extra']);
         add_action('wp_ajax_webgsm_v2_create_attributes', [$this, 'ajax_create_attributes']);
         add_action('wp_ajax_webgsm_v2_create_menu', [$this, 'ajax_create_menu']);
+        add_action('wp_ajax_webgsm_v2_sync_menu_categories', [$this, 'ajax_sync_menu_categories']);
+        add_action('wp_ajax_webgsm_v2_get_menu_editor', [$this, 'ajax_get_menu_editor']);
+        add_action('wp_ajax_webgsm_v2_delete_menu_item', [$this, 'ajax_delete_menu_item']);
+        add_action('wp_ajax_webgsm_v2_add_menu_category_item', [$this, 'ajax_add_menu_category_item']);
         add_action('wp_ajax_webgsm_v2_setup_filters', [$this, 'ajax_setup_filters']);
         add_action('wp_ajax_webgsm_v2_clear_filters', [$this, 'ajax_clear_filters']);
         add_action('wp_ajax_webgsm_v2_clear_menu', [$this, 'ajax_clear_menu']);
@@ -2034,71 +2038,288 @@ class WebGSM_Setup_Wizard_V2 {
         wp_enqueue_script('jquery');
         ?>
         <style>
-            .webgsm-wrap { max-width: 1000px; margin: 20px auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-            .webgsm-header { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); color: white; padding: 30px; border-radius: 16px; margin-bottom: 30px; }
-            .webgsm-header h1 { margin: 0 0 8px 0; font-size: 28px; color: white; }
-            .webgsm-header p { margin: 0; opacity: 0.9; }
-            
-            .webgsm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-            @media (max-width: 900px) { .webgsm-grid { grid-template-columns: 1fr; } }
-            
-            .webgsm-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
-            .webgsm-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-            .webgsm-card-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .webgsm-card-icon.blue { background: #dbeafe; }
-            .webgsm-card-icon.green { background: #d1fae5; }
-            .webgsm-card-icon.purple { background: #ede9fe; }
-            .webgsm-card-icon.orange { background: #ffedd5; }
-            .webgsm-card-icon.red { background: #fee2e2; }
-            
-            .webgsm-card h3 { margin: 0; font-size: 16px; color: #1f2937; }
-            .webgsm-card p { color: #6b7280; font-size: 13px; margin: 0 0 16px 0; }
-            
-            .webgsm-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-            .webgsm-btn-primary { background: #2563eb; color: white; }
-            .webgsm-btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+            @keyframes webgsm-fade-up {
+                from { opacity: 0; transform: translateY(16px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes webgsm-fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+            /* Lățime confortabilă, centrat — nu full-bleed pe tot ecranul admin */
+            .webgsm-setup-shell.webgsm-wrap {
+                max-width: 1000px;
+                width: 100%;
+                margin: 16px auto 32px;
+                padding: 0 8px;
+                box-sizing: border-box;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: transparent;
+            }
+            @media screen and (max-width: 782px) {
+                .webgsm-setup-shell.webgsm-wrap {
+                    max-width: 100%;
+                    padding-left: 4px;
+                    padding-right: 4px;
+                }
+            }
+
+            .webgsm-setup-shell .webgsm-animate {
+                opacity: 0;
+                animation: webgsm-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d1 { animation-delay: 0.05s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d2 { animation-delay: 0.1s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d3 { animation-delay: 0.15s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d4 { animation-delay: 0.2s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d5 { animation-delay: 0.25s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d6 { animation-delay: 0.3s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d7 { animation-delay: 0.35s; }
+            .webgsm-setup-shell .webgsm-animate.webgsm-d8 { animation-delay: 0.4s; }
+            @media (prefers-reduced-motion: reduce) {
+                .webgsm-setup-shell .webgsm-animate { animation: none; opacity: 1; transform: none; }
+            }
+
+            .webgsm-setup-hero {
+                position: relative;
+                overflow: hidden;
+                border-radius: 14px;
+                margin-bottom: 18px;
+                background: linear-gradient(125deg, #1e40af 0%, #5b21b6 55%, #6d28d9 100%);
+                color: #fff;
+                box-shadow: 0 8px 24px -8px rgba(49, 46, 129, 0.35);
+            }
+            .webgsm-setup-hero::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(255,255,255,0.18), transparent 55%);
+                pointer-events: none;
+            }
+            .webgsm-setup-hero-inner { position: relative; z-index: 1; padding: 22px 24px 20px; }
+            .webgsm-setup-hero h1 { margin: 0 0 6px; font-size: 1.45rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+            .webgsm-setup-hero p { margin: 0; font-size: 13px; opacity: 0.92; line-height: 1.5; max-width: 40rem; }
+
+            .webgsm-step-rail {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 4px 0 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            @media (min-width: 960px) {
+                .webgsm-step-rail { flex-wrap: wrap; overflow-x: visible; }
+            }
+            .webgsm-step-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 16px;
+                border-radius: 999px;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+                color: #334155;
+                background: rgba(255,255,255,0.85);
+                border: 1px solid rgba(148, 163, 184, 0.35);
+                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+                transition: background 0.2s, box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+            }
+            .webgsm-step-pill:hover {
+                background: #fff;
+                border-color: #6366f1;
+                color: #312e81;
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+                transform: translateY(-1px);
+            }
+            .webgsm-step-pill .webgsm-step-num {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 22px;
+                height: 22px;
+                padding: 0 6px;
+                border-radius: 999px;
+                font-size: 11px;
+                background: #e0e7ff;
+                color: #4338ca;
+            }
+
+            .webgsm-ref-details {
+                margin-bottom: 18px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            }
+            .webgsm-ref-details summary {
+                cursor: pointer;
+                padding: 14px 18px;
+                font-weight: 600;
+                font-size: 14px;
+                color: #1e293b;
+                list-style: none;
+            }
+            .webgsm-ref-details summary::-webkit-details-marker { display: none; }
+            .webgsm-ref-details[open] summary { border-bottom: 1px solid #e2e8f0; }
+            .webgsm-ref-body { padding: 16px 18px 20px; animation: webgsm-fade-in 0.35s ease; }
+
+            .webgsm-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+            .webgsm-tab { padding: 8px 14px; background: #f1f5f9; border-radius: 999px; font-weight: 600; font-size: 12px; cursor: default; color: #64748b; border: 1px solid transparent; }
+            .webgsm-tab.active { background: #4f46e5; color: #fff; }
+
+            .webgsm-setup-grid {
+                display: grid;
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                gap: 18px;
+                align-items: start;
+            }
+            .webgsm-card-step { grid-column: span 6; }
+            .webgsm-card-span-full { grid-column: 1 / -1; }
+            @media (max-width: 900px) {
+                .webgsm-card-step { grid-column: 1 / -1; }
+            }
+
+            .webgsm-card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 20px 22px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+                transition: box-shadow 0.2s ease, border-color 0.2s ease;
+                scroll-margin-top: 56px;
+            }
+            .webgsm-card:hover {
+                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+                border-color: #d1d5db;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .webgsm-card:hover { transform: none; }
+            }
+
+            .webgsm-card-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
+            .webgsm-card-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 22px;
+                flex-shrink: 0;
+            }
+            .webgsm-card-icon.blue { background: linear-gradient(145deg, #dbeafe, #bfdbfe); }
+            .webgsm-card-icon.green { background: linear-gradient(145deg, #d1fae5, #a7f3d0); }
+            .webgsm-card-icon.purple { background: linear-gradient(145deg, #ede9fe, #ddd6fe); }
+            .webgsm-card-icon.orange { background: linear-gradient(145deg, #ffedd5, #fed7aa); }
+            .webgsm-card-icon.red { background: linear-gradient(145deg, #fee2e2, #fecaca); }
+
+            .webgsm-card h3 { margin: 0; font-size: 17px; color: #0f172a; font-weight: 700; letter-spacing: -0.02em; }
+            .webgsm-card .webgsm-card-lead { color: #64748b; font-size: 13px; margin: 4px 0 0; line-height: 1.55; }
+            .webgsm-card > p:not(.webgsm-card-lead) { color: #64748b; font-size: 13px; margin: 0 0 14px; line-height: 1.55; }
+
+            .webgsm-btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+            .webgsm-hint { font-size: 12px; color: #64748b; display: block; margin-top: 8px; line-height: 1.45; }
+
+            .webgsm-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 18px;
+                border: none;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            }
+            .webgsm-btn-primary { background: #4f46e5; color: white; box-shadow: 0 2px 10px rgba(79, 70, 229, 0.25); }
+            .webgsm-btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
             .webgsm-btn-success { background: #059669; color: white; }
             .webgsm-btn-danger { background: #dc2626; color: white; }
             .webgsm-btn-danger:hover { background: #b91c1c; }
-            .webgsm-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-            
-            .webgsm-status { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
-            .webgsm-status.show { display: block; }
-            .webgsm-status.loading { background: #dbeafe; color: #1e40af; }
+            .webgsm-btn-teal { background: #0d9488; color: #fff; }
+            .webgsm-btn-teal:hover { background: #0f766e; }
+            .webgsm-btn-muted { background: #64748b; color: #fff; }
+            .webgsm-btn-muted:hover { background: #475569; }
+            .webgsm-btn-amber { background: #f59e0b; color: #fff; }
+            .webgsm-btn-amber:hover { background: #d97706; }
+            .webgsm-btn-sky { background: #0ea5e9; color: #fff; }
+            .webgsm-btn-sky:hover { background: #0284c7; }
+            .webgsm-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none; }
+
+            .webgsm-status { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; display: none; transition: opacity 0.3s ease; }
+            .webgsm-status.show { display: block; animation: webgsm-fade-in 0.35s ease; }
+            .webgsm-status.loading { background: #e0e7ff; color: #3730a3; }
             .webgsm-status.success { background: #d1fae5; color: #065f46; }
             .webgsm-status.error { background: #fee2e2; color: #991b1b; }
-            
-            .webgsm-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 11px; font-family: monospace; max-height: 150px; overflow-y: auto; white-space: pre; }
-            
-            .webgsm-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-            .webgsm-tab { padding: 10px 16px; background: #f1f5f9; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-            .webgsm-tab:hover { background: #e2e8f0; }
-            .webgsm-tab.active { background: #2563eb; color: white; }
-            
+
+            .webgsm-preview {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 12px 14px;
+                margin: 12px 0;
+                font-size: 11px;
+                font-family: ui-monospace, monospace;
+                max-height: 140px;
+                overflow-y: auto;
+                white-space: pre;
+                color: #475569;
+            }
+
             .spinner { animation: spin 1s linear infinite; display: inline-block; }
-            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-            
+
             .webgsm-full { grid-column: 1 / -1; }
             .webgsm-checklist { list-style: none; padding: 0; margin: 0; }
-            .webgsm-checklist li { padding: 8px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+            .webgsm-checklist li { padding: 10px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
             .webgsm-checklist li:last-child { border-bottom: none; }
-            .check-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+            .check-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
             .check-icon.done { background: #d1fae5; color: #059669; }
             .check-icon.pending { background: #f1f5f9; color: #9ca3af; }
 
-            .webgsm-structure-viewer { background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
-            .webgsm-structure-viewer h2 { margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
-            .structure-section { margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 4px; }
-            .category-tree, .category-tree ul { list-style: none; padding-left: 20px; }
+            .webgsm-structure-viewer { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+            .webgsm-structure-viewer h2 { margin: 0 0 12px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; color: #0f172a; }
+            .structure-section { margin: 16px 0; padding: 14px; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; }
+            .category-tree, .category-tree ul { list-style: none; padding-left: 18px; }
             .category-tree > li { padding-left: 0; }
             .cat-item { display: inline-block; padding: 3px 0; }
-            .cat-item code { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+            .cat-item code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
             .attributes-list { list-style: none; padding: 0; }
-            .attributes-list li { padding: 10px; margin: 5px 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+            .attributes-list li { padding: 10px; margin: 6px 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
             .tags-cloud { line-height: 2; }
-            .tag-item { display: inline-block; background: #0073aa; color: #fff; padding: 2px 8px; border-radius: 3px; margin: 2px; font-size: 12px; }
-            .export-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
-            #copy-status { margin-left: 10px; color: #46b450; display: none; }
+            .tag-item { display: inline-block; background: #4f46e5; color: #fff; padding: 2px 8px; border-radius: 4px; margin: 2px; font-size: 12px; }
+            .export-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+            #copy-status { margin-left: 10px; color: #059669; display: none; }
+
+            .webgsm-menu-editor {
+                margin-top: 16px;
+                padding: 16px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+            }
+            .webgsm-menu-editor > strong { font-size: 14px; color: #0f172a; }
+            .webgsm-menu-tree-outer {
+                max-height: 280px;
+                overflow: auto;
+                margin: 10px 0 12px;
+                padding: 10px 12px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                font-size: 13px;
+            }
+            .webgsm-menu-add-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+            .webgsm-menu-add-row label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155; }
+            .webgsm-brand-piesa-extra { margin: 12px 0; padding: 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; }
+            .webgsm-filter-config { margin: 12px 0; padding: 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; }
+            .webgsm-status-card { border-left: 4px solid #6366f1; }
         </style>
         <?php
     }
@@ -2109,55 +2330,70 @@ class WebGSM_Setup_Wizard_V2 {
         $menu_done = get_option('webgsm_v2_menu', false);
         $filters_done = get_option('webgsm_v2_filters', false);
         ?>
-        <div class="webgsm-wrap">
+        <div class="wrap webgsm-wrap webgsm-setup-shell">
             
-            <div class="webgsm-header">
-                <h1>🚀 WebGSM Setup Wizard v2</h1>
-                <p>Structură finală: Piese • Unelte • Accesorii • Dispozitive • Servicii</p>
-            </div>
-            
-            <!-- Preview Tabs -->
-            <div class="webgsm-tabs">
-                <div class="webgsm-tab active">🔧 Piese</div>
-                <div class="webgsm-tab">🛠️ Unelte</div>
-                <div class="webgsm-tab">📦 Accesorii</div>
-                <div class="webgsm-tab">📱 Dispozitive</div>
-                <div class="webgsm-tab">⚡ Servicii</div>
-            </div>
-            
-            <!-- Vizualizare Structură Actuală (read-only + export AI) -->
-            <div class="webgsm-structure-viewer">
-                <h2>📊 Structura Actuală <button type="button" class="button" id="toggle-structure">[Arată]</button></h2>
-                <div id="structure-content" style="display:none;">
-                    <div class="structure-section">
-                        <h3>📁 Categorii Produse</h3>
-                        <div id="category-tree"><?php echo webgsm_get_category_tree_html(); ?></div>
-                    </div>
-                    <div class="structure-section">
-                        <h3>🏷️ Atribute WooCommerce</h3>
-                        <div id="attributes-list"><?php echo webgsm_get_attributes_html(); ?></div>
-                    </div>
-                    <div class="structure-section">
-                        <h3>🔖 Tag-uri Produse</h3>
-                        <div id="tags-list"><?php echo webgsm_get_tags_html(); ?></div>
-                    </div>
-                    <div class="export-section">
-                        <button type="button" id="copy-for-ai" class="button button-primary">📋 Copiază Structura pentru AI</button>
-                        <button type="button" id="export-json" class="button">📥 Export JSON</button>
-                        <span id="copy-status"></span>
-                    </div>
+            <div class="webgsm-setup-hero webgsm-animate webgsm-d1">
+                <div class="webgsm-setup-hero-inner">
+                    <h1>WebGSM Setup Wizard</h1>
+                    <p>Flux recomandat: <strong>Categorii</strong> → <strong>Atribute</strong> → <strong>Meniu</strong> → <strong>Filtre</strong>. Structură magazin: Piese · Unelte · Accesorii · Dispozitive · Servicii.</p>
                 </div>
             </div>
 
-            <div class="webgsm-grid">
+            <nav class="webgsm-step-rail webgsm-animate webgsm-d2" aria-label="Pași setup">
+                <a href="#webgsm-step-cats" class="webgsm-step-pill"><span class="webgsm-step-num">1</span> Categorii</a>
+                <a href="#webgsm-step-attrs" class="webgsm-step-pill"><span class="webgsm-step-num">2</span> Atribute</a>
+                <a href="#webgsm-step-menu" class="webgsm-step-pill"><span class="webgsm-step-num">3</span> Meniu</a>
+                <a href="#webgsm-step-filters" class="webgsm-step-pill"><span class="webgsm-step-num">4</span> Filtre</a>
+                <a href="#webgsm-step-status" class="webgsm-step-pill"><span class="webgsm-step-num">✓</span> Status &amp; pericol</a>
+            </nav>
+
+            <details class="webgsm-ref-details webgsm-animate webgsm-d2">
+                <summary>📚 Referință magazin · categorii live · export pentru AI</summary>
+                <div class="webgsm-ref-body">
+                    <p class="webgsm-hint" style="margin-top:0;">Deschide când ai nevoie de copiere structură sau verificare în baza de date. Nu este necesar pentru pașii de mai jos.</p>
+                    <div class="webgsm-tabs" aria-hidden="true">
+                        <span class="webgsm-tab active">Piese</span>
+                        <span class="webgsm-tab">Unelte</span>
+                        <span class="webgsm-tab">Accesorii</span>
+                        <span class="webgsm-tab">Dispozitive</span>
+                        <span class="webgsm-tab">Servicii</span>
+                    </div>
+                    <div class="webgsm-structure-viewer">
+                        <h2>Structura actuală <button type="button" class="button" id="toggle-structure">[Arată]</button></h2>
+                        <div id="structure-content" style="display:none;">
+                            <div class="structure-section">
+                                <h3>📁 Categorii produse</h3>
+                                <div id="category-tree"><?php echo webgsm_get_category_tree_html(); ?></div>
+                            </div>
+                            <div class="structure-section">
+                                <h3>🏷️ Atribute WooCommerce</h3>
+                                <div id="attributes-list"><?php echo webgsm_get_attributes_html(); ?></div>
+                            </div>
+                            <div class="structure-section">
+                                <h3>🔖 Tag-uri produse</h3>
+                                <div id="tags-list"><?php echo webgsm_get_tags_html(); ?></div>
+                            </div>
+                            <div class="export-section">
+                                <button type="button" id="copy-for-ai" class="button button-primary">📋 Copiază structura pentru AI</button>
+                                <button type="button" id="export-json" class="button">📥 Export JSON</button>
+                                <span id="copy-status"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <div class="webgsm-setup-grid">
                 
-                <!-- 1. Categorii -->
-                <div class="webgsm-card">
+                <div id="webgsm-step-cats" class="webgsm-card webgsm-card-step webgsm-animate webgsm-d3">
                     <div class="webgsm-card-header">
                         <div class="webgsm-card-icon blue">📁</div>
-                        <h3>1. Creare Categorii</h3>
+                        <div>
+                            <h3>Categorii WooCommerce</h3>
+                            <p class="webgsm-card-lead">Pasul 1 · categorii principale și subcategorii</p>
+                        </div>
                     </div>
-                    <p>Creează 5 categorii principale + ~50 subcategorii. <strong>Prima dată: Creează. După ce ai rulat: poți rula din nou (Actualizează).</strong></p>
+                    <p>Creează 5 categorii principale și subcategoriile din wizard. <strong>Prima dată: Creează.</strong> Ulterior poți rula din nou (completare, fără să șteargă ce există).</p>
                     <div class="webgsm-preview">Piese/
 ├── Piese iPhone → Ecrane, Baterii, Camere...
 ├── Piese Samsung → Ecrane, Baterii, Flexuri...
@@ -2170,30 +2406,36 @@ Dispozitive/
 ├── Telefoane Folosite, Tablete...
 Servicii/
 ├── Reparații, Training, Buy-back...</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-cats">
-                        <?php echo $cats_done ? '🔄 Actualizează Categorii' : '📁 Creează Categorii'; ?>
-                    </button>
-                    <span style="font-size: 12px; color: #64748b; display: block; margin-top: 4px;"><?php echo $cats_done ? 'Categorii există – poți rula din nou pentru actualizare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
+                    <div class="webgsm-btn-row">
+                        <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-cats">
+                            <?php echo $cats_done ? '🔄 Actualizează categorii' : '📁 Creează categorii'; ?>
+                        </button>
+                    </div>
+                    <span class="webgsm-hint"><?php echo $cats_done ? 'Categorii există – poți rula din nou pentru completare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
                     <div class="webgsm-status" id="status-cats"></div>
                 </div>
                 
-                <!-- 2. Atribute -->
-                <div class="webgsm-card">
+                <div id="webgsm-step-attrs" class="webgsm-card webgsm-card-step webgsm-animate webgsm-d4">
                     <div class="webgsm-card-header">
                         <div class="webgsm-card-icon green">🏷️</div>
-                        <h3>2. Creare Atribute</h3>
+                        <div>
+                            <h3>Atribute produse</h3>
+                            <p class="webgsm-card-lead">Pasul 2 · Model, calitate, brand piesă, tehnologie…</p>
+                        </div>
                     </div>
-                    <p>Creează atribute pentru filtrare. <strong>Prima dată: Creează. După ce ai rulat: poți rula din nou (Actualizează).</strong></p>
+                    <p>Atribute pentru filtrare în magazin. <strong>Prima dată: Creează.</strong> Apoi poți actualiza oricând.</p>
                     <?php
                     $brand_piesa_extra_raw = get_option('webgsm_v2_brand_piesa_extra_terms', []);
                     $brand_piesa_extra = is_array($brand_piesa_extra_raw) ? implode("\n", $brand_piesa_extra_raw) : (string) $brand_piesa_extra_raw;
                     ?>
-                    <div class="webgsm-brand-piesa-extra" style="margin:12px 0;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-                        <strong>Brand Piesă – termeni suplimentari (unul per linie)</strong>
-                        <p style="margin:4px 0 8px;font-size:12px;color:#64748b;">Adaugă aici branduri care nu sunt în lista implicită. Se salvează și se includ la „Creează/Actualizează Atribute”.</p>
-                        <textarea id="webgsm-brand-piesa-extra" rows="4" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;"><?php echo esc_textarea($brand_piesa_extra); ?></textarea>
-                        <button type="button" class="webgsm-btn" style="margin-top:8px;background:#0ea5e9;color:#fff;" id="btn-save-brand-piesa">Salvează termeni Brand Piesă</button>
-                        <span id="status-brand-piesa" style="margin-left:8px;font-size:12px;"></span>
+                    <div class="webgsm-brand-piesa-extra">
+                        <strong>Brand piesă – termeni extra (unul pe linie)</strong>
+                        <p class="webgsm-hint" style="margin:6px 0 8px;">Se salvează separat și intră la următorul „Creează/Actualizează atribute”.</p>
+                        <textarea id="webgsm-brand-piesa-extra" rows="4" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;"><?php echo esc_textarea($brand_piesa_extra); ?></textarea>
+                        <div class="webgsm-btn-row" style="margin-top:10px;">
+                            <button type="button" class="webgsm-btn webgsm-btn-sky" id="btn-save-brand-piesa">Salvează termeni Brand Piesă</button>
+                            <span id="status-brand-piesa" class="webgsm-hint" style="margin-top:0;"></span>
+                        </div>
                     </div>
                     <div class="webgsm-preview">Model: iPhone 16 Pro Max ... Galaxy S24 Ultra...
 Calitate: Original, Premium OEM, Aftermarket...
@@ -2201,42 +2443,90 @@ Brand Piesă: JK Incell, GX OLED, Ampsentrix... + termenii tăi
 Tehnologie: Soft OLED, Hard OLED, Incell...
 Brand Telefon: Apple, Samsung, Huawei...
 Culoare: Negru, Alb, Auriu...</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-attrs">
-                        <?php echo $attrs_done ? '🔄 Actualizează Atribute' : '🏷️ Creează Atribute'; ?>
-                    </button>
-                    <span style="font-size: 12px; color: #64748b; display: block; margin-top: 4px;"><?php echo $attrs_done ? 'Atribute există – poți rula din nou pentru actualizare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
+                    <div class="webgsm-btn-row">
+                        <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-attrs">
+                            <?php echo $attrs_done ? '🔄 Actualizează atribute' : '🏷️ Creează atribute'; ?>
+                        </button>
+                    </div>
+                    <span class="webgsm-hint"><?php echo $attrs_done ? 'Atribute există – poți rula din nou pentru actualizare.' : 'Încă nu ai rulat – apasă Creează.'; ?></span>
                     <div class="webgsm-status" id="status-attrs"></div>
                 </div>
                 
-                <!-- 3. Meniu -->
-                <div class="webgsm-card">
+                <div id="webgsm-step-menu" class="webgsm-card webgsm-card-span-full webgsm-animate webgsm-d5">
                     <div class="webgsm-card-header">
                         <div class="webgsm-card-icon purple">🍔</div>
-                        <h3>3. Creare Meniu</h3>
+                        <div>
+                            <h3>Meniu navigare</h3>
+                            <p class="webgsm-card-lead">Pasul 3 · WebGSM Main Menu + editor rapid</p>
+                        </div>
                     </div>
-                    <p>Creează meniul principal cu 5 tab-uri. Poți <strong>Șterge doar Meniu</strong> apoi <strong>Actualizează Meniu</strong> fără să atingi categorii/atribute.</p>
+                    <p>Meniul este doar <strong>linkuri</strong> către categorii. Îl poți refăce fără să atingi produsele. Produsele devin fără categorie doar dacă ștergi <strong>termenii</strong> din WooCommerce sau folosești <strong>Șterge tot</strong> jos.</p>
                     <div class="webgsm-preview">┌─────────┬─────────┬─────────────┬───────────┬──────────┐
 │  Piese  │ Unelte  │  Accesorii  │ Dispozitive│ Servicii │
 └─────────┴─────────┴─────────────┴───────────┴──────────┘
 Piese → 3 nivele: Piese iPhone > Ecrane, Baterii...
 Unelte / Accesorii → Dropdown cu categorii
 Dispozitive / Servicii → Dropdown simplu</div>
-                    <button class="webgsm-btn webgsm-btn-primary" id="btn-menu">
-                        <?php echo $menu_done ? '🔄 Actualizează Meniu' : '🍔 Creează Meniu'; ?>
-                    </button>
-                    <button class="webgsm-btn" style="background: #94a3b8; color: #fff;" id="btn-clear-menu" title="Șterge doar meniul WebGSM (categorii și atribute rămân)">
-                        🧹 Șterge doar Meniu
-                    </button>
+                    <div class="webgsm-btn-row">
+                        <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-menu">
+                            <?php echo $menu_done ? '🔄 Refă meniul complet' : '🍔 Creează meniu'; ?>
+                        </button>
+                        <button type="button" class="webgsm-btn webgsm-btn-teal" id="btn-sync-menu" title="Adaugă în meniu categoriile care lipsesc, fără să ștergi itemii existenți">
+                            ➕ Doar categorii lipsă
+                        </button>
+                        <button type="button" class="webgsm-btn webgsm-btn-muted" id="btn-clear-menu" title="Șterge doar meniul WebGSM (categorii și atribute rămân)">
+                            🧹 Șterge doar meniu
+                        </button>
+                    </div>
                     <div class="webgsm-status" id="status-menu"></div>
+                    <div class="webgsm-menu-editor">
+                        <strong>Editor meniu</strong>
+                        <p class="webgsm-hint" style="margin:6px 0 10px;">Adaugă / șterge poziții în <code>WebGSM Main Menu</code>. Pentru reordonare fină poți folosi și Aspect → Meniuri.</p>
+                        <div id="webgsm-menu-tree-wrap" class="webgsm-menu-tree-outer">
+                            <em id="webgsm-menu-tree-placeholder" style="color:#94a3b8;">Se încarcă…</em>
+                        </div>
+                        <button type="button" class="webgsm-btn webgsm-btn-muted" id="btn-menu-editor-reload">Reîmprospătează lista</button>
+                        <div class="webgsm-menu-add-row">
+                            <div>
+                                <label for="webgsm-menu-add-parent">Părinte în meniu</label>
+                                <select id="webgsm-menu-add-parent" style="min-width:240px;padding:6px 8px;max-width:100%;">
+                                    <option value="0">— Nivel principal —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="webgsm-menu-editor-term">Categorie produs</label>
+                                <?php
+                                if (taxonomy_exists('product_cat')) {
+                                    wp_dropdown_categories([
+                                        'taxonomy'           => 'product_cat',
+                                        'hide_empty'         => false,
+                                        'hierarchical'       => true,
+                                        'name'               => 'webgsm_menu_editor_term_unused',
+                                        'id'                 => 'webgsm-menu-editor-term',
+                                        'show_option_none'   => '— Alege categorie —',
+                                        'option_none_value'  => '0',
+                                        'style'              => 'min-width:260px;max-width:100%;padding:6px 8px;',
+                                    ]);
+                                } else {
+                                    echo '<p style="font-size:12px;color:#b91c1c;">WooCommerce nu e activ.</p>';
+                                }
+                                ?>
+                            </div>
+                            <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-menu-add-category">Adaugă în meniu</button>
+                        </div>
+                        <span id="status-menu-editor" class="webgsm-hint" style="display:block;margin-top:10px;"></span>
+                    </div>
                 </div>
                 
-                <!-- 4. Filtre -->
-                <div class="webgsm-card">
+                <div id="webgsm-step-filters" class="webgsm-card webgsm-card-span-full webgsm-animate webgsm-d6">
                     <div class="webgsm-card-header">
                         <div class="webgsm-card-icon orange">🔍</div>
-                        <h3>4. Configurare Filtre</h3>
+                        <div>
+                            <h3>Filtre sidebar magazin</h3>
+                            <p class="webgsm-card-lead">Pasul 4 · widget-uri în sidebar-ul catalogului</p>
+                        </div>
                     </div>
-                    <p><strong>Bifează</strong> filtrele pe care le vrei, <strong>debifează</strong> pe cele pe care nu le vrei, sau <strong>Șterge doar Filtre</strong> ca să le scoți pe toate. Apoi <strong>Aplică Filtre</strong>. Produsele nu își pierd maparea.</p>
+                    <p>Bifează filtrele dorite, apoi <strong>Aplică</strong>. <strong>Șterge doar filtre</strong> scoate widget-urile din sidebar; produsele rămân mapate la atribute.</p>
                     <?php
                     $available_filters = [
                         'model-compatibil' => 'Compatibilitate (Model compatibil)',
@@ -2248,34 +2538,36 @@ Dispozitive / Servicii → Dropdown simplu</div>
                     $saved_filter_attrs = get_option('webgsm_v2_filter_attributes', ['model-compatibil', 'model', 'calitate', 'brand-piesa', 'tehnologie', 'price']);
                     $current_filters_list = $this->get_current_sidebar_filters_list();
                     ?>
-                    <div class="webgsm-filter-config" style="margin: 12px 0; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <div style="font-weight: 600; margin-bottom: 8px;">☑ Ce filtre să apară (bifează / debifează):</div>
+                    <div class="webgsm-filter-config">
+                        <div style="font-weight: 600; margin-bottom: 10px; color: #334155;">Filtre vizibile în sidebar</div>
                         <?php foreach ($available_filters as $slug => $label) : ?>
-                        <label style="display: block; margin: 4px 0;"><input type="checkbox" class="webgsm-filter-attr" value="<?php echo esc_attr($slug); ?>" <?php echo in_array($slug, $saved_filter_attrs, true) ? 'checked' : ''; ?> /> <?php echo esc_html($label); ?></label>
+                        <label style="display: block; margin: 6px 0;"><input type="checkbox" class="webgsm-filter-attr" value="<?php echo esc_attr($slug); ?>" <?php echo in_array($slug, $saved_filter_attrs, true) ? 'checked' : ''; ?> /> <?php echo esc_html($label); ?></label>
                         <?php endforeach; ?>
-                        <label style="display: block; margin: 4px 0;"><input type="checkbox" class="webgsm-filter-attr" value="price" id="webgsm-filter-price" <?php echo in_array('price', $saved_filter_attrs, true) ? 'checked' : ''; ?> /> 💰 Preț</label>
+                        <label style="display: block; margin: 6px 0;"><input type="checkbox" class="webgsm-filter-attr" value="price" id="webgsm-filter-price" <?php echo in_array('price', $saved_filter_attrs, true) ? 'checked' : ''; ?> /> 💰 Preț</label>
                     </div>
                     <?php if (!empty($current_filters_list)) : ?>
-                    <div class="webgsm-current-filters" style="margin: 8px 0; font-size: 12px; color: #64748b;">
-                        <strong>Filtre active acum în sidebar:</strong> <?php echo esc_html($current_filters_list); ?>
+                    <div class="webgsm-current-filters webgsm-hint" style="margin: 10px 0;">
+                        <strong>Active acum:</strong> <?php echo esc_html($current_filters_list); ?>
                     </div>
                     <?php endif; ?>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="webgsm-btn webgsm-btn-primary" id="btn-filters">
-                            <?php echo $filters_done ? '🔄 Aplică Filtre (cu selecția de mai sus)' : '🔍 Configurează Filtre'; ?>
+                    <div class="webgsm-btn-row">
+                        <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-filters">
+                            <?php echo $filters_done ? '🔄 Aplică filtre (cu selecția de mai sus)' : '🔍 Configurează filtre'; ?>
                         </button>
-                        <button class="webgsm-btn" style="background: #94a3b8; color: #fff;" id="btn-clear-filters" title="Șterge doar widget-urile de filtre din sidebar">
-                            🧹 Șterge doar Filtre
+                        <button type="button" class="webgsm-btn webgsm-btn-muted" id="btn-clear-filters" title="Șterge doar widget-urile de filtre din sidebar">
+                            🧹 Șterge doar filtre
                         </button>
                     </div>
                     <div class="webgsm-status" id="status-filters"></div>
                 </div>
                 
-                <!-- Status General -->
-                <div class="webgsm-card webgsm-full">
+                <div id="webgsm-step-status" class="webgsm-card webgsm-card-span-full webgsm-status-card webgsm-animate webgsm-d7">
                     <div class="webgsm-card-header">
                         <div class="webgsm-card-icon blue">📊</div>
-                        <h3>Status Setup</h3>
+                        <div>
+                            <h3>Status &amp; acțiuni periculoase</h3>
+                            <p class="webgsm-card-lead">Verificare rapidă · reset flag-uri · ștergere totală</p>
+                        </div>
                     </div>
                     <ul class="webgsm-checklist">
                         <li>
@@ -2296,13 +2588,13 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         </li>
                     </ul>
                     
-                    <p style="margin-top: 12px; font-size: 12px; color: #64748b;"><strong>Șterge Tot</strong> = șterge categorii, atribute, tags, meniu – produsele rămân dar își pierd asignările. Pentru doar actualizare: la Categorii/Atribute apasă Actualizează; la Meniu folosește Șterge doar Meniu + Actualizează; la Filtre bifezi/debifezi și Aplică sau Șterge doar Filtre.</p>
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="webgsm-btn" style="background: #f59e0b; color: white;" id="btn-reset" title="Resetează doar flag-urile (Categorii/Atribute/Meniu/Filtre) – butoanele vor arăta din nou «Creează» unde nu ai rulat">
-                            🔄 Reset Flags
+                    <p class="webgsm-hint" style="margin-top:4px;"><strong>Șterge tot</strong> elimină categorii, atribute, tags și meniu din WooCommerce — produsele rămân, dar își pierd legăturile la categorii/atribute. Pentru actualizări normale folosește butoanele din pașii 1–4.</p>
+                    <div class="webgsm-btn-row" style="margin-top:18px;padding-top:18px;border-top:1px solid #e2e8f0;">
+                        <button type="button" class="webgsm-btn webgsm-btn-amber" id="btn-reset" title="Resetează doar flag-urile din wizard (butoanele arată din nou «Creează»)">
+                            🔄 Reset flags wizard
                         </button>
-                        <button class="webgsm-btn webgsm-btn-danger" id="btn-cleanup">
-                            🗑️ Șterge Tot (Categorii + Subcategorii + Tags + Atribute + Meniu)
+                        <button type="button" class="webgsm-btn webgsm-btn-danger" id="btn-cleanup">
+                            🗑️ Șterge tot (categorii + atribute + meniu + tags)
                         </button>
                     </div>
                 </div>
@@ -2313,6 +2605,16 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         <script>
         jQuery(document).ready(function($) {
+            $('.webgsm-step-pill').on('click', function(e) {
+                var href = $(this).attr('href');
+                if (href && href.charAt(0) === '#') {
+                    var $t = $(href);
+                    if ($t.length) {
+                        e.preventDefault();
+                        $('html, body').animate({ scrollTop: $t.offset().top - 56 }, 420);
+                    }
+                }
+            });
             
             function doAjax(action, btnId, statusId) {
                 var $btn = $('#' + btnId);
@@ -2330,11 +2632,15 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         if (response.success) {
                             $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
                             var id = $btn.attr('id');
-                            if (id === 'btn-filters') $btn.html('🔄 Actualizează Filtre').addClass('webgsm-btn-success').prop('disabled', false);
-                            else if (id === 'btn-cats') $btn.html('🔄 Actualizează Categorii').addClass('webgsm-btn-success').prop('disabled', false);
-                            else if (id === 'btn-attrs') $btn.html('🔄 Actualizează Atribute').addClass('webgsm-btn-success').prop('disabled', false);
-                            else if (id === 'btn-menu') $btn.html('🔄 Actualizează Meniu').addClass('webgsm-btn-success').prop('disabled', false);
+                            if (id === 'btn-filters') $btn.html('🔄 Aplică filtre (cu selecția de mai sus)').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-cats') $btn.html('🔄 Actualizează categorii').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-attrs') $btn.html('🔄 Actualizează atribute').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-menu') $btn.html('🔄 Refă meniul complet').addClass('webgsm-btn-success').prop('disabled', false);
+                            else if (id === 'btn-sync-menu') $btn.html('➕ Adaugă categorii lipsă (fără ștergere)').prop('disabled', false);
                             else $btn.html('✅ Gata!').addClass('webgsm-btn-success');
+                            if (id === 'btn-menu' || id === 'btn-sync-menu') {
+                                if (typeof window.webgsmReloadMenuEditor === 'function') window.webgsmReloadMenuEditor();
+                            }
                         } else {
                             $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
                             $btn.prop('disabled', false).html(originalText);
@@ -2368,6 +2674,94 @@ Dispozitive / Servicii → Dropdown simplu</div>
             });
             $('#btn-attrs').on('click', function() { doAjax('webgsm_v2_create_attributes', 'btn-attrs', 'status-attrs'); });
             $('#btn-menu').on('click', function() { doAjax('webgsm_v2_create_menu', 'btn-menu', 'status-menu'); });
+            $('#btn-sync-menu').on('click', function() { doAjax('webgsm_v2_sync_menu_categories', 'btn-sync-menu', 'status-menu'); });
+
+            var webgsmMenuNonce = '<?php echo wp_create_nonce('webgsm_v2'); ?>';
+            function webgsmReloadMenuEditor() {
+                var $wrap = $('#webgsm-menu-tree-wrap');
+                var $ph = $('#webgsm-menu-tree-placeholder');
+                var $parent = $('#webgsm-menu-add-parent');
+                $ph.text('Se încarcă…').show();
+                $wrap.find('.webgsm-menu-tree-row').remove();
+                $.post(ajaxurl, { action: 'webgsm_v2_get_menu_editor', nonce: webgsmMenuNonce }, function(response) {
+                    $ph.hide();
+                    if (!response.success) {
+                        $ph.text(response.data && response.data.message ? response.data.message : 'Nu s-a putut încărca meniul.').show();
+                        $parent.html('<option value="0">— Nivel principal —</option>');
+                        return;
+                    }
+                    var items = response.data.items || [];
+                    if (items.length === 0) {
+                        $ph.text('Nu există meniu WebGSM sau e gol. Rulează «Creează Meniu» mai sus.').show();
+                        $parent.html('<option value="0">— Nivel principal —</option>');
+                        return;
+                    }
+                    var html = '';
+                    items.forEach(function(row) {
+                        var pad = new Array((row.depth || 0) * 4 + 1).join('&nbsp;');
+                        var meta = row.type === 'taxonomy' && row.object === 'product_cat' ? ' <span style="color:#94a3b8;">(cat #' + row.object_id + ')</span>' : '';
+                        html += '<div class="webgsm-menu-tree-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;">' +
+                            '<span>' + pad + '<span style="font-weight:' + (row.depth ? '500' : '700') + ';">' + $('<div/>').text(row.title).html() + '</span>' + meta + '</span>' +
+                            '<button type="button" class="webgsm-menu-del-item webgsm-btn" style="padding:2px 8px;font-size:11px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;border-radius:4px;" data-id="' + row.db_id + '">Șterge</button></div>';
+                    });
+                    $wrap.append(html);
+                    var opts = '<option value="0">— Nivel principal —</option>';
+                    items.forEach(function(row) {
+                        var dpad = new Array(row.depth * 3 + 1).join('— ');
+                        opts += '<option value="' + row.db_id + '">' + $('<div/>').text(dpad + row.title).html() + '</option>';
+                    });
+                    $parent.html(opts);
+                }).fail(function() {
+                    $ph.text('Eroare de conexiune.').show();
+                });
+            }
+            window.webgsmReloadMenuEditor = webgsmReloadMenuEditor;
+            webgsmReloadMenuEditor();
+            $('#btn-menu-editor-reload').on('click', webgsmReloadMenuEditor);
+            $('#webgsm-menu-tree-wrap').on('click', '.webgsm-menu-del-item', function() {
+                var id = $(this).data('id');
+                if (!id || !confirm('Ștergi acest item din meniu? (Categoriile produselor rămân.)')) return;
+                var $st = $('#status-menu-editor');
+                $st.removeClass('success error').text('Se șterge…');
+                $.post(ajaxurl, { action: 'webgsm_v2_delete_menu_item', nonce: webgsmMenuNonce, menu_item_id: id }, function(response) {
+                    if (response.success) {
+                        $st.removeClass('error').addClass('success').css('color', '#059669').text('✅ ' + response.data.message);
+                        webgsmReloadMenuEditor();
+                    } else {
+                        $st.removeClass('success').addClass('error').css('color', '#dc2626').text('❌ ' + (response.data && response.data.message ? response.data.message : 'Eroare'));
+                    }
+                }).fail(function() {
+                    $st.addClass('error').css('color', '#dc2626').text('❌ Eroare de conexiune');
+                });
+            });
+            $('#btn-menu-add-category').on('click', function() {
+                var termId = parseInt($('#webgsm-menu-editor-term').val(), 10);
+                var parentId = parseInt($('#webgsm-menu-add-parent').val(), 10) || 0;
+                if (!termId) {
+                    $('#status-menu-editor').removeClass('success').addClass('error').css('color', '#dc2626').text('Alege o categorie.');
+                    return;
+                }
+                var $st = $('#status-menu-editor');
+                $st.removeClass('success error').text('Se adaugă…');
+                $('#btn-menu-add-category').prop('disabled', true);
+                $.post(ajaxurl, {
+                    action: 'webgsm_v2_add_menu_category_item',
+                    nonce: webgsmMenuNonce,
+                    term_id: termId,
+                    parent_menu_item_id: parentId
+                }, function(response) {
+                    $('#btn-menu-add-category').prop('disabled', false);
+                    if (response.success) {
+                        $st.removeClass('error').addClass('success').css('color', '#059669').text('✅ ' + response.data.message);
+                        webgsmReloadMenuEditor();
+                    } else {
+                        $st.removeClass('success').addClass('error').css('color', '#dc2626').text('❌ ' + (response.data && response.data.message ? response.data.message : 'Eroare'));
+                    }
+                }).fail(function() {
+                    $('#btn-menu-add-category').prop('disabled', false);
+                    $st.addClass('error').css('color', '#dc2626').text('❌ Eroare de conexiune');
+                });
+            });
             $('#btn-filters').on('click', function() {
                 var attrs = [];
                 $('.webgsm-filter-attr:checked').each(function() { attrs.push($(this).val()); });
@@ -2384,7 +2778,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
                     success: function(response) {
                         if (response.success) {
                             $status.removeClass('loading').addClass('success').html('✅ ' + response.data.message);
-                            $btn.html('🔄 Aplică Filtre (cu selecția de mai sus)').addClass('webgsm-btn-success').prop('disabled', false);
+                            $btn.html('🔄 Aplică filtre (cu selecția de mai sus)').addClass('webgsm-btn-success').prop('disabled', false);
                         } else {
                             $status.removeClass('loading').addClass('error').html('❌ ' + (response.data ? response.data.message : 'Eroare'));
                             $btn.prop('disabled', false).html(originalText);
@@ -2830,6 +3224,349 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         update_option('webgsm_v2_menu', true);
         wp_send_json_success(['message' => "Meniu creat cu {$items_count} itemi!"]);
+    }
+
+    /**
+     * Adaugă în meniu linkurile către categorii care lipsesc, fără wp_delete_nav_menu.
+     * Nu modifică termenii product_cat și nu atinge atribuirile produs–categorie.
+     */
+    public function ajax_sync_menu_categories() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+
+        $menu_name = 'WebGSM Main Menu';
+        $menu      = wp_get_nav_menu_object($menu_name);
+        if (!$menu) {
+            $menu_id = wp_create_nav_menu($menu_name);
+            if (is_wp_error($menu_id)) {
+                wp_send_json_error(['message' => 'Nu există meniu WebGSM și nu s-a putut crea unul gol.']);
+            }
+        } else {
+            $menu_id = (int) $menu->term_id;
+        }
+
+        $term_to_item = [];
+        $order        = 1;
+        $items        = wp_get_nav_menu_items($menu_id);
+        if (!empty($items)) {
+            foreach ($items as $item) {
+                $mo = isset($item->menu_order) ? (int) $item->menu_order : 0;
+                if ($mo >= $order) {
+                    $order = $mo + 1;
+                }
+                if ($item->type === 'taxonomy' && $item->object === 'product_cat') {
+                    $tid = (int) $item->object_id;
+                    if (!isset($term_to_item[$tid])) {
+                        $term_to_item[$tid] = (int) $item->ID;
+                    }
+                }
+            }
+        }
+
+        $added = 0;
+
+        foreach ($this->categories as $parent_name => $parent_data) {
+            $parent_term = get_term_by('slug', $parent_data['slug'], 'product_cat');
+            if (!$parent_term || is_wp_error($parent_term)) {
+                continue;
+            }
+
+            $parent_tid = (int) $parent_term->term_id;
+            $is_mega    = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii'], true);
+
+            if (!isset($term_to_item[$parent_tid])) {
+                $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
+                    'menu-item-title'     => $parent_name,
+                    'menu-item-object'    => 'product_cat',
+                    'menu-item-object-id' => $parent_tid,
+                    'menu-item-type'      => 'taxonomy',
+                    'menu-item-status'    => 'publish',
+                    'menu-item-classes'   => $is_mega ? 'mf-mega-menu' : '',
+                    'menu-item-position'  => $order++,
+                ]);
+                if (is_wp_error($parent_menu_id)) {
+                    continue;
+                }
+                $term_to_item[$parent_tid] = (int) $parent_menu_id;
+                $added++;
+            }
+
+            $parent_menu_id = $term_to_item[$parent_tid];
+            if (empty($parent_data['children'])) {
+                continue;
+            }
+
+            foreach ($parent_data['children'] as $child_name => $child_value) {
+                if (is_array($child_value) && isset($child_value['slug'])) {
+                    $child_term = get_term_by('slug', $child_value['slug'], 'product_cat');
+                    if (!$child_term || is_wp_error($child_term)) {
+                        continue;
+                    }
+                    $ctid = (int) $child_term->term_id;
+                    if (!isset($term_to_item[$ctid])) {
+                        $level2_menu_id = wp_update_nav_menu_item($menu_id, 0, [
+                            'menu-item-title'     => $child_name,
+                            'menu-item-object'    => 'product_cat',
+                            'menu-item-object-id' => $ctid,
+                            'menu-item-type'      => 'taxonomy',
+                            'menu-item-status'    => 'publish',
+                            'menu-item-parent-id' => $parent_menu_id,
+                            'menu-item-position'  => $order++,
+                        ]);
+                        if (!is_wp_error($level2_menu_id)) {
+                            $term_to_item[$ctid] = (int) $level2_menu_id;
+                            $added++;
+                        }
+                    }
+                    $level2_menu_id = $term_to_item[$ctid] ?? 0;
+                    if (!$level2_menu_id || empty($child_value['children'])) {
+                        continue;
+                    }
+                    $level2_slug   = $child_value['slug'];
+                    $brand_suffix  = str_replace('piese-', '', $level2_slug);
+                    foreach ($child_value['children'] as $sub_name => $sub_slug) {
+                        $sub_slug_unique = $sub_slug . '-' . $brand_suffix;
+                        $sub_term        = get_term_by('slug', $sub_slug_unique, 'product_cat');
+                        if (!$sub_term || is_wp_error($sub_term)) {
+                            continue;
+                        }
+                        $stid = (int) $sub_term->term_id;
+                        if (isset($term_to_item[$stid])) {
+                            continue;
+                        }
+                        $mid = wp_update_nav_menu_item($menu_id, 0, [
+                            'menu-item-title'     => $sub_name,
+                            'menu-item-object'    => 'product_cat',
+                            'menu-item-object-id' => $stid,
+                            'menu-item-type'      => 'taxonomy',
+                            'menu-item-status'    => 'publish',
+                            'menu-item-parent-id' => $level2_menu_id,
+                            'menu-item-position'  => $order++,
+                        ]);
+                        if (!is_wp_error($mid)) {
+                            $term_to_item[$stid] = (int) $mid;
+                            $added++;
+                        }
+                    }
+                } else {
+                    $child_slug = is_string($child_value) ? $child_value : sanitize_title($child_name);
+                    $child_term = get_term_by('slug', $child_slug, 'product_cat');
+                    if (!$child_term || is_wp_error($child_term)) {
+                        continue;
+                    }
+                    $ctid = (int) $child_term->term_id;
+                    if (isset($term_to_item[$ctid])) {
+                        continue;
+                    }
+                    $mid = wp_update_nav_menu_item($menu_id, 0, [
+                        'menu-item-title'     => $child_name,
+                        'menu-item-object'    => 'product_cat',
+                        'menu-item-object-id' => $ctid,
+                        'menu-item-type'      => 'taxonomy',
+                        'menu-item-status'    => 'publish',
+                        'menu-item-parent-id' => $parent_menu_id,
+                        'menu-item-position'  => $order++,
+                    ]);
+                    if (!is_wp_error($mid)) {
+                        $term_to_item[$ctid] = (int) $mid;
+                        $added++;
+                    }
+                }
+            }
+
+            $wizard_flat_slugs = [];
+            foreach ($parent_data['children'] as $child_name => $child_value) {
+                if (is_array($child_value) && isset($child_value['slug'])) {
+                    $wizard_flat_slugs = null;
+                    break;
+                }
+                $wizard_flat_slugs[] = is_string($child_value) ? $child_value : sanitize_title($child_name);
+            }
+            if (is_array($wizard_flat_slugs)) {
+                $wc_children = get_terms([
+                    'taxonomy'   => 'product_cat',
+                    'parent'     => $parent_tid,
+                    'hide_empty' => false,
+                    'orderby'    => 'name',
+                    'order'      => 'ASC',
+                ]);
+                if (!is_wp_error($wc_children)) {
+                    foreach ($wc_children as $wc_term) {
+                        if (in_array($wc_term->slug, $wizard_flat_slugs, true)) {
+                            continue;
+                        }
+                        $wtid = (int) $wc_term->term_id;
+                        if (isset($term_to_item[$wtid])) {
+                            continue;
+                        }
+                        $mid = wp_update_nav_menu_item($menu_id, 0, [
+                            'menu-item-title'     => $wc_term->name,
+                            'menu-item-object'    => 'product_cat',
+                            'menu-item-object-id' => $wtid,
+                            'menu-item-type'      => 'taxonomy',
+                            'menu-item-status'    => 'publish',
+                            'menu-item-parent-id' => $parent_menu_id,
+                            'menu-item-position'  => $order++,
+                        ]);
+                        if (!is_wp_error($mid)) {
+                            $term_to_item[$wtid] = (int) $mid;
+                            $added++;
+                        }
+                    }
+                }
+            }
+        }
+
+        $locations                      = get_theme_mod('nav_menu_locations', []);
+        $locations['primary']           = $menu_id;
+        $locations['primary-menu']      = $menu_id;
+        $locations['shop-department']   = $menu_id;
+        $locations['shop_department']   = $menu_id;
+        $locations['mobile']            = $menu_id;
+        set_theme_mod('nav_menu_locations', $locations);
+
+        update_option('webgsm_v2_menu', true);
+        wp_send_json_success([
+            'message' => sprintf(
+                'Sincronizare fără ștergere: %d item(i) nou(i) în meniu. Categoriile produselor și atribuirile rămân neschimbate.',
+                $added
+            ),
+        ]);
+    }
+
+    private function get_webgsm_main_menu_id() {
+        $menu = wp_get_nav_menu_object('WebGSM Main Menu');
+
+        return $menu ? (int) $menu->term_id : 0;
+    }
+
+    private function nav_menu_item_belongs_to_menu($menu_item_db_id, $menu_id) {
+        return (int) get_post_meta($menu_item_db_id, '_menu_item_menu_id', true) === (int) $menu_id;
+    }
+
+    private function compute_nav_menu_item_depth($item, array $by_id) {
+        $d     = 0;
+        $cur   = $item;
+        $guard = 0;
+        while ($cur && (int) $cur->menu_item_parent > 0 && $guard++ < 40) {
+            $d++;
+            $pid = (int) $cur->menu_item_parent;
+            $cur = $by_id[$pid] ?? null;
+        }
+
+        return $d;
+    }
+
+    public function ajax_get_menu_editor() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+        $menu_id = $this->get_webgsm_main_menu_id();
+        if (!$menu_id) {
+            wp_send_json_success(['items' => [], 'menu_id' => 0]);
+        }
+        $items = wp_get_nav_menu_items($menu_id);
+        if (!$items) {
+            wp_send_json_success(['items' => [], 'menu_id' => $menu_id]);
+        }
+        $by_id = [];
+        foreach ($items as $item) {
+            $by_id[(int) $item->ID] = $item;
+        }
+        usort($items, function ($a, $b) {
+            return (int) $a->menu_order <=> (int) $b->menu_order;
+        });
+        $out = [];
+        foreach ($items as $item) {
+            $out[] = [
+                'db_id'        => (int) $item->ID,
+                'title'        => $item->title,
+                'depth'        => $this->compute_nav_menu_item_depth($item, $by_id),
+                'type'         => $item->type,
+                'object'       => $item->object,
+                'object_id'    => (int) $item->object_id,
+                'parent_db_id' => (int) $item->menu_item_parent,
+            ];
+        }
+        wp_send_json_success(['items' => $out, 'menu_id' => $menu_id]);
+    }
+
+    public function ajax_delete_menu_item() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+        $item_id = isset($_POST['menu_item_id']) ? (int) $_POST['menu_item_id'] : 0;
+        if ($item_id < 1) {
+            wp_send_json_error(['message' => 'ID invalid']);
+        }
+        $post = get_post($item_id);
+        if (!$post || $post->post_type !== 'nav_menu_item') {
+            wp_send_json_error(['message' => 'Item inexistent']);
+        }
+        $menu_id = $this->get_webgsm_main_menu_id();
+        if (!$menu_id || !$this->nav_menu_item_belongs_to_menu($item_id, $menu_id)) {
+            wp_send_json_error(['message' => 'Itemul nu aparține meniului WebGSM Main Menu']);
+        }
+        if (!wp_delete_post($item_id, true)) {
+            wp_send_json_error(['message' => 'Nu s-a putut șterge']);
+        }
+        wp_send_json_success(['message' => 'Item șters din meniu (categoriile produselor sunt neschimbate).']);
+    }
+
+    public function ajax_add_menu_category_item() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+        $term_id             = isset($_POST['term_id']) ? (int) $_POST['term_id'] : 0;
+        $parent_menu_item_id = isset($_POST['parent_menu_item_id']) ? (int) $_POST['parent_menu_item_id'] : 0;
+        if ($term_id < 1) {
+            wp_send_json_error(['message' => 'Alege o categorie']);
+        }
+        $term = get_term($term_id, 'product_cat');
+        if (!$term || is_wp_error($term)) {
+            wp_send_json_error(['message' => 'Categorie inexistentă']);
+        }
+        $menu_id = $this->get_webgsm_main_menu_id();
+        if (!$menu_id) {
+            wp_send_json_error(['message' => 'Nu există meniul WebGSM Main Menu. Rulează «Creează Meniu» mai sus.']);
+        }
+        if ($parent_menu_item_id > 0) {
+            $parent_post = get_post($parent_menu_item_id);
+            if (!$parent_post || $parent_post->post_type !== 'nav_menu_item'
+                || !$this->nav_menu_item_belongs_to_menu($parent_menu_item_id, $menu_id)) {
+                wp_send_json_error(['message' => 'Părinte invalid în meniu']);
+            }
+        }
+        foreach ((array) wp_get_nav_menu_items($menu_id) as $it) {
+            if ($it->type === 'taxonomy' && $it->object === 'product_cat' && (int) $it->object_id === $term_id) {
+                wp_send_json_error(['message' => 'Această categorie e deja în meniu.']);
+            }
+        }
+        $max_order = 0;
+        foreach ((array) wp_get_nav_menu_items($menu_id) as $it) {
+            $mo = (int) $it->menu_order;
+            if ($mo > $max_order) {
+                $max_order = $mo;
+            }
+        }
+        $mid = wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title'       => $term->name,
+            'menu-item-object'      => 'product_cat',
+            'menu-item-object-id'   => $term_id,
+            'menu-item-type'        => 'taxonomy',
+            'menu-item-status'      => 'publish',
+            'menu-item-parent-id'   => $parent_menu_item_id,
+            'menu-item-position'    => $max_order + 1,
+        ]);
+        if (is_wp_error($mid)) {
+            wp_send_json_error(['message' => $mid->get_error_message()]);
+        }
+        wp_send_json_success(['message' => 'Adăugat în meniu: ' . $term->name]);
     }
     
     /** Listează filtrele active în sidebar (pentru afișare vizuală). */

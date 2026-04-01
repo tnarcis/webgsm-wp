@@ -1,9 +1,14 @@
 # Ignorăm tot WordPress-ul
 /*
 
-# Permitem fișierele necesare pentru deploy (YAML)
-!cpanel.yml
-!.cpanel.yml
+# cPanel: .cpanel.yml cu DEPLOYPATH real = doar pe server / local (nu commit)
+/.cpanel.yml
+/cpanel.yml
+**/.cpanel.yml
+**/cpanel.yml
+# Șablon versionat – copiezi pe server: cp .cpanel.yml.example .cpanel.yml
+!/.cpanel.yml.example
+
 !.gitignore
 
 # Permitem wp-content
@@ -22,6 +27,8 @@ wp-content/themes/*
 
 # Ignorăm toate pluginurile, apoi permitem doar pluginurile tale custom
 wp-content/plugins/*
+# Packeta oficială (vendor) – instalare locală / update din ZIP, nu în git
+wp-content/plugins/packeta/
 !wp-content/plugins/webgsm-b2b-pricing/
 !wp-content/plugins/webgsm-checkout-pro/
 !wp-content/plugins/webgsm-setup-wizard-v2/
@@ -50,3 +57,4 @@ debug.log
 wp-content/debug.log
 wp-content/webgsm-perf-audit.log
 **/webgsm-perf-audit.log
+wp-content/plugins/**/logs/*.log
