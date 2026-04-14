@@ -18,7 +18,7 @@
             country: 'ro',
             language: 'ro',
             webUrl: window.location.origin || undefined,
-            appIdentity: 'webgsm-packeta-admin-1.4'
+            appIdentity: 'webgsm-packeta-admin-1.4.4'
         };
         var w = getWeight();
         if (w !== undefined) {
@@ -159,6 +159,14 @@
     }
 
     function validateBeforeSubmit(e) {
+        var rawVal = String($('#value').val() || '').replace(',', '.').trim();
+        var parcelVal = parseFloat(rawVal);
+        if (!parcelVal || parcelVal <= 0 || isNaN(parcelVal)) {
+            e.preventDefault();
+            window.alert(msg('parcelValueRequired'));
+            return false;
+        }
+
         var awbFlow = document.getElementById('awb_flow');
         if (!awbFlow) {
             return true;
@@ -217,6 +225,22 @@
         $(document).on('click', '#webgsm_packeta_open_map', function (e) {
             e.preventDefault();
             openMap();
+        });
+
+        $(document).on('click', '#webgsm_packeta_preset_acte', function (e) {
+            e.preventDefault();
+            $('#cod').val('0');
+            $('#value').val('1');
+            $('#weight').val('0,1');
+            var $note = $('#note');
+            if ($note.length && !String($note.val() || '').trim()) {
+                $note.val('Acte');
+            }
+        });
+
+        $(document).on('click', '#webgsm_packeta_preset_no_cod', function (e) {
+            e.preventDefault();
+            $('#cod').val('0');
         });
 
         $('#webgsm_packeta_awb_form').on('submit', validateBeforeSubmit);

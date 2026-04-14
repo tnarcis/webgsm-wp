@@ -356,11 +356,14 @@ class WebGSM_Checkout_Validate {
             }
         }
         
-        // Pentru guest - din session
-        if (isset($_SESSION['webgsm_guest_person'])) {
-            return $_SESSION['webgsm_guest_person'];
+        // Pentru guest - din session (PHP + WooCommerce)
+        if ( class_exists( 'WebGSM_Checkout_Pro' ) ) {
+            $gp = WebGSM_Checkout_Pro::get_guest_person_from_storage();
+            if ( is_array( $gp ) ) {
+                return $gp;
+            }
         }
-        
+
         return null;
     }
     
@@ -378,11 +381,14 @@ class WebGSM_Checkout_Validate {
             }
         }
         
-        // Pentru guest - din session
-        if (isset($_SESSION['webgsm_guest_company'])) {
-            return $_SESSION['webgsm_guest_company'];
+        // Pentru guest - din session (PHP + WooCommerce)
+        if ( class_exists( 'WebGSM_Checkout_Pro' ) ) {
+            $gc = WebGSM_Checkout_Pro::get_guest_company_from_storage();
+            if ( is_array( $gc ) ) {
+                return $gc;
+            }
         }
-        
+
         return null;
     }
     

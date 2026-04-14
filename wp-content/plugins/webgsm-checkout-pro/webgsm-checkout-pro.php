@@ -93,6 +93,8 @@ class WebGSM_Checkout_Pro {
         add_action('woocommerce_thankyou', [$this, 'custom_thankyou_content'], 999);
         add_filter('woocommerce_get_order_item_totals', [$this, 'filter_order_item_totals_ro'], 10, 3);
         add_filter('gettext', [$this, 'filter_packeta_labels_ro'], 10, 3);
+        add_action('woocommerce_checkout_order_processed', [$this, 'maybe_create_guest_account_after_order'], 25, 3);
+        add_action('woocommerce_checkout_order_processed', [ __CLASS__, 'clear_guest_checkout_storage_on_thankyou' ], 100, 3);
         // Output hidden billing/shipping inputs inside the checkout <form> so they get included in POST
         add_action('woocommerce_checkout_before_customer_details', [$this, 'render_hidden_form_fields']);
         // Apply our shipping fields on order creation if provided by our form (run late so WooCommerce core doesn't overwrite)
@@ -251,7 +253,114 @@ class WebGSM_Checkout_Pro {
     private function get_privacy_url() {
         return get_privacy_policy_url() ?: home_url( '/politica-confidentialitate' );
     }
-    
+
+    /**
+     * Date firmă salvate pentru guest (sesiune PHP + sesiune WooCommerce).
+     */
+    public static function get_guest_company_from_storage() {
+        if ( ! session_id() && ! headers_sent() ) {
+            @session_start(); // phpcs:ignore
+        }
+        if ( ! empty( $_SESSION['webgsm_guest_company'] ) && is_array( $_SESSION['webgsm_guest_company'] ) ) {
+            return $_SESSION['webgsm_guest_company'];
+        }
+        if ( function_exists( 'WC' ) && WC()->session ) {
+            $c = WC()->session->get( 'webgsm_guest_company' );
+            if ( is_array( $c ) && ! empty( $c ) ) {
+                return $c;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Date persoană salvate pentru guest.
+     */
+    public static function get_guest_person_from_storage() {
+        if ( ! session_id() && ! headers_sent() ) {
+            @session_start(); // phpcs:ignore
+        }
+        if ( ! empty( $_SESSION['webgsm_guest_person'] ) && is_array( $_SESSION['webgsm_guest_person'] ) ) {
+            return $_SESSION['webgsm_guest_person'];
+        }
+        if ( function_exists( 'WC' ) && WC()->session ) {
+            $p = WC()->session->get( 'webgsm_guest_person' );
+            if ( is_array( $p ) && ! empty( $p ) ) {
+                return $p;
+            }
+        }
+        return null;
+    }
+
+    /** După plasare comandă — șterge cache guest checkout. */
+    public static function clear_guest_checkout_storage() {
+        if ( ! session_id() && ! headers_sent() ) {
+            @session_start(); // phpcs:ignore
+        }
+        unset( $_SESSION['webgsm_guest_company'], $_SESSION['webgsm_guest_person'] );
+        if ( function_exists( 'WC' ) && WC()->session ) {
+            WC()->session->set( 'webgsm_guest_company', null );
+            WC()->session->set( 'webgsm_guest_person', null );
+            WC()->session->save_data();
+        }
+    }
+
+    /** Hook: curăță sesiunea guest după comandă reușită. */
+    public static function clear_guest_checkout_storage_on_thankyou( $order_id, $posted_data = null, $order = null ) {
+        unset( $posted_data, $order );
+        if ( ! $order_id ) {
+            return;
+        }
+        self::clear_guest_checkout_storage();
+    }
+
+    /**
+     * Creează cont WordPress/WC pentru guest dacă a bifat opțiunea și WC nu l-a creat deja.
+     */
+    public function maybe_create_guest_account_after_order( $order_id, $posted_data, $order ) {
+        if ( is_user_logged_in() ) {
+            return;
+        }
+        if ( ! $order instanceof WC_Order || $order->get_customer_id() ) {
+            return;
+        }
+        $create = ! empty( $_POST['createaccount'] ) || ! empty( $posted_data['createaccount'] );
+        if ( ! $create ) {
+            return;
+        }
+        $email = $order->get_billing_email();
+        if ( ! $email || ! is_email( $email ) || email_exists( $email ) ) {
+            return;
+        }
+        $username = sanitize_user( current( explode( '@', $email ) ), true );
+        if ( strlen( $username ) < 3 ) {
+            $username = 'client_' . wp_generate_password( 6, false, false );
+        }
+        $base = $username;
+        $i    = 1;
+        while ( username_exists( $username ) ) {
+            $username = $base . '_' . $i++;
+        }
+        $password = wp_generate_password();
+        $new_id   = wc_create_new_customer( $email, $username, $password );
+        if ( is_wp_error( $new_id ) ) {
+            return;
+        }
+        $order->set_customer_id( $new_id );
+        $order->save();
+        if ( function_exists( 'wc_update_new_customer_past_orders' ) ) {
+            wc_update_new_customer_past_orders( $new_id );
+        }
+        wp_update_user(
+            array(
+                'ID'         => $new_id,
+                'first_name' => $order->get_billing_first_name(),
+                'last_name'  => $order->get_billing_last_name(),
+            )
+        );
+        // Email „cont nou” / setare parolă este trimis de WooCommerce din wc_create_new_customer().
+    }
+
     private function render_products_section() {
         ?>
         <div class="webgsm-section">
@@ -300,8 +409,23 @@ class WebGSM_Checkout_Pro {
         if (!is_array($persons)) $persons = [];
         if (!is_array($companies)) $companies = [];
 
+        // Guest: reafișează firmă / persoană din sesiune (după refresh sau nouă vizită pe checkout)
+        if ( ! $user_id ) {
+            $guest_co = self::get_guest_company_from_storage();
+            if ( is_array( $guest_co ) && ! empty( $guest_co['cui'] ) ) {
+                $companies = [ $guest_co ];
+            }
+            $guest_pe = self::get_guest_person_from_storage();
+            if ( is_array( $guest_pe ) && ! empty( $guest_pe['phone'] ) && empty( $companies ) ) {
+                $persons = [ $guest_pe ];
+            }
+        }
+
         // Auto-detectare tip client: verifică ultima preferință, meta PJ, sau dacă are firme salvate
         $default_type = 'pf';
+        if ( ! $user_id && ! empty( $companies ) ) {
+            $default_type = 'pj';
+        }
         if ( $user_id ) {
             $saved_type = get_user_meta( $user_id, 'webgsm_customer_type', true );
             if ( $saved_type === 'pj' ) {
@@ -346,7 +470,9 @@ class WebGSM_Checkout_Pro {
                                 <?php if (!empty($p['phone'])): ?><small>Tel: <?php echo esc_html($p['phone']); ?></small><?php endif; ?>
                                 <?php if (!empty($p['address'])): ?><small><?php echo esc_html($p['address'].', '.$p['city']); ?></small><?php endif; ?>
                             </span>
+                            <?php if ( $user_id ) : ?>
                             <button type="button" class="delete-person" data-index="<?php echo $i; ?>">×</button>
+                            <?php endif; ?>
                         </label>
                     <?php endforeach; else: ?>
                         <p class="no-items">Nu ai persoane salvate.</p>
@@ -379,7 +505,9 @@ class WebGSM_Checkout_Pro {
                                 <small>CUI: <?php echo esc_html($c['cui']); ?><?php if(!empty($c['phone'])) echo ' | '.esc_html($c['phone']); ?></small>
                                 <small><?php echo esc_html($c['address'].', '.$c['city']); ?></small>
                             </span>
+                            <?php if ( $user_id ) : ?>
                             <button type="button" class="delete-company" data-index="<?php echo $i; ?>">×</button>
+                            <?php endif; ?>
                         </label>
                     <?php endforeach; else: ?>
                         <p class="no-items">Nu ai firme salvate.</p>
@@ -699,6 +827,14 @@ class WebGSM_Checkout_Pro {
             <?php endif; ?>
             
             <div class="summary-total"><span>TOTAL:</span><span class="total-value"><?php echo wc_price($total); ?></span></div>
+            <?php if ( ! is_user_logged_in() ) : ?>
+            <div class="summary-create-account webgsm-legal-check">
+                <label class="terms-checkbox">
+                    <input type="checkbox" name="createaccount" id="createaccount" value="1" checked>
+                    <span class="terms-text">Vreau să îmi creez cont cu adresa de email de facturare — voi primi un mesaj pentru a seta parola și pentru comenzi ulterioare mai rapide.</span>
+                </label>
+            </div>
+            <?php endif; ?>
             <div class="summary-terms webgsm-legal-check">
                 <label class="terms-checkbox">
                     <input type="checkbox" name="terms" id="terms" required aria-required="true">
@@ -883,6 +1019,10 @@ class WebGSM_Checkout_Pro {
             wp_send_json_success(['index' => count($companies)-1, 'company' => $new, 'saved_to_account' => true]);
         } else {
             $_SESSION['webgsm_guest_company'] = $new;
+            if ( function_exists( 'WC' ) && WC()->session ) {
+                WC()->session->set( 'webgsm_guest_company', $new );
+                WC()->session->save_data();
+            }
             wp_send_json_success(['company' => $new, 'saved_to_account' => false]);
         }
     }
@@ -922,6 +1062,10 @@ class WebGSM_Checkout_Pro {
             wp_send_json_success(['index' => count($persons)-1, 'person' => $new, 'saved_to_account' => true]);
         } else {
             $_SESSION['webgsm_guest_person'] = $new;
+            if ( function_exists( 'WC' ) && WC()->session ) {
+                WC()->session->set( 'webgsm_guest_person', $new );
+                WC()->session->save_data();
+            }
             wp_send_json_success(['person' => $new, 'saved_to_account' => false]);
         }
     }

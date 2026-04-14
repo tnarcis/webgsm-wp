@@ -83,9 +83,12 @@ class WebGSM_Checkout_Save {
                     $this->webgsm_fill_post_from_person($persons[$selected_index]);
                 }
             }
-            // Pentru guest - preia din session
-            elseif (isset($_SESSION['webgsm_guest_person'])) {
-                $this->webgsm_fill_post_from_person($_SESSION['webgsm_guest_person']);
+            // Pentru guest - preia din session (PHP + WC)
+            elseif ( class_exists( 'WebGSM_Checkout_Pro' ) ) {
+                $gp = WebGSM_Checkout_Pro::get_guest_person_from_storage();
+                if ( is_array( $gp ) ) {
+                    $this->webgsm_fill_post_from_person( $gp );
+                }
             }
         }
     }
@@ -154,8 +157,11 @@ class WebGSM_Checkout_Save {
                 }
             }
             // Pentru guest
-            elseif (isset($_SESSION['webgsm_guest_company'])) {
-                $this->webgsm_fill_post_from_company($_SESSION['webgsm_guest_company']);
+            elseif ( class_exists( 'WebGSM_Checkout_Pro' ) ) {
+                $gc = WebGSM_Checkout_Pro::get_guest_company_from_storage();
+                if ( is_array( $gc ) ) {
+                    $this->webgsm_fill_post_from_company( $gc );
+                }
             }
         }
     }

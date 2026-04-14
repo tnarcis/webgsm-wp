@@ -217,8 +217,9 @@ $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
 
         <div class="webgsm-packeta-grid webgsm-packeta-grid-4">
             <div class="webgsm-packeta-field">
-                <label for="value">Valoare colet</label>
-                <input type="text" name="value" id="value" value="0" inputmode="decimal" />
+                <label for="value">Valoare declarată colet (asigurare Packeta) *</label>
+                <input type="number" name="value" id="value" value="1" step="0.01" min="0.01" inputmode="decimal" required />
+                <p class="webgsm-packeta-help">Nu e rambursul la livrare. Packeta cere un număr &gt; 0 (asigurare). Pentru <strong>acte</strong> poți pune o valoare simbolică (ex. 1) dacă reflectă ce declară coletul; greutatea rămâne reală.</p>
             </div>
             <div class="webgsm-packeta-field">
                 <label for="currency">Monedă</label>
@@ -229,9 +230,23 @@ $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
                 <input type="text" name="weight" id="weight" value="1" inputmode="decimal" />
             </div>
             <div class="webgsm-packeta-field">
-                <label for="cod">Ramburs (COD)</label>
+                <label for="cod">Ramburs la livrare (COD)</label>
                 <input type="text" name="cod" id="cod" value="0" inputmode="decimal" />
+                <p class="webgsm-packeta-help"><strong>Fără ramburs:</strong> lasă 0 dacă curierul nu încasează nimic la livrare (indiferent dacă în magazin transportul a fost plătit sau <strong>gratuit</strong>).</p>
             </div>
+        </div>
+
+        <div class="webgsm-packeta-presets" style="margin:0 0 12px;">
+            <p style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <button type="button" class="button" id="webgsm_packeta_preset_acte"><?php esc_html_e('Preset: acte (fără ramburs)', 'webgsm-packeta'); ?></button>
+                <button type="button" class="button" id="webgsm_packeta_preset_no_cod"><?php esc_html_e('Preset: colet fără ramburs (doar COD 0)', 'webgsm-packeta'); ?></button>
+            </p>
+            <p class="webgsm-packeta-help" style="margin:0;">
+                <?php esc_html_e('„Transport gratuit” în WooCommerce = clientul nu plătește livrarea la comandă; nu înseamnă automat altceva în Packeta. Aici, „Ramburs (COD)” = bani încasați de curier la ușă. Dacă nu se încasează nimic la livrare, pune COD 0. Valoarea declarată a coletului rămâne pentru asigurare (conținutul expediat), nu este taxa de transport.', 'webgsm-packeta'); ?>
+            </p>
+            <p class="webgsm-packeta-help" style="margin:8px 0 0;">
+                <?php esc_html_e('Preset „acte”: COD 0, valoare 1, greutate 0,1 kg. Preset „colet fără ramburs”: doar COD 0; completezi tu valoarea și greutatea produselor.', 'webgsm-packeta'); ?>
+            </p>
         </div>
 
         <div class="webgsm-packeta-field">

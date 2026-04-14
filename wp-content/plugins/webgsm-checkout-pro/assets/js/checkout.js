@@ -1115,45 +1115,64 @@
             log('Răspuns save_company:', response);
             
             if (response.success) {
-                // FIX: Închide popup și reload întotdeauna pentru a actualiza lista
-                log('Firmă salvată cu succes - reload pagină');
                 closePopup();
-                
-                // Setează în hidden input
                 $('input[name="billing_customer_type"][value="pj"]').prop('checked', true);
-                
-                // Salvează în sessionStorage pentru a persista după reload
-                if (window.sessionStorage) {
-                    sessionStorage.setItem('webgsm_force_pj', 'yes');
+                WebGSM.currentCustomerType = 'pj';
+                toggleCustomerSections('pj');
+
+                if (response.data.saved_to_account) {
+                    if (window.sessionStorage) {
+                        sessionStorage.setItem('webgsm_force_pj', 'yes');
+                    }
+                    location.reload();
+                    return;
                 }
-                
-                // Reload pentru a actualiza lista de firme
-                location.reload();
-                
-                // Branch pentru guest (nu se mai execută din cauza reload)
-                if (false && !response.data.saved_to_account) {
-                    // Guest - injectează direct
-                    var companyData = {
-                        contact_first: data.contact_first,
-                        contact_last: data.contact_last,
-                        name: data.name,
-                        phone: data.phone,
-                        email: data.email,
-                        address: data.address,
-                        city: data.city,
-                        county: data.county,
-                        cui: data.cui,
-                        reg: data.reg,
-                        iban: data.iban,
-                        bank: data.bank
-                    };
-                    
-                    injectBillingData(companyData, 'pj');
-                    hideInlineError('pj_section');
-                    
-                    // Trigger update checkout
-                    $(document.body).trigger('update_checkout');
-                }
+
+                // Guest: fără reload — injectare imediată + card vizual în listă
+                var co = response.data.company || {};
+                var companyData = {
+                    name: co.name || data.name,
+                    phone: co.phone || data.phone,
+                    email: co.email || data.email,
+                    address: co.address || data.address,
+                    city: co.city || data.city,
+                    county: co.county || data.county,
+                    postcode: co.postcode || '',
+                    company: co.name || data.name,
+                    cui: co.cui || data.cui,
+                    reg: co.reg || data.reg,
+                    iban: co.iban || data.iban,
+                    bank: co.bank || data.bank
+                };
+                injectBillingData(companyData, 'pj');
+                hideInlineError('pj_section');
+
+                var $list = $('#pj_section .companies-list');
+                $list.find('.no-items').remove();
+                $list.find('.company-item').remove();
+                var $lab = $('<label class="webgsm-radio company-item">' +
+                    '<input type="radio" name="selected_company" value="0" checked>' +
+                    '<span class="radio-mark"></span><span class="radio-label">' +
+                    '<strong></strong><small class="c-ui"></small><small class="c-adr"></small>' +
+                    '</span></label>');
+                $lab.find('input').attr({
+                    'data-name': companyData.name,
+                    'data-cui': companyData.cui,
+                    'data-reg': companyData.reg,
+                    'data-phone': companyData.phone,
+                    'data-email': companyData.email,
+                    'data-address': companyData.address,
+                    'data-county': companyData.county,
+                    'data-city': companyData.city,
+                    'data-iban': companyData.iban,
+                    'data-bank': companyData.bank
+                });
+                $lab.find('strong').text(companyData.name);
+                $lab.find('.c-ui').text('CUI: ' + companyData.cui + (companyData.phone ? ' | ' + companyData.phone : ''));
+                $lab.find('.c-adr').text([companyData.address, companyData.city].filter(Boolean).join(', '));
+                $list.append($lab);
+
+                $(document.body).trigger('update_checkout');
             } else {
                 alert(response.data || 'Eroare la salvare.');
             }

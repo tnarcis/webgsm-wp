@@ -66,6 +66,7 @@ class WebGSM_Packeta_Admin {
                 'mustSelectPoint' => 'Pentru punct fix / Box trebuie să selectezi punctul pe harta Packeta înainte de trimitere.',
                 'addressFieldsRequired' => 'Completează strada și orașul pentru livrarea la adresă.',
                 'missingHomeCarrier' => 'Introdu addressId pentru transportatorul de livrare la adresă (din Packeta).',
+                'parcelValueRequired' => 'Completează valoarea coletului (mai mare ca 0) — obligatoriu pentru asigurare în Packeta.',
             ],
         ]);
     }
@@ -247,6 +248,12 @@ class WebGSM_Packeta_Admin {
      * Validare înainte de createPacket / packetAttributesValid.
      */
     private function validate_awb_post_before_api(): ?string {
+        $raw_val = isset($_POST['value']) ? str_replace(',', '.', (string) wp_unslash($_POST['value'])) : '';
+        $parcel_value = $raw_val === '' ? 0.0 : (float) $raw_val;
+        if ($parcel_value <= 0) {
+            return 'missing_parcel_value';
+        }
+
         $flow = isset($_POST['awb_flow']) ? sanitize_key((string) $_POST['awb_flow']) : '';
         if ($flow === 'home') {
             $aid = isset($_POST['address_id']) ? (int) $_POST['address_id'] : 0;

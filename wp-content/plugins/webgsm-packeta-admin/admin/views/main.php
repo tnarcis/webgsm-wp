@@ -16,6 +16,7 @@ $notices = [
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
     'missing_home_carrier' => ['class' => 'notice-error', 'text' => 'Pentru livrare la adresă completează addressId (transportator).'],
     'missing_home_address' => ['class' => 'notice-error', 'text' => 'Completează strada și orașul pentru livrarea la adresă.'],
+    'missing_parcel_value' => ['class' => 'notice-error', 'text' => 'Valoarea declarată a coletului trebuie să fie mai mare ca 0 (asigurare Packeta). Nu e același lucru cu rambursul: la acte fără COD poți folosi o valoare simbolică (ex. 1) dacă e cazul.'],
 ];
 
 ?>
