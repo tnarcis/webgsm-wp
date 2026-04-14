@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Packeta Admin
  * Description: Interfață simplă în admin pentru AWB Packeta și grupare expediție (ridicare curier).
- * Version: 1.4.4
+ * Version: 1.4.5
  * Author: WebGSM
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('WEBGSM_PACKETA_VERSION', '1.4.4');
+define('WEBGSM_PACKETA_VERSION', '1.4.5');
 define('WEBGSM_PACKETA_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_PACKETA_URL', plugin_dir_url(__FILE__));
 define('WEBGSM_PACKETA_OPTION', 'webgsm_packeta_settings');

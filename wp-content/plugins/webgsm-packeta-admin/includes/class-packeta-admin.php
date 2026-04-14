@@ -116,7 +116,11 @@ class WebGSM_Packeta_Admin {
                 if (!empty($res['ok'])) {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
-                        ['type' => 'packet', 'data' => $res, 'attrs' => $attrs],
+                        [
+                            'type' => 'packet',
+                            'data' => self::packeta_api_response_for_transient($res),
+                            'attrs' => $attrs,
+                        ],
                         120
                     );
                     $this->redirect_with_notice($tab, isset($_POST['validate_only']) ? 'validated' : 'packet_ok');
@@ -150,7 +154,7 @@ class WebGSM_Packeta_Admin {
                 if (!empty($res['ok'])) {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
-                        ['type' => 'shipment', 'data' => $res],
+                        ['type' => 'shipment', 'data' => self::packeta_api_response_for_transient($res)],
                         120
                     );
                     $this->redirect_with_notice('shipment', 'shipment_ok');
@@ -204,7 +208,7 @@ class WebGSM_Packeta_Admin {
                 if (!empty($res['ok'])) {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
-                        ['type' => 'status', 'data' => $res],
+                        ['type' => 'status', 'data' => self::packeta_api_response_for_transient($res)],
                         120
                     );
                     $this->redirect_with_notice('label', 'status_ok');
@@ -228,6 +232,52 @@ class WebGSM_Packeta_Admin {
             )
         );
         exit;
+    }
+
+    /**
+     * Object cache (ex. LiteSpeed) serializează transientele — SimpleXMLElement nu poate fi serializat.
+     *
+     * @param array<string, mixed> $res
+     * @return array<string, mixed>
+     */
+    private static function packeta_api_response_for_transient(array $res): array {
+        return self::deep_replace_simplexml_for_transient($res);
+    }
+
+    /**
+     * @param mixed $value
+     * @return mixed
+     */
+    private static function deep_replace_simplexml_for_transient($value) {
+        if ($value instanceof \SimpleXMLElement) {
+            return self::simplexml_to_export($value);
+        }
+        if (is_array($value)) {
+            $out = [];
+            foreach ($value as $k => $v) {
+                $out[$k] = self::deep_replace_simplexml_for_transient($v);
+            }
+
+            return $out;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @return array<string, mixed>|string
+     */
+    private static function simplexml_to_export(\SimpleXMLElement $sx) {
+        $children = $sx->children();
+        if (count($children) === 0) {
+            return trim((string) $sx);
+        }
+        $out = [];
+        foreach ($children as $child) {
+            $out[$child->getName()] = self::simplexml_to_export($child);
+        }
+
+        return $out;
     }
 
     /**

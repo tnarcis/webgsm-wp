@@ -62,11 +62,21 @@ $notices = [
                     echo '<pre>' . esc_html(strlen($raw) > 8000 ? substr($raw, 0, 8000) . '…' : $raw) . '</pre>';
                 }
                 echo '</div>';
-            } elseif (($last['type'] ?? '') === 'packet' && !empty($last['data']['data'])) {
+            } elseif (($last['type'] ?? '') === 'packet' && isset($last['data']['data']) && $last['data']['data'] !== '' && $last['data']['data'] !== []) {
                 $r = $last['data']['data'];
-                $id = isset($r->id) ? (string) $r->id : '';
-                $barcode = isset($r->barcode) ? (string) $r->barcode : '';
-                $btext = isset($r->barcodeText) ? (string) $r->barcodeText : '';
+                if (is_array($r)) {
+                    $id = isset($r['id']) && is_scalar($r['id']) ? (string) $r['id'] : '';
+                    $barcode = isset($r['barcode']) && is_scalar($r['barcode']) ? (string) $r['barcode'] : '';
+                    $btext = isset($r['barcodeText']) && is_scalar($r['barcodeText']) ? (string) $r['barcodeText'] : '';
+                } elseif ($r instanceof \SimpleXMLElement) {
+                    $id = isset($r->id) ? (string) $r->id : '';
+                    $barcode = isset($r->barcode) ? (string) $r->barcode : '';
+                    $btext = isset($r->barcodeText) ? (string) $r->barcodeText : '';
+                } else {
+                    $id = '';
+                    $barcode = '';
+                    $btext = '';
+                }
                 echo '<div class="webgsm-packeta-result"><p><strong>Packet ID:</strong> ' . esc_html($id) . '</p>';
                 if ($barcode !== '') {
                     echo '<p><strong>Barcode:</strong> ' . esc_html($barcode) . '</p>';
@@ -75,13 +85,25 @@ $notices = [
                     echo '<p><strong>Barcode text:</strong> ' . esc_html($btext) . '</p>';
                 }
                 echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p></div>';
-            } elseif (($last['type'] ?? '') === 'shipment' && !empty($last['data']['data'])) {
+            } elseif (($last['type'] ?? '') === 'shipment' && isset($last['data']['data']) && $last['data']['data'] !== '' && $last['data']['data'] !== []) {
                 $r = $last['data']['data'];
-                $out = $r instanceof \SimpleXMLElement ? $r->asXML() : wp_json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                if ($r instanceof \SimpleXMLElement) {
+                    $out = $r->asXML();
+                } elseif (is_array($r) || is_string($r)) {
+                    $out = wp_json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                } else {
+                    $out = '';
+                }
                 echo '<div class="webgsm-packeta-result"><pre>' . esc_html((string) $out) . '</pre></div>';
-            } elseif (($last['type'] ?? '') === 'status' && !empty($last['data']['data'])) {
+            } elseif (($last['type'] ?? '') === 'status' && isset($last['data']['data']) && $last['data']['data'] !== '' && $last['data']['data'] !== []) {
                 $r = $last['data']['data'];
-                $out = $r instanceof \SimpleXMLElement ? $r->asXML() : wp_json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                if ($r instanceof \SimpleXMLElement) {
+                    $out = $r->asXML();
+                } elseif (is_array($r) || is_string($r)) {
+                    $out = wp_json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                } else {
+                    $out = '';
+                }
                 echo '<div class="webgsm-packeta-result"><pre>' . esc_html((string) $out) . '</pre></div>';
             }
             ?>
