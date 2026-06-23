@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WebGSM Setup Wizard v2
- * Description: Creează structura finală cu 5 taburi: Parts, Tools, Accessories, Devices, Services
+ * Description: Creează structura finală cu 6 taburi: Parts, Tools, Accessories, Devices, Smart Home, Services
  * Version: 2.0.0
  * Author: WebGSM
  * Requires PHP: 7.4
@@ -37,6 +37,10 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         'dispozitive' => [
             'name' => 'Dispozitive',
             'filter_param' => 'filter_dispozitive',
+        ],
+        'supraveghere-smart-home' => [
+            'name' => 'Supraveghere & Smart Home',
+            'filter_param' => 'filter_supraveghere',
         ],
         'servicii' => [
             'name' => 'Servicii',
@@ -190,7 +194,7 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         parent::__construct(
             'webgsm_category_filter',
             'WebGSM Filtru Categorii (Dinamic)',
-            ['description' => 'Filtre dinamice care citesc subcategoriile din WooCommerce. Funcționează pentru Piese, Unelte, Accesorii, Dispozitive, Servicii.']
+            ['description' => 'Filtre dinamice care citesc subcategoriile din WooCommerce. Funcționează pentru Piese, Unelte, Accesorii, Dispozitive, Supraveghere & Smart Home, Servicii.']
         );
     }
 
@@ -1021,7 +1025,7 @@ class WebGSM_Setup_Wizard_V2 {
     }
     
     // ===========================================
-    // STRUCTURA CATEGORIILOR - 5 TABURI (Piese are 3 nivele: Piese > Piese iPhone > Ecrane)
+    // STRUCTURA CATEGORIILOR - 6 TABURI (Piese are 3 nivele: Piese > Piese iPhone > Ecrane)
     // ===========================================
     private $categories = [
         'Piese' => [
@@ -1100,6 +1104,16 @@ class WebGSM_Setup_Wizard_V2 {
                 'Telefoane Refurbished' => 'telefoane-refurbished',
                 'Tablete' => 'tablete',
                 'Smartwatch' => 'smartwatch',
+            ]
+        ],
+        'Supraveghere & Smart Home' => [
+            'slug' => 'supraveghere-smart-home',
+            'description' => 'Supraveghere video, smart home, automatizări și securitate',
+            'children' => [
+                'Supraveghere Video' => 'supraveghere-video',
+                'Smart Home & Confort' => 'smart-home-confort',
+                'Automatizări Porți & Acces' => 'automatizari-porti-acces',
+                'Sisteme de Alarmă' => 'sisteme-alarma',
             ]
         ],
         'Servicii' => [
@@ -1764,6 +1778,23 @@ class WebGSM_Setup_Wizard_V2 {
         }
         
         // ============================================
+        // FILTRARE SUPRAVEGHERE & SMART HOME
+        // ============================================
+        $supraveghere_param = isset($_GET['filter_supraveghere']) ? sanitize_text_field(wp_unslash($_GET['filter_supraveghere'])) : '';
+        if ($supraveghere_param !== '') {
+            $supraveghere_slugs = array_map('trim', explode(',', $supraveghere_param));
+            foreach ($supraveghere_slugs as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'supraveghere-smart-home') {
+                        $cat_term_ids[] = $t->term_id;
+                    }
+                }
+            }
+        }
+
+        // ============================================
         // FILTRARE SERVICII
         // ============================================
         $servicii_param = isset($_GET['filter_servicii']) ? sanitize_text_field(wp_unslash($_GET['filter_servicii'])) : '';
@@ -1906,6 +1937,19 @@ class WebGSM_Setup_Wizard_V2 {
                 }
             }
         }
+        // SUPRAVEGHERE & SMART HOME
+        $supraveghere_param = isset($_GET['filter_supraveghere']) ? sanitize_text_field(wp_unslash($_GET['filter_supraveghere'])) : '';
+        if ($supraveghere_param !== '') {
+            foreach (array_map('trim', explode(',', $supraveghere_param)) as $slug) {
+                $t = get_term_by('slug', $slug, 'product_cat');
+                if ($t && !is_wp_error($t)) {
+                    $parent = get_term($t->parent, 'product_cat');
+                    if ($parent && !is_wp_error($parent) && $parent->slug === 'supraveghere-smart-home') {
+                        $cat_term_ids[] = $t->term_id;
+                    }
+                }
+            }
+        }
         // SERVICII
         $servicii_param = isset($_GET['filter_servicii']) ? sanitize_text_field(wp_unslash($_GET['filter_servicii'])) : '';
         if ($servicii_param !== '') {
@@ -1930,6 +1974,7 @@ class WebGSM_Setup_Wizard_V2 {
                 'filter_unelte' => $unelte_param,
                 'filter_accesorii' => $accesorii_param,
                 'filter_dispozitive' => $dispozitive_param,
+                'filter_supraveghere' => $supraveghere_param,
                 'filter_servicii' => $servicii_param,
             ],
         ];
@@ -1938,7 +1983,7 @@ class WebGSM_Setup_Wizard_V2 {
 
     /** Debug runtime în consola browserului: adaugă ?webgsm_debug_filters=1 la URL. */
     public function render_filters_debug_console() {
-        $has_filter_params = isset($_GET['filter_piese_subcat']) || isset($_GET['filter_piese_tip']) || isset($_GET['filter_unelte']) || isset($_GET['filter_accesorii']) || isset($_GET['filter_dispozitive']) || isset($_GET['filter_servicii']);
+        $has_filter_params = isset($_GET['filter_piese_subcat']) || isset($_GET['filter_piese_tip']) || isset($_GET['filter_unelte']) || isset($_GET['filter_accesorii']) || isset($_GET['filter_dispozitive']) || isset($_GET['filter_supraveghere']) || isset($_GET['filter_servicii']);
         if (!isset($_GET['webgsm_debug_filters']) && !$has_filter_params) {
             return;
         }
@@ -2580,7 +2625,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $menu_done ? 'done' : 'pending'; ?>"><?php echo $menu_done ? '✓' : '○'; ?></span>
-                            <span>Meniu navigare principal (5 tab-uri)</span>
+                            <span>Meniu navigare principal (6 tab-uri)</span>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $filters_done ? 'done' : 'pending'; ?>"><?php echo $filters_done ? '✓' : '○'; ?></span>
@@ -2986,6 +3031,50 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         return is_wp_error($result) ? false : $result['term_id'];
     }
+
+    /** Etichetă scurtă în meniu pentru categorii cu titlu lung. */
+    private function get_category_menu_label($category_name) {
+        if ($category_name === 'Supraveghere & Smart Home') {
+            return 'Smart Home';
+        }
+        return $category_name;
+    }
+
+    /** Reordonează itemii de nivel 0 din meniu conform ordinii din $this->categories. */
+    private function reorder_main_menu_by_category_structure($menu_id) {
+        $desired_slugs = [];
+        foreach ($this->categories as $parent_data) {
+            $desired_slugs[] = $parent_data['slug'];
+        }
+
+        $items = wp_get_nav_menu_items($menu_id);
+        if (empty($items)) {
+            return;
+        }
+
+        $top_level = [];
+        foreach ($items as $item) {
+            if ((int) $item->menu_item_parent !== 0 || $item->type !== 'taxonomy' || $item->object !== 'product_cat') {
+                continue;
+            }
+            $term = get_term((int) $item->object_id, 'product_cat');
+            if ($term && !is_wp_error($term)) {
+                $top_level[$term->slug] = (int) $item->ID;
+            }
+        }
+
+        $position = 1;
+        foreach ($desired_slugs as $slug) {
+            if (!isset($top_level[$slug])) {
+                continue;
+            }
+            wp_update_post([
+                'ID' => $top_level[$slug],
+                'menu_order' => $position,
+            ]);
+            $position++;
+        }
+    }
     
     /** Șterge o categorie și toți descendenții (recursiv, de la frunze la rădăcină). */
     private function delete_category_and_children($term_id) {
@@ -3112,7 +3201,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
             $is_mega = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii']);
             
             $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
-                'menu-item-title' => $parent_name,
+                'menu-item-title' => $this->get_category_menu_label($parent_name),
                 'menu-item-object' => 'product_cat',
                 'menu-item-object-id' => $parent_term->term_id,
                 'menu-item-type' => 'taxonomy',
@@ -3222,6 +3311,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $locations['mobile'] = $menu_id;
         set_theme_mod('nav_menu_locations', $locations);
         
+        $this->reorder_main_menu_by_category_structure($menu_id);
         update_option('webgsm_v2_menu', true);
         wp_send_json_success(['message' => "Meniu creat cu {$items_count} itemi!"]);
     }
@@ -3278,7 +3368,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
 
             if (!isset($term_to_item[$parent_tid])) {
                 $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
-                    'menu-item-title'     => $parent_name,
+                    'menu-item-title'     => $this->get_category_menu_label($parent_name),
                     'menu-item-object'    => 'product_cat',
                     'menu-item-object-id' => $parent_tid,
                     'menu-item-type'      => 'taxonomy',
@@ -3427,6 +3517,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $locations['mobile']            = $menu_id;
         set_theme_mod('nav_menu_locations', $locations);
 
+        $this->reorder_main_menu_by_category_structure($menu_id);
         update_option('webgsm_v2_menu', true);
         wp_send_json_success([
             'message' => sprintf(

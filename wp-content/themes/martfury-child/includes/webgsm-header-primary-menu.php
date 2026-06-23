@@ -21,6 +21,8 @@ function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {
         'unelte'     => 'webgsm-nav-unelte',
         'accesorii'  => 'webgsm-nav-accesorii',
         'dispozitive' => 'webgsm-nav-dispozitive',
+        'supraveghere' => 'webgsm-nav-supraveghere',
+        'smart home' => 'webgsm-nav-supraveghere',
         'servicii'   => 'webgsm-nav-servicii',
     ];
     $title_lower = mb_strtolower(trim($item->title));
@@ -34,7 +36,7 @@ function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {
 }
 
 // Iconițe FontAwesome încapsulate în <span class="led-icon"> doar la nivel 0 (categorii principale)
-// + clasă culoare LED per categorie: led-cyan, led-orange, led-magenta, led-blue, led-green
+// + clasă culoare LED per categorie: led-cyan, led-orange, led-magenta, led-blue, led-gold, led-green
 add_filter('nav_menu_item_title', 'webgsm_primary_menu_led_icon_in_title', 10, 4);
 function webgsm_primary_menu_led_icon_in_title($title, $item, $args, $depth) {
     if ($depth !== 0) return $title;
@@ -47,6 +49,8 @@ function webgsm_primary_menu_led_icon_in_title($title, $item, $args, $depth) {
         'unelte'     => ['icon' => 'fa fa-wrench',         'color' => 'led-orange'],
         'accesorii'  => ['icon' => 'fa fa-cube',           'color' => 'led-magenta'],
         'dispozitive' => ['icon' => 'fa fa-mobile',        'color' => 'led-blue'],
+        'supraveghere' => ['icon' => 'fa fa-video-camera', 'color' => 'led-gold'],
+        'smart home' => ['icon' => 'fa fa-video-camera',   'color' => 'led-gold'],
         'servicii'   => ['icon' => 'fa fa-cogs',           'color' => 'led-green'],
     ];
     $title_lower = mb_strtolower(trim($item->title));
@@ -170,6 +174,14 @@ function webgsm_primary_menu_styles() {
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon i,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon i,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon i { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
+    .vertical-menu li:hover .led-gold i,
+    .main-navigation li:hover .led-gold i,
+    .site-header .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
+    .site-header .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
     .vertical-menu li:hover .led-green i,
     .main-navigation li:hover .led-green i,
     .site-header .primary-nav.nav .webgsm-nav-servicii:hover .led-icon i,
@@ -179,10 +191,10 @@ function webgsm_primary_menu_styles() {
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon i,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon i { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
     /* Fallback când .led-icon nu are clasă de culoare */
-    .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i,
-    .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i,
-    .site-header .col-header-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i,
-    .site-header.header-department-top .main-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
+    .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
+    .site-header .col-header-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
+    .site-header.header-department-top .main-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
 
     /* Text meniu – font-weight mai mare la hover (aspect premium) */
     .vertical-menu li:hover > a,
@@ -261,10 +273,13 @@ function webgsm_primary_menu_styles() {
     .primary-mobile-nav li:hover .led-blue i,
     .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon i,
     .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon i { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-gold i,
+    .primary-mobile-nav .webgsm-nav-supraveghere:hover .led-icon i,
+    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon i { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
     .primary-mobile-nav li:hover .led-green i,
     .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon i,
     .primary-mobile-nav .webgsm-nav-servicii.active .led-icon i { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
     .primary-mobile-nav li:hover > a,
     .primary-mobile-nav li.active > a {
         font-weight: 700 !important;
