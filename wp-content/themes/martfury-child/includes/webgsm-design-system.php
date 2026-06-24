@@ -455,13 +455,14 @@ body.single-product .widget-area {
 }
 .site-header .col-header-menu {
     position: relative;
-    z-index: 1;
+    z-index: 20;
     background: transparent !important;
     padding: 0.28rem 0.5rem 0.32rem;
     flex: 0 0 100% !important;
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
 }
 .site-header .col-header-menu::before {
     content: "";
@@ -493,6 +494,56 @@ body.single-product .widget-area {
         right: 0;
         transform: none;
     }
+}
+
+/* Header + dropdown categorii deasupra bannerelor Elementor (homepage) */
+.site-header,
+#masthead {
+    position: relative;
+    z-index: 1000;
+}
+.site-header .header-main,
+.site-header .main-menu,
+.site-header .primary-nav,
+.site-header .products-cats-menu {
+    overflow: visible !important;
+}
+.site-header .products-cats-menu {
+    position: relative;
+    z-index: 30;
+}
+.site-header .products-cats-menu.open .toggle-product-cats,
+.site-header .products-cats-menu.mf-closed:hover .toggle-product-cats,
+.sticky-header .site-header .products-cats-menu.open .toggle-product-cats,
+.sticky-header .site-header .products-cats-menu.mf-closed:hover .toggle-product-cats,
+.sticky-header .site-header.minimized .header-main .products-cats-menu:hover .toggle-product-cats {
+    z-index: 10050 !important;
+}
+.site-header .primary-nav > ul.menu > li.menu-item-has-children,
+.site-header .primary-nav.nav > ul.menu > li.menu-item-has-children {
+    position: relative;
+    z-index: 40;
+}
+.site-header .primary-nav > ul.menu > li > ul.sub-menu,
+.site-header .primary-nav.nav > ul.menu > li > ul.sub-menu,
+.site-header .nav .menu > li.menu-item-has-children > ul,
+.site-header .nav .menu .is-mega-menu .dropdown-submenu,
+.site-header .nav .menu .is-mega-menu:hover .mega-menu-container,
+.site-header .nav .menu .is-mega-menu:hover .dropdown-submenu {
+    z-index: 10050 !important;
+}
+body.home #content,
+body.home .site-content,
+body.home #primary,
+body.home .elementor-location-content {
+    position: relative;
+    z-index: 1;
+}
+body.home .elementor-top-section .elementor-widget-martfury-slides,
+body.home .elementor-top-section .mf-elementor-slides,
+body.home .elementor-top-section .mf-elementor-banner-medium,
+body.home .elementor-top-section .slick-slider {
+    z-index: 1 !important;
 }
 /* Grid Elementor „Nou în stoc”: webgsm_get_product_section_elementor_bg_css() → inline ultimul handle Elementor + wp_head 9999999 */
 
