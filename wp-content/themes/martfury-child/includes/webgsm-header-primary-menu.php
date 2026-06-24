@@ -23,6 +23,9 @@ function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {
         'dispozitive' => 'webgsm-nav-dispozitive',
         'supraveghere' => 'webgsm-nav-supraveghere',
         'smart home' => 'webgsm-nav-supraveghere',
+        'smart tech' => 'webgsm-nav-supraveghere',
+        'security' => 'webgsm-nav-supraveghere',
+        'securitate' => 'webgsm-nav-supraveghere',
         'servicii'   => 'webgsm-nav-servicii',
     ];
     $title_lower = mb_strtolower(trim($item->title));
@@ -51,6 +54,9 @@ function webgsm_primary_menu_led_icon_in_title($title, $item, $args, $depth) {
         'dispozitive' => ['icon' => 'fa fa-mobile',        'color' => 'led-blue'],
         'supraveghere' => ['icon' => 'fa fa-video-camera', 'color' => 'led-gold'],
         'smart home' => ['icon' => 'fa fa-video-camera',   'color' => 'led-gold'],
+        'smart tech' => ['icon' => 'fa fa-video-camera',   'color' => 'led-gold'],
+        'security' => ['icon' => 'fa fa-shield',           'color' => 'led-gold'],
+        'securitate' => ['icon' => 'fa fa-shield',         'color' => 'led-gold'],
         'servicii'   => ['icon' => 'fa fa-cogs',           'color' => 'led-green'],
     ];
     $title_lower = mb_strtolower(trim($item->title));
