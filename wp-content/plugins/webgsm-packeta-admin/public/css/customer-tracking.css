@@ -1,0 +1,120 @@
+.webgsm-shipment-tracking {
+    margin: 28px 0 8px;
+    padding: 22px 24px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.webgsm-shipment-tracking__title {
+    margin: 0 0 10px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.webgsm-shipment-tracking__awb {
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+    color: #334155;
+}
+
+.webgsm-shipment-tracking__awb code {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.webgsm-shipment-tracking__link {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.webgsm-shipment-tracking__link:hover {
+    text-decoration: underline;
+}
+
+.webgsm-shipment-tracking__steps {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.webgsm-shipment-tracking__step {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.25;
+    color: #94a3b8;
+}
+
+.webgsm-shipment-tracking__step .dot {
+    display: block;
+    width: 12px;
+    height: 12px;
+    margin: 0 auto 6px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    border: 2px solid #cbd5e1;
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.webgsm-shipment-tracking__step.is-done .dot,
+.webgsm-shipment-tracking__step.is-active .dot {
+    background: var(--step-color, #2563eb);
+    border-color: var(--step-color, #2563eb);
+}
+
+.webgsm-shipment-tracking__step.is-active .dot {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--step-color, #2563eb) 25%, transparent);
+}
+
+.webgsm-shipment-tracking.is-delivered .webgsm-shipment-tracking__step.is-done .dot,
+.webgsm-shipment-tracking.is-delivered .webgsm-shipment-tracking__step.is-active .dot {
+    background: #16a34a;
+    border-color: #16a34a;
+}
+
+.webgsm-shipment-tracking.is-problem .webgsm-shipment-tracking__fill {
+    background: #dc2626 !important;
+}
+
+.webgsm-shipment-tracking.is-problem .webgsm-shipment-tracking__step.is-active .dot {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.webgsm-shipment-tracking__bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.webgsm-shipment-tracking__fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.webgsm-shipment-tracking__status {
+    margin: 12px 0 0;
+    font-size: 0.92rem;
+    color: #475569;
+}
+
+.webgsm-shipment-tracking__updated {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+@media (max-width: 640px) {
+    .webgsm-shipment-tracking {
+        padding: 16px;
+    }
+
+    .webgsm-shipment-tracking__step .lbl {
+        font-size: 9px;
+    }
+}

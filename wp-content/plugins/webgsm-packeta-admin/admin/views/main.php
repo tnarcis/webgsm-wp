@@ -16,6 +16,8 @@ $notices = [
     'status_ok' => ['class' => 'notice-success', 'text' => 'Status citit.'],
     'courier_number_ok' => ['class' => 'notice-success', 'text' => 'Număr AWB curier (Sameday/Fan) obținut — vezi mai jos. Acesta se caută pe site-ul curierului, nu barcode-ul Z…'],
     'awb_registered' => ['class' => 'notice-success', 'text' => 'AWB adăugat în listă și status actualizat.'],
+    'awb_deleted' => ['class' => 'notice-success', 'text' => 'AWB șters din listă.'],
+    'packet_id_invalid' => ['class' => 'notice-error', 'text' => 'Packet ID invalid — vezi detaliile de mai jos. Verifică că folosești ID-ul Packeta (nu AWB Sameday).'],
     'missing_packet_id' => ['class' => 'notice-error', 'text' => 'Introdu Packet ID sau barcode (ex. Z 383 2892 743).'],
     'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos.'],
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],

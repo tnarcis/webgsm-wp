@@ -16,8 +16,13 @@ class WebGSM_Packeta_Admin {
     }
 
     public function maybe_schedule_cron(): void {
+        $ver = get_option('webgsm_packeta_cron_schedule_ver', '');
+        if ($ver !== WEBGSM_PACKETA_VERSION) {
+            wp_clear_scheduled_hook('webgsm_packeta_sync_awb_cron');
+            update_option('webgsm_packeta_cron_schedule_ver', WEBGSM_PACKETA_VERSION);
+        }
         if (!wp_next_scheduled('webgsm_packeta_sync_awb_cron')) {
-            wp_schedule_event(time() + 120, 'webgsm_packeta_15min', 'webgsm_packeta_sync_awb_cron');
+            wp_schedule_event(time() + 300, 'webgsm_packeta_2hours', 'webgsm_packeta_sync_awb_cron');
         }
     }
 
@@ -27,10 +32,10 @@ class WebGSM_Packeta_Admin {
             return;
         }
         $client = $this->make_client($settings);
-        foreach (WebGSM_Packeta_Awb_Repository::list_active_for_sync(40) as $row) {
+        foreach (WebGSM_Packeta_Awb_Repository::list_active_for_sync(30) as $row) {
             $pid = (string) ($row['packet_id'] ?? '');
             if ($pid !== '') {
-                $this->sync_awb_status($pid, $client);
+                WebGSM_Packeta_Awb_Sync::sync_status($pid, $client);
             }
         }
     }
@@ -66,7 +71,7 @@ class WebGSM_Packeta_Admin {
             wp_localize_script('webgsm-packeta-awb-list', 'webgsmPacketaAwbList', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('webgsm_packeta_awb_list'),
-                'pollInterval' => 60000,
+                'pollInterval' => 180000,
             ]);
 
             return;
@@ -242,22 +247,39 @@ class WebGSM_Packeta_Admin {
                     break;
                 }
                 $order_ref = isset($_POST['register_order_ref']) ? sanitize_text_field(wp_unslash((string) $_POST['register_order_ref'])) : '';
-                WebGSM_Packeta_Awb_Repository::upsert([
-                    'packet_id' => $pid,
-                    'order_ref' => $order_ref,
-                ]);
                 $client = $this->make_client($settings);
-                $sync = $this->sync_awb_status($pid, $client);
+                $sync = WebGSM_Packeta_Awb_Sync::sync_status($pid, $client);
                 if (empty($sync['ok'])) {
+                    $message = (string) ($sync['message'] ?? 'Statusul nu a putut fi citit.');
+                    if (!empty($sync['packet_id_fault'])) {
+                        WebGSM_Packeta_Awb_Repository::delete_by_packet_id($pid);
+                        $message = WebGSM_Packeta_Awb_Sync::packet_id_fault_help($pid, $message);
+                    }
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
-                        ['type' => 'error', 'message' => $sync['message'] ?? 'AWB adăugat, dar statusul nu a putut fi citit.', 'raw' => $sync['raw'] ?? ''],
+                        ['type' => 'error', 'message' => $message, 'raw' => $sync['raw'] ?? ''],
                         120
                     );
-                    $this->redirect_with_notice('awb_list', 'api_error');
+                    $this->redirect_with_notice('awb_list', !empty($sync['packet_id_fault']) ? 'packet_id_invalid' : 'api_error');
                     break;
                 }
+                if ($order_ref !== '') {
+                    $wc_order_id = WebGSM_Packeta_Awb_Repository::resolve_wc_order_id($order_ref);
+                    $patch = ['packet_id' => $pid, 'order_ref' => $order_ref];
+                    if ($wc_order_id > 0) {
+                        $patch['wc_order_id'] = $wc_order_id;
+                    }
+                    WebGSM_Packeta_Awb_Repository::upsert($patch);
+                }
                 $this->redirect_with_notice('awb_list', 'awb_registered');
+                break;
+
+            case 'delete_awb':
+                $pid = isset($_POST['delete_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['delete_packet_id'])) : '';
+                if ($pid !== '') {
+                    WebGSM_Packeta_Awb_Repository::delete_by_packet_id($pid);
+                }
+                $this->redirect_with_notice('awb_list', 'awb_deleted');
                 break;
 
             case 'download_label':
@@ -310,7 +332,7 @@ class WebGSM_Packeta_Admin {
                 $client = $this->make_client($settings);
                 $res = $client->packet_status($pid);
                 if (!empty($res['ok'])) {
-                    $this->sync_awb_status($pid, $client, $res);
+                    WebGSM_Packeta_Awb_Sync::sync_status($pid, $client, $res);
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'status', 'data' => self::packeta_api_response_for_transient($res)],
@@ -380,7 +402,7 @@ class WebGSM_Packeta_Admin {
         if ($settings['api_password'] === '') {
             wp_send_json_error(['message' => 'Parolă API lipsă.']);
         }
-        $result = $this->sync_awb_status($pid, $this->make_client($settings));
+        $result = WebGSM_Packeta_Awb_Sync::sync_status($pid, $this->make_client($settings));
         if (empty($result['ok'])) {
             wp_send_json_error($result);
         }
@@ -404,7 +426,7 @@ class WebGSM_Packeta_Admin {
             if ($pid === '') {
                 continue;
             }
-            $sync = $this->sync_awb_status($pid, $client);
+            $sync = WebGSM_Packeta_Awb_Sync::sync_status($pid, $client);
             if (!empty($sync['ok'])) {
                 $updated++;
                 $rows[] = $sync;
@@ -419,7 +441,7 @@ class WebGSM_Packeta_Admin {
      */
     private function save_awb_from_packet_response(array $res, array $attrs): void {
         $data = $res['data'] ?? null;
-        $packet_id = self::api_field($data, 'id');
+        $packet_id = WebGSM_Packeta_Awb_Sync::api_field($data, 'id');
         if ($packet_id === '') {
             return;
         }
@@ -432,11 +454,15 @@ class WebGSM_Packeta_Admin {
 
         $name = trim((string) ($attrs['name'] ?? '') . ' ' . (string) ($attrs['surname'] ?? ''));
 
+        $order_ref = (string) ($attrs['number'] ?? '');
+        $wc_order_id = WebGSM_Packeta_Awb_Repository::resolve_wc_order_id($order_ref);
+
         WebGSM_Packeta_Awb_Repository::upsert([
             'packet_id' => $packet_id,
-            'barcode' => self::api_field($data, 'barcode'),
-            'barcode_text' => self::api_field($data, 'barcodeText'),
-            'order_ref' => (string) ($attrs['number'] ?? ''),
+            'barcode' => WebGSM_Packeta_Awb_Sync::api_field($data, 'barcode'),
+            'barcode_text' => WebGSM_Packeta_Awb_Sync::api_field($data, 'barcodeText'),
+            'wc_order_id' => $wc_order_id,
+            'order_ref' => $order_ref,
             'carrier_name' => $carrier,
             'recipient_name' => $name,
             'recipient_phone' => (string) ($attrs['phone'] ?? ''),
@@ -451,7 +477,7 @@ class WebGSM_Packeta_Admin {
 
         $settings = self::get_settings();
         if ($settings['api_password'] !== '') {
-            $this->sync_awb_status($packet_id, $this->make_client($settings));
+            WebGSM_Packeta_Awb_Sync::sync_status($packet_id, $this->make_client($settings));
         }
     }
 
@@ -460,7 +486,7 @@ class WebGSM_Packeta_Admin {
      * @param array<string, mixed> $res
      */
     private function attach_shipment_to_awb_records(array $packet_ids, array $res): void {
-        $shipment_id = self::api_field($res['data'] ?? null, 'id');
+        $shipment_id = WebGSM_Packeta_Awb_Sync::api_field($res['data'] ?? null, 'id');
         foreach ($packet_ids as $raw_id) {
             $pid = WebGSM_Packeta_Xml_Client::normalize_packet_id((string) $raw_id);
             if ($pid === '') {
@@ -471,112 +497,6 @@ class WebGSM_Packeta_Admin {
                 'shipment_id' => $shipment_id,
             ]);
         }
-    }
-
-  /**
-     * @param array<string, mixed>|null $api_response
-     * @return array<string, mixed>
-     */
-    private function sync_awb_status(string $packet_id, WebGSM_Packeta_Xml_Client $client, ?array $api_response = null): array {
-        $packet_id = WebGSM_Packeta_Xml_Client::normalize_packet_id($packet_id);
-        if ($packet_id === '') {
-            return ['ok' => false, 'message' => 'Packet ID invalid.'];
-        }
-
-        $res = $api_response ?? $client->packet_status($packet_id);
-        if (empty($res['ok'])) {
-            return [
-                'ok' => false,
-                'message' => $res['error'] ?? 'Eroare API',
-                'raw' => $res['raw'] ?? '',
-            ];
-        }
-
-        $parsed = self::parse_status_response($res['data'] ?? null);
-        if ($parsed === null) {
-            return ['ok' => false, 'message' => 'Răspuns status invalid.'];
-        }
-
-        $progress = WebGSM_Packeta_Status_Mapper::from_api_status(
-            (int) $parsed['status_code'],
-            (string) $parsed['code_text'],
-            (string) $parsed['status_text']
-        );
-
-        $courier = (string) ($parsed['external_tracking_code'] ?? '');
-        $existing = WebGSM_Packeta_Awb_Repository::get_by_packet_id($packet_id);
-        if ($courier === '' && is_array($existing) && !empty($existing['courier_number'])) {
-            $courier = (string) $existing['courier_number'];
-        } elseif ($courier === '') {
-            $cn = $client->packet_courier_number($packet_id);
-            if (!empty($cn['ok']) && !empty($cn['number'])) {
-                $courier = (string) $cn['number'];
-            }
-        }
-
-        WebGSM_Packeta_Awb_Repository::update_status($packet_id, [
-            'status_code' => (int) $parsed['status_code'],
-            'status_code_text' => (string) $parsed['code_text'],
-            'status_text' => (string) $parsed['status_text'],
-            'status_datetime' => (string) ($parsed['date_time'] ?? ''),
-            'progress_step' => (int) $progress['step'],
-            'progress_percent' => (int) $progress['percent'],
-            'is_final' => !empty($progress['is_final']),
-            'is_problem' => !empty($progress['is_problem']),
-            'courier_number' => $courier,
-        ]);
-
-        $updated_at = current_time('mysql');
-
-        return [
-            'ok' => true,
-            'packet_id' => $packet_id,
-            'status_label' => (string) ($parsed['status_text'] !== '' ? $parsed['status_text'] : $progress['label']),
-            'progress_step' => (int) $progress['step'],
-            'progress_percent' => (int) $progress['percent'],
-            'is_final' => !empty($progress['is_final']),
-            'is_problem' => !empty($progress['is_problem']),
-            'courier_number' => $courier,
-            'updated_human' => wp_date('d.m. H:i', strtotime($updated_at)),
-        ];
-    }
-
-    /**
-     * @param mixed $data
-     */
-    private static function api_field($data, string $name): string {
-        if ($data instanceof \SimpleXMLElement && isset($data->{$name})) {
-            return trim((string) $data->{$name});
-        }
-        if (is_array($data) && isset($data[$name]) && is_scalar($data[$name])) {
-            return trim((string) $data[$name]);
-        }
-
-        return '';
-    }
-
-    /**
-     * @param mixed $data
-     * @return array<string, string>|null
-     */
-    private static function parse_status_response($data): ?array {
-        if ($data === null || $data === '') {
-            return null;
-        }
-
-        $status_code = self::api_field($data, 'statusCode');
-        $code_text = self::api_field($data, 'codeText');
-        if ($status_code === '' && $code_text === '') {
-            return null;
-        }
-
-        return [
-            'status_code' => $status_code !== '' ? $status_code : '0',
-            'code_text' => $code_text,
-            'status_text' => self::api_field($data, 'statusText'),
-            'date_time' => self::api_field($data, 'dateTime'),
-            'external_tracking_code' => self::api_field($data, 'externalTrackingCode'),
-        ];
     }
 
     private function carrier_label_for_address_id(int $address_id): string {

@@ -347,6 +347,16 @@ class WebGSM_Packeta_Xml_Client {
     }
 
     private static function format_fault(\SimpleXMLElement $sx): string {
+        $fault = isset($sx->fault) ? trim((string) $sx->fault) : '';
+        $detail = isset($sx->string) ? trim((string) $sx->string) : '';
+
+        if ($fault !== '' && $detail !== '') {
+            return $fault . ': ' . $detail;
+        }
+        if ($detail !== '') {
+            return $detail;
+        }
+
         if (!isset($sx->fault)) {
             return '';
         }
@@ -360,5 +370,10 @@ class WebGSM_Packeta_Xml_Client {
         }
 
         return implode(' ', $parts);
+    }
+
+    public static function is_packet_id_fault_message(string $message): bool {
+        return stripos($message, 'PacketIdFault') !== false
+            || stripos($message, 'Incorrect packet ID') !== false;
     }
 }

@@ -366,16 +366,16 @@
 
 .webgsm-packeta-track-step.is-done .dot,
 .webgsm-packeta-track-step.is-active .dot {
-    background: #2271b1;
-    border-color: #2271b1;
+    background: var(--step-color, #2271b1);
+    border-color: var(--step-color, #2271b1);
 }
 
 .webgsm-packeta-track-step.is-active .dot {
-    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.25);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--step-color, #2271b1) 28%, transparent);
 }
 
 .webgsm-packeta-track.is-problem .webgsm-packeta-track-fill {
-    background: #d63638;
+    background: #d63638 !important;
 }
 
 .webgsm-packeta-track.is-problem .webgsm-packeta-track-step.is-done .dot,
@@ -409,7 +409,13 @@
 }
 
 .webgsm-packeta-awb-row.is-delivered .webgsm-packeta-track-fill {
-    background: linear-gradient(90deg, #00a32a, #68de7c);
+    background: #16a34a !important;
+}
+
+.webgsm-packeta-awb-row.is-delivered .webgsm-packeta-track-step.is-done .dot,
+.webgsm-packeta-awb-row.is-delivered .webgsm-packeta-track-step.is-active .dot {
+    background: #16a34a;
+    border-color: #16a34a;
 }
 
 @media (max-width: 1200px) {

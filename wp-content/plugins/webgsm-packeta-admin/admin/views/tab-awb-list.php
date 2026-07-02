@@ -9,16 +9,20 @@ $label_format = WebGSM_Packeta_Config::get_default_label_format();
 ?>
 <div class="webgsm-packeta-card webgsm-packeta-card-wide">
     <h2>AWB-uri trimise</h2>
-    <p class="webgsm-packeta-help">
-        Lista AWB-urilor create din acest plugin. Statusul se actualizează automat la fiecare 60 secunde pentru coletele în curs.
-        Pentru Sameday/Fan, eticheta PDF este cea a curierului (nu barcode-ul <code>Z …</code>).
+        <p class="webgsm-packeta-help">
+        Lista AWB-urilor trimise. Status în română, actualizare automată la ~3 minute (admin) și la 2 ore (fundal).
+        Clienții văd urmărirea în <strong>Contul meu → detalii comandă</strong>, după ce există AWB curier (Sameday/Fan).
     </p>
 
     <form method="post" class="webgsm-packeta-inline-form" style="margin-bottom:20px;">
         <?php wp_nonce_field('webgsm_packeta'); ?>
         <input type="hidden" name="tab" value="awb_list" />
         <input type="hidden" name="webgsm_packeta_action" value="register_awb" />
-        <label><strong>Adaugă AWB existent</strong> (packet ID sau Z …)</label>
+        <label><strong>Adaugă AWB existent</strong> (Packet ID Packeta)</label>
+        <p class="webgsm-packeta-help" style="margin:4px 0 8px;">
+            <strong>Corect:</strong> Packet ID de la „Trimite AWB” (ex. <code>3832892743</code>) sau barcode <code>Z 383 2892 743</code>.<br>
+            <strong>Greșit:</strong> AWB Sameday/Fan, ID expediție ridicare (<code>D-…-XM-221209160</code>), număr de comandă.
+        </p>
         <div class="webgsm-packeta-inline-row">
             <input type="text" name="register_packet_id" class="regular-text" placeholder="3832892743 sau Z 383 2892 743" required />
             <input type="text" name="register_order_ref" class="regular-text" placeholder="Referință comandă (opțional)" />
@@ -92,6 +96,7 @@ $label_format = WebGSM_Packeta_Config::get_default_label_format();
                                 <div class="webgsm-packeta-track-steps">
                                     <?php foreach ($steps as $i => $s) :
                                         $cls = 'webgsm-packeta-track-step';
+                                        $color = (string) ($s['color'] ?? '#64748b');
                                         if ($i < $step) {
                                             $cls .= ' is-done';
                                         } elseif ($i === $step && !$is_final) {
@@ -100,14 +105,14 @@ $label_format = WebGSM_Packeta_Config::get_default_label_format();
                                             $cls .= ' is-done is-active';
                                         }
                                         ?>
-                                        <span class="<?php echo esc_attr($cls); ?>" title="<?php echo esc_attr($s['label']); ?>">
+                                        <span class="<?php echo esc_attr($cls); ?>" style="--step-color:<?php echo esc_attr($color); ?>" title="<?php echo esc_attr($s['label']); ?>">
                                             <span class="dot"></span>
                                             <span class="lbl"><?php echo esc_html($s['label']); ?></span>
                                         </span>
                                     <?php endforeach; ?>
                                 </div>
                                 <div class="webgsm-packeta-track-bar" aria-hidden="true">
-                                    <div class="webgsm-packeta-track-fill" style="width:<?php echo esc_attr((string) $percent); ?>%"></div>
+                                    <div class="webgsm-packeta-track-fill" style="width:<?php echo esc_attr((string) $percent); ?>%;background:<?php echo esc_attr(WebGSM_Packeta_Status_Mapper::step_color($step, $is_problem, $is_final && !$is_problem)); ?>"></div>
                                 </div>
                                 <div class="webgsm-packeta-track-meta">
                                     <span class="webgsm-packeta-status-label"><?php echo esc_html($status_label !== '' ? $status_label : '—'); ?></span>
@@ -142,6 +147,13 @@ $label_format = WebGSM_Packeta_Config::get_default_label_format();
                                     Expediție
                                 </a>
                             <?php endif; ?>
+                            <form method="post" class="webgsm-packeta-row-action" onsubmit="return confirm('Ștergi acest AWB din listă?');">
+                                <?php wp_nonce_field('webgsm_packeta'); ?>
+                                <input type="hidden" name="tab" value="awb_list" />
+                                <input type="hidden" name="webgsm_packeta_action" value="delete_awb" />
+                                <input type="hidden" name="delete_packet_id" value="<?php echo esc_attr($packet_id); ?>" />
+                                <button type="submit" class="button button-small button-link-delete">Șterge</button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

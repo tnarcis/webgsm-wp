@@ -21,6 +21,7 @@ class WebGSM_Packeta_Awb_Repository {
             packet_id varchar(20) NOT NULL,
             barcode varchar(64) NOT NULL DEFAULT '',
             barcode_text varchar(64) NOT NULL DEFAULT '',
+            wc_order_id bigint(20) unsigned NOT NULL DEFAULT 0,
             order_ref varchar(120) NOT NULL DEFAULT '',
             carrier_name varchar(120) NOT NULL DEFAULT '',
             recipient_name varchar(200) NOT NULL DEFAULT '',
@@ -41,7 +42,8 @@ class WebGSM_Packeta_Awb_Repository {
             PRIMARY KEY  (id),
             UNIQUE KEY packet_id (packet_id),
             KEY is_final (is_final),
-            KEY updated_at (updated_at)
+            KEY updated_at (updated_at),
+            KEY wc_order_id (wc_order_id)
         ) {$charset};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -68,6 +70,7 @@ class WebGSM_Packeta_Awb_Repository {
             'packet_id' => $packet_id,
             'barcode' => isset($data['barcode']) ? (string) $data['barcode'] : '',
             'barcode_text' => isset($data['barcode_text']) ? (string) $data['barcode_text'] : '',
+            'wc_order_id' => isset($data['wc_order_id']) ? (int) $data['wc_order_id'] : 0,
             'order_ref' => isset($data['order_ref']) ? (string) $data['order_ref'] : '',
             'carrier_name' => isset($data['carrier_name']) ? (string) $data['carrier_name'] : '',
             'recipient_name' => isset($data['recipient_name']) ? (string) $data['recipient_name'] : '',
@@ -145,6 +148,61 @@ class WebGSM_Packeta_Awb_Repository {
         return is_array($rows) ? $rows : [];
     }
 
+    public static function get_by_wc_order_id(int $order_id): ?array {
+        global $wpdb;
+        if ($order_id < 1) {
+            return null;
+        }
+        $table = self::table_name();
+        $row = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM `{$table}` WHERE wc_order_id = %d ORDER BY updated_at DESC LIMIT 1", $order_id),
+            ARRAY_A
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    public static function resolve_wc_order_id(string $order_ref): int {
+        $order_ref = trim($order_ref);
+        if ($order_ref === '' || !function_exists('wc_get_order')) {
+            return 0;
+        }
+
+        $candidates = [$order_ref];
+        $digits = preg_replace('/\D/', '', $order_ref);
+        if ($digits !== '' && $digits !== $order_ref) {
+            $candidates[] = $digits;
+        }
+
+        foreach ($candidates as $ref) {
+            if ($ref === '') {
+                continue;
+            }
+            $order = wc_get_order($ref);
+            if ($order instanceof \WC_Order) {
+                return (int) $order->get_id();
+            }
+        }
+
+        if (function_exists('wc_get_orders')) {
+            foreach ($candidates as $ref) {
+                $orders = wc_get_orders([
+                    'limit' => 1,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                    'meta_key' => '_order_number',
+                    'meta_value' => $ref,
+                    'return' => 'ids',
+                ]);
+                if (!empty($orders[0])) {
+                    return (int) $orders[0];
+                }
+            }
+        }
+
+        return 0;
+    }
+
     public static function get_by_packet_id(string $packet_id): ?array {
         global $wpdb;
         $table = self::table_name();
@@ -159,5 +217,26 @@ class WebGSM_Packeta_Awb_Repository {
     public static function update_status(string $packet_id, array $status_fields): void {
         $status_fields['packet_id'] = $packet_id;
         self::upsert($status_fields);
+    }
+
+    public static function delete_by_packet_id(string $packet_id): void {
+        global $wpdb;
+        $packet_id = trim($packet_id);
+        if ($packet_id === '') {
+            return;
+        }
+        $wpdb->delete(self::table_name(), ['packet_id' => $packet_id], ['%s']);
+    }
+
+    public static function mark_invalid_packet(string $packet_id, string $reason = ''): void {
+        self::upsert([
+            'packet_id' => $packet_id,
+            'status_text' => $reason !== '' ? $reason : 'Packet ID invalid în Packeta',
+            'status_code_text' => 'unknown',
+            'progress_step' => 0,
+            'progress_percent' => 0,
+            'is_final' => true,
+            'is_problem' => true,
+        ]);
     }
 }
