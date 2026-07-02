@@ -252,6 +252,9 @@ class WebGSM_Packeta_Admin {
      * @return mixed
      */
     private static function deep_replace_simplexml_for_transient($value) {
+        if ($value === null) {
+            return null;
+        }
         if ($value instanceof \SimpleXMLElement) {
             return self::simplexml_to_export($value);
         }
@@ -271,13 +274,16 @@ class WebGSM_Packeta_Admin {
      * @return array<string, mixed>|string
      */
     private static function simplexml_to_export(\SimpleXMLElement $sx) {
-        $children = $sx->children();
-        if (count($children) === 0) {
-            return trim((string) $sx);
-        }
         $out = [];
-        foreach ($children as $child) {
-            $out[$child->getName()] = self::simplexml_to_export($child);
+        $children = $sx->children();
+        if ($children instanceof \SimpleXMLElement) {
+            foreach ($children as $child) {
+                $out[$child->getName()] = self::simplexml_to_export($child);
+            }
+        }
+
+        if ($out === []) {
+            return trim((string) $sx);
         }
 
         return $out;
