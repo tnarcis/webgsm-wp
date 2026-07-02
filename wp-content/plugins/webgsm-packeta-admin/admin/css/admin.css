@@ -295,3 +295,125 @@
         grid-template-columns: 1fr;
     }
 }
+
+.webgsm-packeta-wrap.webgsm-packeta-layout-wide .webgsm-packeta-card-wide {
+    max-width: none;
+}
+
+.webgsm-packeta-inline-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.webgsm-packeta-sync-hint {
+    margin-left: 10px;
+    color: #646970;
+    font-size: 13px;
+}
+
+.webgsm-packeta-sync-hint.is-error {
+    color: #b32d2e;
+}
+
+.webgsm-packeta-awb-table {
+    margin-top: 12px;
+}
+
+.webgsm-packeta-awb-table td {
+    vertical-align: top;
+}
+
+.webgsm-packeta-awb-actions {
+    min-width: 140px;
+}
+
+.webgsm-packeta-row-action {
+    display: inline-block;
+    margin: 0 4px 6px 0;
+}
+
+.webgsm-packeta-track {
+    min-width: 280px;
+}
+
+.webgsm-packeta-track-steps {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.webgsm-packeta-track-step {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.2;
+    color: #a7aaad;
+}
+
+.webgsm-packeta-track-step .dot {
+    display: block;
+    width: 10px;
+    height: 10px;
+    margin: 0 auto 4px;
+    border-radius: 50%;
+    background: #dcdcde;
+    border: 2px solid #dcdcde;
+}
+
+.webgsm-packeta-track-step.is-done .dot,
+.webgsm-packeta-track-step.is-active .dot {
+    background: #2271b1;
+    border-color: #2271b1;
+}
+
+.webgsm-packeta-track-step.is-active .dot {
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.25);
+}
+
+.webgsm-packeta-track.is-problem .webgsm-packeta-track-fill {
+    background: #d63638;
+}
+
+.webgsm-packeta-track.is-problem .webgsm-packeta-track-step.is-done .dot,
+.webgsm-packeta-track.is-problem .webgsm-packeta-track-step.is-active .dot {
+    background: #d63638;
+    border-color: #d63638;
+}
+
+.webgsm-packeta-track-bar {
+    height: 6px;
+    background: #f0f0f1;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.webgsm-packeta-track-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2271b1, #72aee6);
+    border-radius: 3px;
+    transition: width 0.35s ease;
+}
+
+.webgsm-packeta-track-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #50575e;
+}
+
+.webgsm-packeta-status-updated {
+    color: #787c82;
+}
+
+.webgsm-packeta-awb-row.is-delivered .webgsm-packeta-track-fill {
+    background: linear-gradient(90deg, #00a32a, #68de7c);
+}
+
+@media (max-width: 1200px) {
+    .webgsm-packeta-track-step .lbl {
+        display: none;
+    }
+}

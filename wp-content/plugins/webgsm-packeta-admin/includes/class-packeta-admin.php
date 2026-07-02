@@ -9,6 +9,30 @@ class WebGSM_Packeta_Admin {
         add_action('admin_menu', [$this, 'register_menu']);
         add_action('admin_init', [$this, 'handle_post']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
+        add_action('wp_ajax_webgsm_packeta_refresh_awb_status', [$this, 'ajax_refresh_awb_status']);
+        add_action('wp_ajax_webgsm_packeta_refresh_all_awb_statuses', [$this, 'ajax_refresh_all_awb_statuses']);
+        add_action('webgsm_packeta_sync_awb_cron', [$this, 'cron_sync_awb_statuses']);
+        add_action('init', [$this, 'maybe_schedule_cron']);
+    }
+
+    public function maybe_schedule_cron(): void {
+        if (!wp_next_scheduled('webgsm_packeta_sync_awb_cron')) {
+            wp_schedule_event(time() + 120, 'webgsm_packeta_15min', 'webgsm_packeta_sync_awb_cron');
+        }
+    }
+
+    public function cron_sync_awb_statuses(): void {
+        $settings = self::get_settings();
+        if ($settings['api_password'] === '') {
+            return;
+        }
+        $client = $this->make_client($settings);
+        foreach (WebGSM_Packeta_Awb_Repository::list_active_for_sync(40) as $row) {
+            $pid = (string) ($row['packet_id'] ?? '');
+            if ($pid !== '') {
+                $this->sync_awb_status($pid, $client);
+            }
+        }
     }
 
     public function register_menu(): void {
@@ -30,6 +54,24 @@ class WebGSM_Packeta_Admin {
         wp_enqueue_style('webgsm-packeta-admin', WEBGSM_PACKETA_URL . 'admin/css/admin.css', [], WEBGSM_PACKETA_VERSION);
 
         $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'settings';
+
+        if ($tab === 'awb_list') {
+            wp_enqueue_script(
+                'webgsm-packeta-awb-list',
+                WEBGSM_PACKETA_URL . 'admin/js/awb-list.js',
+                ['jquery'],
+                WEBGSM_PACKETA_VERSION,
+                true
+            );
+            wp_localize_script('webgsm-packeta-awb-list', 'webgsmPacketaAwbList', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('webgsm_packeta_awb_list'),
+                'pollInterval' => 60000,
+            ]);
+
+            return;
+        }
+
         if ($tab !== 'awb') {
             return;
         }
@@ -132,6 +174,7 @@ class WebGSM_Packeta_Admin {
                 if (!empty($res['ok'])) {
                     if (!$is_validate_only) {
                         self::clear_awb_form_draft();
+                        $this->save_awb_from_packet_response($res, $attrs);
                     }
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
@@ -171,6 +214,7 @@ class WebGSM_Packeta_Admin {
                 $client = $this->make_client($settings);
                 $res = $client->create_shipment($ids, $custom);
                 if (!empty($res['ok'])) {
+                    $this->attach_shipment_to_awb_records($ids, $res);
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'shipment', 'data' => self::packeta_api_response_for_transient($res)],
@@ -187,9 +231,39 @@ class WebGSM_Packeta_Admin {
                 }
                 break;
 
-            case 'download_label':
+            case 'register_awb':
                 if ($settings['api_password'] === '') {
-                    $this->redirect_with_notice('label', 'no_password');
+                    $this->redirect_with_notice('awb_list', 'no_password');
+                    break;
+                }
+                $pid = isset($_POST['register_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['register_packet_id'])) : '';
+                if ($pid === '') {
+                    $this->redirect_with_notice('awb_list', 'missing_packet_id');
+                    break;
+                }
+                $order_ref = isset($_POST['register_order_ref']) ? sanitize_text_field(wp_unslash((string) $_POST['register_order_ref'])) : '';
+                WebGSM_Packeta_Awb_Repository::upsert([
+                    'packet_id' => $pid,
+                    'order_ref' => $order_ref,
+                ]);
+                $client = $this->make_client($settings);
+                $sync = $this->sync_awb_status($pid, $client);
+                if (empty($sync['ok'])) {
+                    set_transient(
+                        'webgsm_packeta_last_' . get_current_user_id(),
+                        ['type' => 'error', 'message' => $sync['message'] ?? 'AWB adăugat, dar statusul nu a putut fi citit.', 'raw' => $sync['raw'] ?? ''],
+                        120
+                    );
+                    $this->redirect_with_notice('awb_list', 'api_error');
+                    break;
+                }
+                $this->redirect_with_notice('awb_list', 'awb_registered');
+                break;
+
+            case 'download_label':
+                $return_tab = $tab !== '' ? $tab : 'label';
+                if ($settings['api_password'] === '') {
+                    $this->redirect_with_notice($return_tab, 'no_password');
                     break;
                 }
                 $pid = isset($_POST['label_packet_id']) ? (string) wp_unslash($_POST['label_packet_id']) : '';
@@ -200,7 +274,7 @@ class WebGSM_Packeta_Admin {
                         ['type' => 'error', 'message' => 'Packet ID invalid. Exemplu: Z 383 2892 743 sau 3832892743.', 'raw' => ''],
                         120
                     );
-                    $this->redirect_with_notice('label', 'api_error');
+                    $this->redirect_with_notice($return_tab, 'api_error');
                     break;
                 }
                 $format = isset($_POST['label_format']) ? sanitize_text_field(wp_unslash((string) $_POST['label_format'])) : WebGSM_Packeta_Config::get_default_label_format();
@@ -223,47 +297,54 @@ class WebGSM_Packeta_Admin {
                     ['type' => 'error', 'message' => $res['error'] ?? 'Nu s-a putut genera PDF.', 'raw' => $res['raw'] ?? ''],
                     120
                 );
-                $this->redirect_with_notice('label', 'api_error');
+                $this->redirect_with_notice($return_tab, 'api_error');
                 break;
 
             case 'packet_status':
+                $return_tab = $tab !== '' ? $tab : 'label';
                 if ($settings['api_password'] === '') {
-                    $this->redirect_with_notice('label', 'no_password');
+                    $this->redirect_with_notice($return_tab, 'no_password');
                     break;
                 }
                 $pid = isset($_POST['status_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['status_packet_id'])) : '';
                 $client = $this->make_client($settings);
                 $res = $client->packet_status($pid);
                 if (!empty($res['ok'])) {
+                    $this->sync_awb_status($pid, $client, $res);
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'status', 'data' => self::packeta_api_response_for_transient($res)],
                         120
                     );
-                    $this->redirect_with_notice('label', 'status_ok');
+                    $this->redirect_with_notice($return_tab, 'status_ok');
                 } else {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'error', 'message' => $res['error'] ?? 'Eroare', 'raw' => $res['raw'] ?? ''],
                         120
                     );
-                    $this->redirect_with_notice('label', 'api_error');
+                    $this->redirect_with_notice($return_tab, 'api_error');
                 }
                 break;
 
             case 'courier_number':
+                $return_tab = $tab !== '' ? $tab : 'label';
                 if ($settings['api_password'] === '') {
-                    $this->redirect_with_notice('label', 'no_password');
+                    $this->redirect_with_notice($return_tab, 'no_password');
                     break;
                 }
                 $pid = isset($_POST['courier_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['courier_packet_id'])) : '';
                 if ($pid === '') {
-                    $this->redirect_with_notice('label', 'missing_packet_id');
+                    $this->redirect_with_notice($return_tab, 'missing_packet_id');
                     break;
                 }
                 $client = $this->make_client($settings);
                 $res = $client->packet_courier_number($pid);
                 if (!empty($res['ok']) && !empty($res['number'])) {
+                    WebGSM_Packeta_Awb_Repository::upsert([
+                        'packet_id' => $pid,
+                        'courier_number' => (string) $res['number'],
+                    ]);
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         [
@@ -273,17 +354,243 @@ class WebGSM_Packeta_Admin {
                         ],
                         300
                     );
-                    $this->redirect_with_notice('label', 'courier_number_ok');
+                    $this->redirect_with_notice($return_tab, 'courier_number_ok');
                 } else {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'error', 'message' => $res['error'] ?? 'Număr curier indisponibil încă.', 'raw' => $res['raw'] ?? ''],
                         120
                     );
-                    $this->redirect_with_notice('label', 'api_error');
+                    $this->redirect_with_notice($return_tab, 'api_error');
                 }
                 break;
         }
+    }
+
+    public function ajax_refresh_awb_status(): void {
+        check_ajax_referer('webgsm_packeta_awb_list', 'nonce');
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(['message' => 'Acces interzis.'], 403);
+        }
+        $pid = isset($_POST['packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['packet_id'])) : '';
+        if ($pid === '') {
+            wp_send_json_error(['message' => 'Packet ID lipsă.']);
+        }
+        $settings = self::get_settings();
+        if ($settings['api_password'] === '') {
+            wp_send_json_error(['message' => 'Parolă API lipsă.']);
+        }
+        $result = $this->sync_awb_status($pid, $this->make_client($settings));
+        if (empty($result['ok'])) {
+            wp_send_json_error($result);
+        }
+        wp_send_json_success($result);
+    }
+
+    public function ajax_refresh_all_awb_statuses(): void {
+        check_ajax_referer('webgsm_packeta_awb_list', 'nonce');
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(['message' => 'Acces interzis.'], 403);
+        }
+        $settings = self::get_settings();
+        if ($settings['api_password'] === '') {
+            wp_send_json_error(['message' => 'Parolă API lipsă.']);
+        }
+        $client = $this->make_client($settings);
+        $rows = [];
+        $updated = 0;
+        foreach (WebGSM_Packeta_Awb_Repository::list_active_for_sync(80) as $row) {
+            $pid = (string) ($row['packet_id'] ?? '');
+            if ($pid === '') {
+                continue;
+            }
+            $sync = $this->sync_awb_status($pid, $client);
+            if (!empty($sync['ok'])) {
+                $updated++;
+                $rows[] = $sync;
+            }
+        }
+        wp_send_json_success(['updated' => $updated, 'rows' => $rows]);
+    }
+
+    /**
+     * @param array<string, mixed> $res
+     * @param array<string, scalar> $attrs
+     */
+    private function save_awb_from_packet_response(array $res, array $attrs): void {
+        $data = $res['data'] ?? null;
+        $packet_id = self::api_field($data, 'id');
+        if ($packet_id === '') {
+            return;
+        }
+
+        $flow = isset($_POST['awb_flow']) ? sanitize_key((string) $_POST['awb_flow']) : '';
+        $carrier = isset($_POST['carrier_filter']) ? sanitize_text_field(wp_unslash((string) $_POST['carrier_filter'])) : '';
+        if ($carrier === '') {
+            $carrier = $this->carrier_label_for_address_id((int) ($attrs['addressId'] ?? 0));
+        }
+
+        $name = trim((string) ($attrs['name'] ?? '') . ' ' . (string) ($attrs['surname'] ?? ''));
+
+        WebGSM_Packeta_Awb_Repository::upsert([
+            'packet_id' => $packet_id,
+            'barcode' => self::api_field($data, 'barcode'),
+            'barcode_text' => self::api_field($data, 'barcodeText'),
+            'order_ref' => (string) ($attrs['number'] ?? ''),
+            'carrier_name' => $carrier,
+            'recipient_name' => $name,
+            'recipient_phone' => (string) ($attrs['phone'] ?? ''),
+            'flow_type' => $flow,
+            'status_code_text' => 'received data',
+            'status_text' => 'AWB creat',
+            'progress_step' => 0,
+            'progress_percent' => 0,
+            'is_final' => false,
+            'is_problem' => false,
+        ]);
+
+        $settings = self::get_settings();
+        if ($settings['api_password'] !== '') {
+            $this->sync_awb_status($packet_id, $this->make_client($settings));
+        }
+    }
+
+    /**
+     * @param string[] $packet_ids
+     * @param array<string, mixed> $res
+     */
+    private function attach_shipment_to_awb_records(array $packet_ids, array $res): void {
+        $shipment_id = self::api_field($res['data'] ?? null, 'id');
+        foreach ($packet_ids as $raw_id) {
+            $pid = WebGSM_Packeta_Xml_Client::normalize_packet_id((string) $raw_id);
+            if ($pid === '') {
+                continue;
+            }
+            WebGSM_Packeta_Awb_Repository::upsert([
+                'packet_id' => $pid,
+                'shipment_id' => $shipment_id,
+            ]);
+        }
+    }
+
+  /**
+     * @param array<string, mixed>|null $api_response
+     * @return array<string, mixed>
+     */
+    private function sync_awb_status(string $packet_id, WebGSM_Packeta_Xml_Client $client, ?array $api_response = null): array {
+        $packet_id = WebGSM_Packeta_Xml_Client::normalize_packet_id($packet_id);
+        if ($packet_id === '') {
+            return ['ok' => false, 'message' => 'Packet ID invalid.'];
+        }
+
+        $res = $api_response ?? $client->packet_status($packet_id);
+        if (empty($res['ok'])) {
+            return [
+                'ok' => false,
+                'message' => $res['error'] ?? 'Eroare API',
+                'raw' => $res['raw'] ?? '',
+            ];
+        }
+
+        $parsed = self::parse_status_response($res['data'] ?? null);
+        if ($parsed === null) {
+            return ['ok' => false, 'message' => 'Răspuns status invalid.'];
+        }
+
+        $progress = WebGSM_Packeta_Status_Mapper::from_api_status(
+            (int) $parsed['status_code'],
+            (string) $parsed['code_text'],
+            (string) $parsed['status_text']
+        );
+
+        $courier = (string) ($parsed['external_tracking_code'] ?? '');
+        $existing = WebGSM_Packeta_Awb_Repository::get_by_packet_id($packet_id);
+        if ($courier === '' && is_array($existing) && !empty($existing['courier_number'])) {
+            $courier = (string) $existing['courier_number'];
+        } elseif ($courier === '') {
+            $cn = $client->packet_courier_number($packet_id);
+            if (!empty($cn['ok']) && !empty($cn['number'])) {
+                $courier = (string) $cn['number'];
+            }
+        }
+
+        WebGSM_Packeta_Awb_Repository::update_status($packet_id, [
+            'status_code' => (int) $parsed['status_code'],
+            'status_code_text' => (string) $parsed['code_text'],
+            'status_text' => (string) $parsed['status_text'],
+            'status_datetime' => (string) ($parsed['date_time'] ?? ''),
+            'progress_step' => (int) $progress['step'],
+            'progress_percent' => (int) $progress['percent'],
+            'is_final' => !empty($progress['is_final']),
+            'is_problem' => !empty($progress['is_problem']),
+            'courier_number' => $courier,
+        ]);
+
+        $updated_at = current_time('mysql');
+
+        return [
+            'ok' => true,
+            'packet_id' => $packet_id,
+            'status_label' => (string) ($parsed['status_text'] !== '' ? $parsed['status_text'] : $progress['label']),
+            'progress_step' => (int) $progress['step'],
+            'progress_percent' => (int) $progress['percent'],
+            'is_final' => !empty($progress['is_final']),
+            'is_problem' => !empty($progress['is_problem']),
+            'courier_number' => $courier,
+            'updated_human' => wp_date('d.m. H:i', strtotime($updated_at)),
+        ];
+    }
+
+    /**
+     * @param mixed $data
+     */
+    private static function api_field($data, string $name): string {
+        if ($data instanceof \SimpleXMLElement && isset($data->{$name})) {
+            return trim((string) $data->{$name});
+        }
+        if (is_array($data) && isset($data[$name]) && is_scalar($data[$name])) {
+            return trim((string) $data[$name]);
+        }
+
+        return '';
+    }
+
+    /**
+     * @param mixed $data
+     * @return array<string, string>|null
+     */
+    private static function parse_status_response($data): ?array {
+        if ($data === null || $data === '') {
+            return null;
+        }
+
+        $status_code = self::api_field($data, 'statusCode');
+        $code_text = self::api_field($data, 'codeText');
+        if ($status_code === '' && $code_text === '') {
+            return null;
+        }
+
+        return [
+            'status_code' => $status_code !== '' ? $status_code : '0',
+            'code_text' => $code_text,
+            'status_text' => self::api_field($data, 'statusText'),
+            'date_time' => self::api_field($data, 'dateTime'),
+            'external_tracking_code' => self::api_field($data, 'externalTrackingCode'),
+        ];
+    }
+
+    private function carrier_label_for_address_id(int $address_id): string {
+        if ($address_id < 1) {
+            return '';
+        }
+        $id = (string) $address_id;
+        foreach (WebGSM_Packeta_Carriers::get_checkout_carriers() as $carrier) {
+            if ((string) ($carrier['carrier_id'] ?? '') === $id) {
+                return (string) ($carrier['title'] ?? '');
+            }
+        }
+
+        return 'ID ' . $address_id;
     }
 
     private function redirect_with_notice(string $tab, string $notice): void {
@@ -588,7 +895,7 @@ class WebGSM_Packeta_Admin {
         }
 
         $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'settings';
-        $allowed = ['settings', 'awb', 'shipment', 'label'];
+        $allowed = ['settings', 'awb', 'awb_list', 'shipment', 'label'];
         if (!in_array($tab, $allowed, true)) {
             $tab = 'settings';
         }

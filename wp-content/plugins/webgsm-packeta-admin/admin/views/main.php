@@ -15,6 +15,7 @@ $notices = [
     'shipment_ok' => ['class' => 'notice-success', 'text' => 'Expediție creată (grupare AWB).'],
     'status_ok' => ['class' => 'notice-success', 'text' => 'Status citit.'],
     'courier_number_ok' => ['class' => 'notice-success', 'text' => 'Număr AWB curier (Sameday/Fan) obținut — vezi mai jos. Acesta se caută pe site-ul curierului, nu barcode-ul Z…'],
+    'awb_registered' => ['class' => 'notice-success', 'text' => 'AWB adăugat în listă și status actualizat.'],
     'missing_packet_id' => ['class' => 'notice-error', 'text' => 'Introdu Packet ID sau barcode (ex. Z 383 2892 743).'],
     'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos.'],
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
@@ -27,7 +28,7 @@ $notices = [
 ];
 
 ?>
-<div class="wrap webgsm-packeta-wrap<?php echo isset($tab) && $tab === 'awb' ? ' webgsm-packeta-layout-wide' : ''; ?>">
+<div class="wrap webgsm-packeta-wrap<?php echo isset($tab) && in_array($tab, ['awb', 'awb_list'], true) ? ' webgsm-packeta-layout-wide' : ''; ?>">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
     <p class="description">
         Creare manuală AWB și grupare expediție, prin
@@ -74,6 +75,7 @@ $notices = [
     <h2 class="nav-tab-wrapper">
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=settings')); ?>" class="nav-tab <?php echo $tab === 'settings' ? 'nav-tab-active' : ''; ?>">Setări</a>
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=awb')); ?>" class="nav-tab <?php echo $tab === 'awb' ? 'nav-tab-active' : ''; ?>">AWB nou</a>
+        <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=awb_list')); ?>" class="nav-tab <?php echo $tab === 'awb_list' ? 'nav-tab-active' : ''; ?>">AWB-uri</a>
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=shipment')); ?>" class="nav-tab <?php echo $tab === 'shipment' ? 'nav-tab-active' : ''; ?>">Expediție / ridicare</a>
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')); ?>" class="nav-tab <?php echo $tab === 'label' ? 'nav-tab-active' : ''; ?>">Etichetă &amp; status</a>
     </h2>
@@ -82,6 +84,8 @@ $notices = [
         <?php include WEBGSM_PACKETA_PATH . 'admin/views/tab-settings.php'; ?>
     <?php elseif ($tab === 'awb') : ?>
         <?php include WEBGSM_PACKETA_PATH . 'admin/views/tab-awb.php'; ?>
+    <?php elseif ($tab === 'awb_list') : ?>
+        <?php include WEBGSM_PACKETA_PATH . 'admin/views/tab-awb-list.php'; ?>
     <?php elseif ($tab === 'shipment') : ?>
         <?php include WEBGSM_PACKETA_PATH . 'admin/views/tab-shipment.php'; ?>
     <?php else : ?>
@@ -121,7 +125,8 @@ $notices = [
                 if ($btext !== '') {
                     echo '<p><strong>Barcode text:</strong> ' . esc_html($btext) . '</p>';
                 }
-                echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p>';
+                echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=awb_list')) . '">Vezi în lista AWB-uri</a> ';
+                echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p>';
                 if ($id !== '') {
                     $shipment_url = add_query_arg(
                         ['page' => 'webgsm-packeta', 'tab' => 'shipment', 'prefill_packet' => $id],

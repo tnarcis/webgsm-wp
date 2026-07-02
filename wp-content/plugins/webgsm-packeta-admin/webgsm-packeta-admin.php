@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Packeta Admin
  * Description: Interfață simplă în admin pentru AWB Packeta și grupare expediție (ridicare curier).
- * Version: 1.5.2
+ * Version: 1.6.0
  * Author: WebGSM
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -12,7 +12,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('WEBGSM_PACKETA_VERSION', '1.5.2');
+define('WEBGSM_PACKETA_VERSION', '1.6.0');
+define('WEBGSM_PACKETA_DB_VERSION_OPTION', 'webgsm_packeta_db_version');
 define('WEBGSM_PACKETA_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_PACKETA_URL', plugin_dir_url(__FILE__));
 define('WEBGSM_PACKETA_OPTION', 'webgsm_packeta_settings');
@@ -26,8 +27,28 @@ if (is_readable($ro_counties_file)) {
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-ro-pricelist.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-carrier-pricing-sync.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-carriers.php';
+require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-status-mapper.php';
+require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-awb-repository.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-admin.php';
 
+register_activation_hook(__FILE__, function () {
+    WebGSM_Packeta_Awb_Repository::install();
+    update_option(WEBGSM_PACKETA_DB_VERSION_OPTION, WEBGSM_PACKETA_VERSION);
+});
+
+add_filter('cron_schedules', function (array $schedules): array {
+    $schedules['webgsm_packeta_15min'] = [
+        'interval' => 900,
+        'display' => 'WebGSM Packeta — la 15 minute',
+    ];
+
+    return $schedules;
+});
+
 add_action('plugins_loaded', function () {
+    if (get_option(WEBGSM_PACKETA_DB_VERSION_OPTION) !== WEBGSM_PACKETA_VERSION) {
+        WebGSM_Packeta_Awb_Repository::install();
+        update_option(WEBGSM_PACKETA_DB_VERSION_OPTION, WEBGSM_PACKETA_VERSION);
+    }
     new WebGSM_Packeta_Admin();
 });
