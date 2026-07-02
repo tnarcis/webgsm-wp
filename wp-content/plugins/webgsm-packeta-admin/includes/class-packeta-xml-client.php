@@ -59,7 +59,11 @@ class WebGSM_Packeta_Xml_Client {
     }
 
     public function packet_label_pdf(string $packet_id, string $format = 'A6 on A6', int $offset = 0): array {
-        $packet_id = preg_replace('/\D/', '', $packet_id);
+        $packet_id = self::normalize_packet_id($packet_id);
+        if ($packet_id === '') {
+            return ['ok' => false, 'error' => 'Packet ID invalid (ex. Z 383 2892 743 sau 3832892743).'];
+        }
+
         $xml = '<packetLabelPdf>'
             . '<apiPassword>' . $this->escape_xml($this->api_password) . '</apiPassword>'
             . '<packetId>' . $this->escape_xml($packet_id) . '</packetId>'
@@ -67,16 +71,126 @@ class WebGSM_Packeta_Xml_Client {
             . '<offset>' . (int) $offset . '</offset>'
             . '</packetLabelPdf>';
 
+        return $this->label_pdf_request($xml);
+    }
+
+    /**
+     * Pentru Sameday / Fan / Cargus (RO): etichetă curier — obligatoriu înainte de packetLabelPdf.
+     *
+     * @return array{ok: bool, number?: string, error?: string, raw?: string}
+     */
+    public function packet_courier_number(string $packet_id): array {
+        $packet_id = self::normalize_packet_id($packet_id);
+        if ($packet_id === '') {
+            return ['ok' => false, 'error' => 'Packet ID invalid.'];
+        }
+
+        $xml = '<packetCourierNumber>'
+            . '<apiPassword>' . $this->escape_xml($this->api_password) . '</apiPassword>'
+            . '<packetId>' . $this->escape_xml($packet_id) . '</packetId>'
+            . '</packetCourierNumber>';
+
+        $res = $this->post_xml($xml);
+        if (empty($res['ok'])) {
+            return $res;
+        }
+
+        $number = '';
+        $data = $res['data'] ?? null;
+        if ($data instanceof \SimpleXMLElement) {
+            $number = trim((string) $data);
+        } elseif (is_string($data)) {
+            $number = trim($data);
+        }
+
+        if ($number === '') {
+            return ['ok' => false, 'error' => 'API nu a returnat număr curier.', 'raw' => $res['raw'] ?? ''];
+        }
+
+        return ['ok' => true, 'number' => $number, 'raw' => $res['raw'] ?? ''];
+    }
+
+    public function packet_courier_label_pdf(string $packet_id, string $courier_number): array {
+        $packet_id = self::normalize_packet_id($packet_id);
+        $courier_number = trim($courier_number);
+        if ($packet_id === '' || $courier_number === '') {
+            return ['ok' => false, 'error' => 'Lipsesc packetId sau courierNumber.'];
+        }
+
+        $xml = '<packetCourierLabelPdf>'
+            . '<apiPassword>' . $this->escape_xml($this->api_password) . '</apiPassword>'
+            . '<packetId>' . $this->escape_xml($packet_id) . '</packetId>'
+            . '<courierNumber>' . $this->escape_xml($courier_number) . '</courierNumber>'
+            . '</packetCourierLabelPdf>';
+
+        return $this->label_pdf_request($xml);
+    }
+
+    /**
+     * Încearcă etichetă curier (RO), apoi etichetă Packeta.
+     *
+     * @return array{ok: bool, pdf?: string, label_type?: string, error?: string, raw?: string}
+     */
+    public function download_label_pdf(string $packet_id, string $format = 'A6 on A6', int $offset = 0): array {
+        $packet_id = self::normalize_packet_id($packet_id);
+        if ($packet_id === '') {
+            return ['ok' => false, 'error' => 'Packet ID invalid. Poți lipi „Z 383 2892 743” sau doar cifrele.'];
+        }
+
+        $courier_err = '';
+        $courier = $this->packet_courier_number($packet_id);
+        if (!empty($courier['ok']) && !empty($courier['number'])) {
+            $carrier = $this->packet_courier_label_pdf($packet_id, (string) $courier['number']);
+            if (!empty($carrier['ok']) && !empty($carrier['pdf'])) {
+                $carrier['label_type'] = 'courier';
+
+                return $carrier;
+            }
+            $courier_err = $carrier['error'] ?? 'Etichetă curier indisponibilă.';
+        } else {
+            $courier_err = $courier['error'] ?? '';
+        }
+
+        $packeta = $this->packet_label_pdf($packet_id, $format, $offset);
+        if (!empty($packeta['ok']) && !empty($packeta['pdf'])) {
+            $packeta['label_type'] = 'packeta';
+
+            return $packeta;
+        }
+
+        $parts = array_filter([
+            $packeta['error'] ?? '',
+            $courier_err !== '' ? 'Curier: ' . $courier_err : '',
+        ]);
+
+        return [
+            'ok' => false,
+            'error' => $parts !== [] ? implode(' ', $parts) : 'Nu s-a putut genera PDF.',
+            'raw' => $packeta['raw'] ?? ($courier['raw'] ?? ''),
+        ];
+    }
+
+    /**
+     * @return array{ok: bool, pdf?: string, error?: string, raw?: string}
+     */
+    private function label_pdf_request(string $xml): array {
         $res = $this->post_xml($xml, true);
         if (!empty($res['ok'])) {
             $res['pdf'] = self::extract_pdf_from_api_result($res['data'] ?? null, $res['raw'] ?? '');
+            if (($res['pdf'] ?? '') === '') {
+                return [
+                    'ok' => false,
+                    'error' => 'Răspuns OK dar PDF lipsă (decodare base64 eșuată).',
+                    'raw' => $res['raw'] ?? '',
+                ];
+            }
         }
 
         return $res;
     }
 
     public function packet_status(string $packet_id): array {
-        $packet_id = preg_replace('/\D/', '', $packet_id);
+        $packet_id = self::normalize_packet_id($packet_id);
         $xml = '<packetStatus>'
             . '<apiPassword>' . $this->escape_xml($this->api_password) . '</apiPassword>'
             . '<packetId>' . $this->escape_xml($packet_id) . '</packetId>'
@@ -151,6 +265,13 @@ class WebGSM_Packeta_Xml_Client {
      * @param \SimpleXMLElement|string|null $data
      */
     private static function extract_pdf_from_api_result($data, string $raw): ?string {
+        if (is_array($data) && !empty($data['binary']) && is_string($data['binary'])) {
+            $bin = $data['binary'];
+            if (str_starts_with(ltrim($bin), '%PDF')) {
+                return $bin;
+            }
+        }
+
         if ($raw !== '' && str_starts_with(ltrim($raw), '%PDF')) {
             return $raw;
         }
@@ -158,29 +279,45 @@ class WebGSM_Packeta_Xml_Client {
             return $data;
         }
         if ($data instanceof \SimpleXMLElement) {
-            $str = (string) $data;
-            if ($str !== '' && str_starts_with(trim($str), '%PDF')) {
-                return $str;
-            }
-            if ($str !== '') {
-                $decoded = base64_decode($str, true);
-                if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
-                    return $decoded;
-                }
+            $str = trim((string) $data);
+            $pdf = self::decode_pdf_payload($str);
+            if ($pdf !== null) {
+                return $pdf;
             }
         }
         if ($raw !== '' && preg_match('/<result[^>]*>([\s\S]*?)<\/result>/', $raw, $m)) {
-            $inner = trim($m[1]);
-            $decoded = base64_decode($inner, true);
-            if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
-                return $decoded;
-            }
-            if (str_starts_with($inner, '%PDF')) {
-                return $inner;
+            $pdf = self::decode_pdf_payload(trim($m[1]));
+            if ($pdf !== null) {
+                return $pdf;
             }
         }
 
         return null;
+    }
+
+    private static function decode_pdf_payload(string $payload): ?string {
+        if ($payload === '') {
+            return null;
+        }
+        if (str_starts_with($payload, '%PDF')) {
+            return $payload;
+        }
+        $b64 = preg_replace('/\s+/', '', $payload) ?? $payload;
+        $decoded = base64_decode($b64, true);
+        if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
+            return $decoded;
+        }
+
+        return null;
+    }
+
+    public static function normalize_packet_id(string $value): string {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        return preg_replace('/\D/', '', $value) ?? '';
     }
 
     private function array_to_xml_elements(string $wrapper, array $data): string {

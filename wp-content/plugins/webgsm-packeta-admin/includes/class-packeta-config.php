@@ -91,6 +91,20 @@ class WebGSM_Packeta_Config {
         return admin_url('admin.php?page=' . self::PACKETA_SETTINGS_PAGE);
     }
 
+    public static function get_default_label_format(): string {
+        $packetery = get_option(self::PACKETA_OPTION, []);
+        if (!is_array($packetery)) {
+            return 'A6 on A6';
+        }
+        foreach (['carrier_label_format', 'packeta_label_format'] as $key) {
+            if (!empty($packetery[$key]) && is_string($packetery[$key])) {
+                return (string) $packetery[$key];
+            }
+        }
+
+        return 'A6 on A6';
+    }
+
     /**
      * @return array{has_table: bool, pickup_count: int}
      */

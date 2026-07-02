@@ -14,6 +14,8 @@ $notices = [
     'validated' => ['class' => 'notice-success', 'text' => 'Atribute validate cu succes.'],
     'shipment_ok' => ['class' => 'notice-success', 'text' => 'Expediție creată (grupare AWB).'],
     'status_ok' => ['class' => 'notice-success', 'text' => 'Status citit.'],
+    'courier_number_ok' => ['class' => 'notice-success', 'text' => 'Număr AWB curier (Sameday/Fan) obținut — vezi mai jos. Acesta se caută pe site-ul curierului, nu barcode-ul Z…'],
+    'missing_packet_id' => ['class' => 'notice-error', 'text' => 'Introdu Packet ID sau barcode (ex. Z 383 2892 743).'],
     'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos.'],
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
     'missing_home_carrier' => ['class' => 'notice-error', 'text' => 'Pentru livrare la adresă completează addressId (transportator).'],
@@ -139,6 +141,13 @@ $notices = [
                     $out = '';
                 }
                 echo '<div class="webgsm-packeta-result"><pre>' . esc_html((string) $out) . '</pre></div>';
+            } elseif (($last['type'] ?? '') === 'courier_number') {
+                $pid = isset($last['packet_id']) ? (string) $last['packet_id'] : '';
+                $cn = isset($last['courier_number']) ? (string) $last['courier_number'] : '';
+                echo '<div class="webgsm-packeta-result"><p><strong>Packet ID Packeta:</strong> ' . esc_html($pid) . '</p>';
+                echo '<p><strong>AWB curier (Sameday/Fan) — caută acest număr pe site-ul curierului:</strong></p>';
+                echo '<p style="font-size:18px;"><code>' . esc_html($cn) . '</code></p>';
+                echo '<p class="webgsm-packeta-help">Barcode-ul <code>Z …</code> nu funcționează pe sameday.ro — doar numărul de mai sus, după ce Packeta l-a înregistrat la curier.</p></div>';
             } elseif (($last['type'] ?? '') === 'status' && isset($last['data']['data']) && $last['data']['data'] !== '' && $last['data']['data'] !== []) {
                 $r = $last['data']['data'];
                 if ($r instanceof \SimpleXMLElement) {

@@ -192,14 +192,24 @@ class WebGSM_Packeta_Admin {
                     $this->redirect_with_notice('label', 'no_password');
                     break;
                 }
-                $pid = isset($_POST['label_packet_id']) ? preg_replace('/\D/', '', (string) wp_unslash($_POST['label_packet_id'])) : '';
-                $format = isset($_POST['label_format']) ? sanitize_text_field(wp_unslash((string) $_POST['label_format'])) : 'A6 on A6';
+                $pid = isset($_POST['label_packet_id']) ? (string) wp_unslash($_POST['label_packet_id']) : '';
+                $pid = WebGSM_Packeta_Xml_Client::normalize_packet_id($pid);
+                if ($pid === '') {
+                    set_transient(
+                        'webgsm_packeta_last_' . get_current_user_id(),
+                        ['type' => 'error', 'message' => 'Packet ID invalid. Exemplu: Z 383 2892 743 sau 3832892743.', 'raw' => ''],
+                        120
+                    );
+                    $this->redirect_with_notice('label', 'api_error');
+                    break;
+                }
+                $format = isset($_POST['label_format']) ? sanitize_text_field(wp_unslash((string) $_POST['label_format'])) : WebGSM_Packeta_Config::get_default_label_format();
                 $allowed = ['A6 on A6', 'A7 on A7', 'A6 on A4', 'A7 on A4', '105x35mm on A4', 'A8 on A8'];
                 if (!in_array($format, $allowed, true)) {
                     $format = 'A6 on A6';
                 }
                 $client = $this->make_client($settings);
-                $res = $client->packet_label_pdf($pid, $format, 0);
+                $res = $client->download_label_pdf($pid, $format, 0);
                 $pdf = $res['pdf'] ?? null;
                 if (!empty($res['ok']) && $pdf !== null && $pdf !== '') {
                     nocache_headers();
@@ -221,7 +231,7 @@ class WebGSM_Packeta_Admin {
                     $this->redirect_with_notice('label', 'no_password');
                     break;
                 }
-                $pid = isset($_POST['status_packet_id']) ? preg_replace('/\D/', '', (string) wp_unslash($_POST['status_packet_id'])) : '';
+                $pid = isset($_POST['status_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['status_packet_id'])) : '';
                 $client = $this->make_client($settings);
                 $res = $client->packet_status($pid);
                 if (!empty($res['ok'])) {
@@ -235,6 +245,39 @@ class WebGSM_Packeta_Admin {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         ['type' => 'error', 'message' => $res['error'] ?? 'Eroare', 'raw' => $res['raw'] ?? ''],
+                        120
+                    );
+                    $this->redirect_with_notice('label', 'api_error');
+                }
+                break;
+
+            case 'courier_number':
+                if ($settings['api_password'] === '') {
+                    $this->redirect_with_notice('label', 'no_password');
+                    break;
+                }
+                $pid = isset($_POST['courier_packet_id']) ? WebGSM_Packeta_Xml_Client::normalize_packet_id((string) wp_unslash($_POST['courier_packet_id'])) : '';
+                if ($pid === '') {
+                    $this->redirect_with_notice('label', 'missing_packet_id');
+                    break;
+                }
+                $client = $this->make_client($settings);
+                $res = $client->packet_courier_number($pid);
+                if (!empty($res['ok']) && !empty($res['number'])) {
+                    set_transient(
+                        'webgsm_packeta_last_' . get_current_user_id(),
+                        [
+                            'type' => 'courier_number',
+                            'packet_id' => $pid,
+                            'courier_number' => (string) $res['number'],
+                        ],
+                        300
+                    );
+                    $this->redirect_with_notice('label', 'courier_number_ok');
+                } else {
+                    set_transient(
+                        'webgsm_packeta_last_' . get_current_user_id(),
+                        ['type' => 'error', 'message' => $res['error'] ?? 'Număr curier indisponibil încă.', 'raw' => $res['raw'] ?? ''],
                         120
                     );
                     $this->redirect_with_notice('label', 'api_error');
