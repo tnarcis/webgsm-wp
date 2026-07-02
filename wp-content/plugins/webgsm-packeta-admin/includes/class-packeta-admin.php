@@ -53,6 +53,7 @@ class WebGSM_Packeta_Admin {
 
         wp_localize_script('webgsm-packeta-admin', 'webgsmPacketaAdmin', [
             'widgetApiKey' => $settings['widget_api_key'],
+            'awbDraft' => self::get_awb_form_draft(),
             'i18n' => [
                 'needKey' => 'Configurează în Packeta: API password și API key (hartă) în WooCommerce → Packeta.',
                 'needPacketaLib' => 'Biblioteca Packeta nu s-a încărcat. Reîncarcă pagina.',
@@ -99,7 +100,18 @@ class WebGSM_Packeta_Admin {
                 $this->redirect_with_notice($tab, 'settings_saved');
                 break;
 
+            case 'sync_carrier_prices':
+                $sync = WebGSM_Packeta_Carrier_Pricing_Sync::sync_active_carriers(true);
+                set_transient(
+                    'webgsm_packeta_pricing_sync_' . get_current_user_id(),
+                    $sync,
+                    300
+                );
+                $this->redirect_with_notice('settings', empty($sync['errors']) ? 'prices_synced' : 'prices_sync_partial');
+                break;
+
             case 'create_packet':
+                $this->store_awb_form_draft_from_post();
                 if ($settings['api_password'] === '') {
                     $this->redirect_with_notice($tab, 'no_password');
                     break;
@@ -111,12 +123,16 @@ class WebGSM_Packeta_Admin {
                 }
                 $client = $this->make_client($settings);
                 $attrs = $this->collect_packet_attributes_from_post($settings);
-                if (isset($_POST['validate_only'])) {
+                $is_validate_only = isset($_POST['validate_only']);
+                if ($is_validate_only) {
                     $res = $client->packet_attributes_valid($attrs);
                 } else {
                     $res = $client->create_packet($attrs);
                 }
                 if (!empty($res['ok'])) {
+                    if (!$is_validate_only) {
+                        self::clear_awb_form_draft();
+                    }
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
                         [
@@ -456,6 +472,73 @@ class WebGSM_Packeta_Admin {
         return $attrs;
     }
 
+    private static function awb_draft_transient_key(): string {
+        return 'webgsm_packeta_awb_draft_' . get_current_user_id();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function collect_awb_form_draft_from_post(): array {
+        $fields = [
+            'awb_flow',
+            'delivery_mode',
+            'point_pickup_type',
+            'address_id',
+            'carrier_pickup_point',
+            'order_number',
+            'street',
+            'house_number',
+            'city',
+            'province',
+            'zip',
+            'recipient_name',
+            'recipient_surname',
+            'recipient_phone',
+            'company',
+            'value',
+            'currency',
+            'weight',
+            'cod',
+            'point_summary',
+            'carrier_filter',
+        ];
+
+        $draft = [];
+        foreach ($fields as $field) {
+            if (!isset($_POST[$field])) {
+                continue;
+            }
+            $draft[$field] = sanitize_text_field(wp_unslash((string) $_POST[$field]));
+        }
+
+        if (isset($_POST['recipient_email'])) {
+            $draft['recipient_email'] = sanitize_email(wp_unslash((string) $_POST['recipient_email']));
+        }
+        if (isset($_POST['note'])) {
+            $draft['note'] = sanitize_textarea_field(wp_unslash((string) $_POST['note']));
+        }
+
+        return $draft;
+    }
+
+    private function store_awb_form_draft_from_post(): void {
+        set_transient(self::awb_draft_transient_key(), $this->collect_awb_form_draft_from_post(), DAY_IN_SECONDS);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function get_awb_form_draft(): array {
+        $draft = get_transient(self::awb_draft_transient_key());
+
+        return is_array($draft) ? $draft : [];
+    }
+
+    public static function clear_awb_form_draft(): void {
+        delete_transient(self::awb_draft_transient_key());
+    }
+
     public function render_page(): void {
         if (!current_user_can('manage_woocommerce')) {
             wp_die(esc_html__('Nu aveți dreptul să accesați această pagină.', 'webgsm-packeta'));
@@ -473,6 +556,14 @@ class WebGSM_Packeta_Admin {
             $packetery_option = [];
         }
         $checkout_carriers = WebGSM_Packeta_Carriers::get_checkout_carriers();
+        $awb_draft = $tab === 'awb' ? self::get_awb_form_draft() : [];
+        $pricing_sync_result = null;
+        if ($tab === 'settings') {
+            $pricing_sync_result = get_transient('webgsm_packeta_pricing_sync_' . get_current_user_id());
+            if (is_array($pricing_sync_result)) {
+                delete_transient('webgsm_packeta_pricing_sync_' . get_current_user_id());
+            }
+        }
         $last = get_transient('webgsm_packeta_last_' . get_current_user_id());
         if (is_array($last)) {
             delete_transient('webgsm_packeta_last_' . get_current_user_id());

@@ -51,6 +51,40 @@ $packeta_url = WebGSM_Packeta_Config::packeta_plugin_settings_url();
 </div>
 
 <div class="webgsm-packeta-card" style="margin-top:16px;">
+    <h2>Tarife curieri în magazin (checkout)</h2>
+    <p class="webgsm-packeta-help">
+        Actualizează grila de greutate/preț din contractul Packeta valabil din
+        <strong><?php echo esc_html(WebGSM_Packeta_Ro_Pricelist::EFFECTIVE_FROM); ?></strong>
+        pentru <strong>curierii Packeta activi</strong> în WooCommerce (ex. Sameday HD, Sameday Easybox).
+        Prețurile se salvează cu <strong>TVA 21%</strong> (ce vede clientul la checkout, dacă magazinul afișează prețuri cu TVA).
+    </p>
+    <?php
+    $enabled_ids = WebGSM_Packeta_Carriers::get_enabled_carrier_ids_from_checkout();
+    if ($enabled_ids === []) :
+        ?>
+        <p class="notice notice-warning inline">Nu ai curieri Packeta activi în <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=shipping')); ?>">Livrare WooCommerce</a>.</p>
+    <?php else : ?>
+        <ul class="webgsm-packeta-ref-list">
+            <?php foreach ($enabled_ids as $cid) : ?>
+                <?php
+                $gk = WebGSM_Packeta_Ro_Pricelist::grid_key_for_carrier_id((string) $cid);
+                $label = $gk !== null && isset(WebGSM_Packeta_Ro_Pricelist::grids()[$gk])
+                    ? WebGSM_Packeta_Ro_Pricelist::grids()[$gk]['label']
+                    : ('Carrier ID ' . $cid);
+                ?>
+                <li><code><?php echo esc_html((string) $cid); ?></code> — <?php echo esc_html($label); ?><?php echo $gk === null ? ' <em>(fără grilă automată)</em>' : ''; ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <form method="post" action="" style="margin-top:12px;">
+            <?php wp_nonce_field('webgsm_packeta'); ?>
+            <input type="hidden" name="webgsm_packeta_action" value="sync_carrier_prices" />
+            <input type="hidden" name="tab" value="settings" />
+            <?php submit_button('Actualizează prețuri curieri (din contract 2026)', 'primary', 'submit', false); ?>
+        </form>
+    <?php endif; ?>
+</div>
+
+<div class="webgsm-packeta-card" style="margin-top:16px;">
     <h2>Opțional: URL REST/XML</h2>
     <p class="webgsm-packeta-help">Doar dacă suportul Packeta îți dă alt endpoint. În mod normal lasă implicit.</p>
     <form method="post" action="">

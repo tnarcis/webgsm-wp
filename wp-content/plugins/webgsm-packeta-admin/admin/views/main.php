@@ -7,6 +7,8 @@ $notice = isset($_GET['packeta_notice']) ? sanitize_key((string) $_GET['packeta_
 
 $notices = [
     'settings_saved' => ['class' => 'notice-success', 'text' => 'Setările au fost salvate.'],
+    'prices_synced' => ['class' => 'notice-success', 'text' => 'Prețurile curierilor activi au fost actualizate din lista Packeta 2026-07-02 (cu TVA 21%).'],
+    'prices_sync_partial' => ['class' => 'notice-warning', 'text' => 'Sincronizare prețuri parțială — vezi detaliile de mai jos.'],
     'no_password' => ['class' => 'notice-error', 'text' => 'Completează parola API în WooCommerce → Packeta (sau vezi Setări aici).'],
     'packet_ok' => ['class' => 'notice-success', 'text' => 'Pachet creat în Packeta.'],
     'validated' => ['class' => 'notice-success', 'text' => 'Atribute validate cu succes.'],
@@ -34,6 +36,36 @@ $notices = [
     <?php if ($notice !== '' && isset($notices[$notice])) : ?>
         <div class="notice <?php echo esc_attr($notices[$notice]['class']); ?> is-dismissible">
             <p><?php echo esc_html($notices[$notice]['text']); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($tab === 'settings' && is_array($pricing_sync_result ?? null)) : ?>
+        <div class="webgsm-packeta-card" style="margin-top:12px;">
+            <h2>Rezultat sincronizare prețuri</h2>
+            <?php if (!empty($pricing_sync_result['updated'])) : ?>
+                <p><strong>Actualizați:</strong></p>
+                <ul class="webgsm-packeta-ref-list">
+                    <?php foreach ($pricing_sync_result['updated'] as $line) : ?>
+                        <li><?php echo esc_html((string) $line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if (!empty($pricing_sync_result['skipped'])) : ?>
+                <p><strong>Săriți:</strong></p>
+                <ul class="webgsm-packeta-ref-list">
+                    <?php foreach ($pricing_sync_result['skipped'] as $line) : ?>
+                        <li><?php echo esc_html((string) $line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if (!empty($pricing_sync_result['errors'])) : ?>
+                <p><strong>Erori:</strong></p>
+                <ul class="webgsm-packeta-ref-list">
+                    <?php foreach ($pricing_sync_result['errors'] as $line) : ?>
+                        <li><?php echo esc_html((string) $line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 

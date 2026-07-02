@@ -50,6 +50,7 @@
         $('#address_id').val('');
         $('#carrier_pickup_point').val('');
         $('#delivery_mode').val('pudo');
+        $('#point_summary').val('');
         $('#webgsm_packeta_point_summary').text(msg('noPointYet'));
         $('#webgsm_packeta_point_status').removeClass('is-done');
     }
@@ -91,6 +92,7 @@
         if (point.city) parts.push(point.city);
         if (point.zip) parts.push(point.zip);
         $('#webgsm_packeta_point_summary').text(parts.join(', ') || msg('selectPoint'));
+        $('#point_summary').val(parts.join(', ') || '');
         $('#webgsm_packeta_point_status').addClass('is-done');
     }
 
@@ -228,9 +230,62 @@
         return true;
     }
 
+    function restoreAwbDraft() {
+        var cfg = typeof webgsmPacketaAdmin !== 'undefined' ? webgsmPacketaAdmin : {};
+        var d = cfg.awbDraft;
+        if (!d || typeof d !== 'object') {
+            return;
+        }
+
+        var savedAddressId = d.address_id || '';
+        var savedCarrierCpp = d.carrier_pickup_point || '';
+        var savedPickupType = d.point_pickup_type || '';
+        var savedPointSummary = d.point_summary || '';
+
+        if (d.awb_flow === 'home') {
+            $('#awb_flow_home').prop('checked', true);
+        } else if (d.awb_flow === 'pickup') {
+            $('#awb_flow_pickup').prop('checked', true);
+        }
+
+        syncFlowFromUi();
+
+        if (d.awb_flow === 'home') {
+            if (savedAddressId) {
+                $('#address_id').val(savedAddressId);
+                $('#webgsm_packeta_home_carrier_select').val(savedAddressId);
+            }
+        } else if (d.awb_flow === 'pickup') {
+            if (savedAddressId) {
+                $('#address_id').val(savedAddressId);
+            }
+            if (savedCarrierCpp) {
+                $('#carrier_pickup_point').val(savedCarrierCpp);
+            }
+            if (savedPickupType) {
+                $('#point_pickup_type').val(savedPickupType);
+            }
+            if (savedPickupType === 'external') {
+                $('#carrier_cpp_wrap').show();
+            }
+            if (savedPointSummary) {
+                $('#webgsm_packeta_point_summary').text(savedPointSummary);
+                $('#point_summary').val(savedPointSummary);
+                $('#webgsm_packeta_point_status').addClass('is-done');
+            }
+            if (d.carrier_filter) {
+                $('#webgsm_packeta_carrier_filter').val(d.carrier_filter);
+            }
+        }
+    }
+
     $(function () {
         $(document).on('change', '.awb-flow-radio', function () {
             syncFlowFromUi();
+        });
+
+        $(document).on('change', '#webgsm_packeta_carrier_filter', function () {
+            $('#carrier_filter').val(String($(this).val() || ''));
         });
 
         $(document).on('change', '#webgsm_packeta_home_carrier_select', function () {
@@ -265,9 +320,17 @@
 
         $('#webgsm_packeta_awb_form').on('submit', validateBeforeSubmit);
 
-        syncFlowFromUi();
-        if (document.getElementById('awb_flow_pickup') && document.getElementById('awb_flow_pickup').checked) {
-            $('#carrier_cpp_wrap').hide();
+        var cfg = typeof webgsmPacketaAdmin !== 'undefined' ? webgsmPacketaAdmin : {};
+        var hasDraft = cfg.awbDraft && typeof cfg.awbDraft === 'object' && Object.keys(cfg.awbDraft).length > 0;
+        if (hasDraft) {
+            restoreAwbDraft();
+        } else {
+            syncFlowFromUi();
+            if (document.getElementById('awb_flow_pickup') && document.getElementById('awb_flow_pickup').checked) {
+                if ($('#point_pickup_type').val() !== 'external') {
+                    $('#carrier_cpp_wrap').hide();
+                }
+            }
         }
     });
 })(jQuery);
