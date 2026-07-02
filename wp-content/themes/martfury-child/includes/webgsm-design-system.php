@@ -1798,6 +1798,59 @@ button.button {
 }
 
 /* ============================================
+   HOMEPAGE – Banner Large (Montaj etc.) pe mobil
+   Elementor: height fix 215px + bg auto/position 66% + buton ascuns
+   ============================================ */
+@media (max-width: 991px) {
+    body.home .mf-elementor-banner-large .banner-content {
+        height: auto !important;
+        min-height: 260px;
+        padding: 22px 18px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        justify-content: center;
+    }
+
+    body.home .mf-elementor-banner-large .banner-left-content {
+        margin-right: 0 !important;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    body.home .mf-elementor-banner-large .banner-right-content {
+        width: 100%;
+        margin-top: 12px;
+    }
+
+    body.home .mf-elementor-banner-large .banner-title {
+        line-height: 1.25 !important;
+        font-size: 22px !important;
+        margin-bottom: 10px !important;
+        text-align: left !important;
+    }
+
+    body.home .mf-elementor-banner-large .banner-desc {
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+        margin-bottom: 14px !important;
+        text-align: left !important;
+    }
+
+    body.home .mf-elementor-banner-large .banner-desc p {
+        font-size: inherit !important;
+    }
+
+    body.home .mf-elementor-banner-large .banner-featured-image {
+        background-size: cover !important;
+        background-position: center center !important;
+    }
+
+    body.home .mf-elementor-banner-large .banner-button {
+        display: block !important;
+    }
+}
+
+/* ============================================
    FIX ZOOM PE MOBIL LA INPUT
    ============================================ */
 /* Previne zoom când dai click pe input */

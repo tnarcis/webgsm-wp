@@ -139,7 +139,8 @@
             if (homeFields) homeFields.style.display = 'grid';
             clearPoint();
             $('#carrier_cpp_wrap').hide();
-            $('#street, #city').prop('required', true);
+            $('#street, #city, #house_number, #zip').prop('required', true);
+            $('#province').prop('required', true);
             if (addrHelp) addrHelp.textContent = msg('addressIdHomeHelp');
             if (formTitle) formTitle.textContent = msg('formTitleHome');
         } else {
@@ -152,7 +153,8 @@
             if (homeCarrierSelect) homeCarrierSelect.value = '';
             if (homeIntro) homeIntro.setAttribute('hidden', 'hidden');
             if (homeFields) homeFields.style.display = 'none';
-            $('#street, #city').prop('required', false);
+            $('#street, #city, #house_number, #zip').prop('required', false);
+            $('#province').prop('required', false);
             if (addrHelp) addrHelp.textContent = msg('addressIdPickupHelp');
             if (formTitle) formTitle.textContent = msg('formTitlePickup');
         }
@@ -174,9 +176,27 @@
         if (awbFlow.value === 'home') {
             var st = ($('#street').val() || '').trim();
             var city = ($('#city').val() || '').trim();
+            var house = ($('#house_number').val() || '').trim();
+            var zip = ($('#zip').val() || '').trim();
+            var province = ($('#province').val() || '').trim();
             if (!st || !city) {
                 e.preventDefault();
                 window.alert(msg('addressFieldsRequired'));
+                return false;
+            }
+            if (!province) {
+                e.preventDefault();
+                window.alert(msg('missingHomeProvince'));
+                return false;
+            }
+            if (!house) {
+                e.preventDefault();
+                window.alert(msg('missingHomeHouse'));
+                return false;
+            }
+            if (!zip) {
+                e.preventDefault();
+                window.alert(msg('missingHomeZip'));
                 return false;
             }
             var hid = parseInt($('#address_id').val(), 10);

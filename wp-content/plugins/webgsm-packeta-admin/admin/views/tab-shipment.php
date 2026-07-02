@@ -6,12 +6,17 @@ if (!defined('ABSPATH')) {
 <div class="webgsm-packeta-card">
     <h2>Expediție (createShipment)</h2>
     <p class="webgsm-packeta-help">
-        Introduceți ID-urile de pachet returnate de Packeta după crearea AWB-urilor (câte unul pe linie).
-        API-ul grupează pachetele într-o expediție — folosit în fluxul de ridicare de către curier, conform contului și regulilor Packeta.
-        Dacă aveți nevoie de alt tip de „cerere de ridicare” (ex. de la adresă), verificați în
-        <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a>
-        sau contactați suportul — nu toate operațiunile sunt expuse în API-ul public.
+        <strong>Pas obligatoriu pentru ridicare curier.</strong> După ce ai creat AWB-ul (tab „AWB nou”), Packeta returnează un <code>packetId</code>.
+        Aici grupezi unul sau mai multe ID-uri într-o expediție — fără acest pas, coletul poate rămâne neprogramat pentru ridicare.
     </p>
+    <p class="webgsm-packeta-help">
+        Introdu câte un <code>packetId</code> pe linie. API-ul apelează <code>createShipment</code> conform contului Packeta.
+        Dacă ridicarea nu apare în cont, verifică și în
+        <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a>.
+    </p>
+    <?php
+    $prefill_packet = isset($_GET['prefill_packet']) ? preg_replace('/\D/', '', (string) $_GET['prefill_packet']) : '';
+    ?>
 
     <form method="post" action="">
         <?php wp_nonce_field('webgsm_packeta'); ?>
@@ -20,7 +25,7 @@ if (!defined('ABSPATH')) {
 
         <div class="webgsm-packeta-field">
             <label for="packet_ids">ID pachete (packetId)</label>
-            <textarea name="packet_ids" id="packet_ids" class="large large-text" rows="8" placeholder="1234567890&#10;1234567891" required></textarea>
+            <textarea name="packet_ids" id="packet_ids" class="large large-text" rows="8" placeholder="1234567890&#10;1234567891" required><?php echo $prefill_packet !== '' ? esc_textarea($prefill_packet) : ''; ?></textarea>
         </div>
 
         <div class="webgsm-packeta-field">

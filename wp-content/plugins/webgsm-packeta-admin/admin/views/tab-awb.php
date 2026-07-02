@@ -18,6 +18,7 @@ if ($has_carriers) {
 $has_pickup = $pickup_carriers_list !== [];
 $has_home = $home_carriers_list !== [];
 $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
+$ro_counties = WebGSM_Packeta_Ro_Counties::get_options();
 ?>
 <div class="webgsm-packeta-card webgsm-packeta-awb-intro">
     <h2>AWB nou</h2>
@@ -151,7 +152,12 @@ $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
         <input type="hidden" name="point_pickup_type" id="point_pickup_type" value="" />
 
         <div id="webgsm_packeta_home_intro" class="webgsm-packeta-home-intro" hidden>
-            <p class="webgsm-packeta-help">Completează <code>addressId</code> = ID-ul transportatorului pentru livrare la adresă (din Packeta), plus adresa destinatarului.</p>
+            <p class="webgsm-packeta-help">Completează adresa destinatarului: stradă, număr, oraș, <strong>județ</strong> și cod poștal — câmpuri cerute de API Packeta la livrare la adresă (Fan, Sameday etc.). <code>addressId</code> = ID-ul curierului HD.</p>
+            <p class="notice notice-info inline" style="margin:10px 0 0;">
+                <strong>După crearea AWB:</strong> mergi la tabul
+                <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=shipment')); ?>">Expediție / ridicare</a>
+                și grupează <code>packetId</code>-ul (createShipment). Fără acest pas, curierul poate să nu vină la ridicare.
+            </p>
         </div>
 
         <div class="webgsm-packeta-grid webgsm-packeta-grid-3">
@@ -174,19 +180,27 @@ $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
         <div class="webgsm-packeta-grid webgsm-packeta-grid-4" id="packeta-home-fields" style="display:none;">
             <div class="webgsm-packeta-field">
                 <label for="street">Stradă *</label>
-                <input type="text" name="street" id="street" value="" />
+                <input type="text" name="street" id="street" value="" autocomplete="address-line1" />
             </div>
             <div class="webgsm-packeta-field">
-                <label for="house_number">Număr</label>
-                <input type="text" name="house_number" id="house_number" value="" />
+                <label for="house_number">Număr *</label>
+                <input type="text" name="house_number" id="house_number" value="" autocomplete="address-line2" />
             </div>
             <div class="webgsm-packeta-field">
                 <label for="city">Oraș *</label>
-                <input type="text" name="city" id="city" value="" />
+                <input type="text" name="city" id="city" value="" autocomplete="address-level2" />
             </div>
             <div class="webgsm-packeta-field">
-                <label for="zip">Cod poștal</label>
-                <input type="text" name="zip" id="zip" value="" />
+                <label for="province">Județ *</label>
+                <select name="province" id="province" autocomplete="address-level1">
+                    <?php foreach ($ro_counties as $code => $label) : ?>
+                        <option value="<?php echo esc_attr($code); ?>"><?php echo esc_html($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="webgsm-packeta-field">
+                <label for="zip">Cod poștal *</label>
+                <input type="text" name="zip" id="zip" value="" inputmode="numeric" autocomplete="postal-code" maxlength="6" />
             </div>
         </div>
 

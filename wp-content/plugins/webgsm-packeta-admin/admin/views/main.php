@@ -16,6 +16,9 @@ $notices = [
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
     'missing_home_carrier' => ['class' => 'notice-error', 'text' => 'Pentru livrare la adresă completează addressId (transportator).'],
     'missing_home_address' => ['class' => 'notice-error', 'text' => 'Completează strada și orașul pentru livrarea la adresă.'],
+    'missing_home_province' => ['class' => 'notice-error', 'text' => 'Selectează județul destinatarului (câmp province în API Packeta).'],
+    'missing_home_zip' => ['class' => 'notice-error', 'text' => 'Completează codul poștal — obligatoriu la livrare la adresă.'],
+    'missing_home_house' => ['class' => 'notice-error', 'text' => 'Completează numărul străzii — obligatoriu la livrare la adresă.'],
     'missing_parcel_value' => ['class' => 'notice-error', 'text' => 'Valoarea declarată a coletului trebuie să fie mai mare ca 0 (asigurare Packeta). Nu e același lucru cu rambursul: la acte fără COD poți folosi o valoare simbolică (ex. 1) dacă e cazul.'],
 ];
 
@@ -84,7 +87,16 @@ $notices = [
                 if ($btext !== '') {
                     echo '<p><strong>Barcode text:</strong> ' . esc_html($btext) . '</p>';
                 }
-                echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p></div>';
+                echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p>';
+                if ($id !== '') {
+                    $shipment_url = add_query_arg(
+                        ['page' => 'webgsm-packeta', 'tab' => 'shipment', 'prefill_packet' => $id],
+                        admin_url('admin.php')
+                    );
+                    echo '<p class="notice notice-warning inline" style="margin-top:12px;"><strong>Ridicare curier:</strong> AWB-ul există în Packeta, dar pentru ridicare trebuie să creezi expediția (grupare). '
+                        . '<a class="button button-secondary" href="' . esc_url($shipment_url) . '">Expediție / ridicare</a></p>';
+                }
+                echo '</div>';
             } elseif (($last['type'] ?? '') === 'shipment' && isset($last['data']['data']) && $last['data']['data'] !== '' && $last['data']['data'] !== []) {
                 $r = $last['data']['data'];
                 if ($r instanceof \SimpleXMLElement) {

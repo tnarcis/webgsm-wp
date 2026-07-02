@@ -64,8 +64,11 @@ class WebGSM_Packeta_Admin {
                 'formTitlePickup' => '3. Detalii expediție',
                 'formTitleHome' => '3. Detalii expediție',
                 'mustSelectPoint' => 'Pentru punct fix / Box trebuie să selectezi punctul pe harta Packeta înainte de trimitere.',
-                'addressFieldsRequired' => 'Completează strada și orașul pentru livrarea la adresă.',
+                'addressFieldsRequired' => 'Completează strada, orașul, județul, numărul și codul poștal pentru livrarea la adresă.',
                 'missingHomeCarrier' => 'Introdu addressId pentru transportatorul de livrare la adresă (din Packeta).',
+                'missingHomeProvince' => 'Selectează județul destinatarului.',
+                'missingHomeZip' => 'Completează codul poștal (obligatoriu la livrare la adresă în Packeta).',
+                'missingHomeHouse' => 'Completează numărul străzii (obligatoriu la livrare la adresă).',
                 'parcelValueRequired' => 'Completează valoarea coletului (mai mare ca 0) — obligatoriu pentru asigurare în Packeta.',
             ],
         ]);
@@ -312,8 +315,20 @@ class WebGSM_Packeta_Admin {
             }
             $street = isset($_POST['street']) ? sanitize_text_field(wp_unslash((string) $_POST['street'])) : '';
             $city = isset($_POST['city']) ? sanitize_text_field(wp_unslash((string) $_POST['city'])) : '';
+            $province_code = isset($_POST['province']) ? sanitize_text_field(wp_unslash((string) $_POST['province'])) : '';
+            $zip = isset($_POST['zip']) ? sanitize_text_field(wp_unslash((string) $_POST['zip'])) : '';
+            $house = isset($_POST['house_number']) ? sanitize_text_field(wp_unslash((string) $_POST['house_number'])) : '';
             if ($street === '' || $city === '') {
                 return 'missing_home_address';
+            }
+            if (!WebGSM_Packeta_Ro_Counties::is_valid_code($province_code)) {
+                return 'missing_home_province';
+            }
+            if ($zip === '') {
+                return 'missing_home_zip';
+            }
+            if ($house === '') {
+                return 'missing_home_house';
             }
 
             return null;
@@ -406,6 +421,8 @@ class WebGSM_Packeta_Admin {
             $house = isset($_POST['house_number']) ? sanitize_text_field(wp_unslash((string) $_POST['house_number'])) : '';
             $city = isset($_POST['city']) ? sanitize_text_field(wp_unslash((string) $_POST['city'])) : '';
             $zip = isset($_POST['zip']) ? sanitize_text_field(wp_unslash((string) $_POST['zip'])) : '';
+            $province_code = isset($_POST['province']) ? sanitize_text_field(wp_unslash((string) $_POST['province'])) : '';
+            $province = WebGSM_Packeta_Ro_Counties::province_for_api($province_code);
             if ($street !== '') {
                 $attrs['street'] = $street;
             }
@@ -417,6 +434,9 @@ class WebGSM_Packeta_Admin {
             }
             if ($zip !== '') {
                 $attrs['zip'] = $zip;
+            }
+            if ($province !== '') {
+                $attrs['province'] = $province;
             }
         }
 
