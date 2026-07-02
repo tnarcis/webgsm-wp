@@ -18,7 +18,7 @@ if ($has_carriers) {
 $has_pickup = $pickup_carriers_list !== [];
 $has_home = $home_carriers_list !== [];
 $sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
-$ro_counties = WebGSM_Packeta_Ro_Counties::get_options();
+$ro_counties = WebGSM_Packeta_Config::get_ro_counties();
 ?>
 <div class="webgsm-packeta-card webgsm-packeta-awb-intro">
     <h2>AWB nou</h2>

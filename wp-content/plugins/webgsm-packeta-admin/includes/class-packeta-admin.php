@@ -321,7 +321,7 @@ class WebGSM_Packeta_Admin {
             if ($street === '' || $city === '') {
                 return 'missing_home_address';
             }
-            if (!WebGSM_Packeta_Ro_Counties::is_valid_code($province_code)) {
+            if (!WebGSM_Packeta_Config::is_valid_ro_county_code($province_code)) {
                 return 'missing_home_province';
             }
             if ($zip === '') {
@@ -422,7 +422,7 @@ class WebGSM_Packeta_Admin {
             $city = isset($_POST['city']) ? sanitize_text_field(wp_unslash((string) $_POST['city'])) : '';
             $zip = isset($_POST['zip']) ? sanitize_text_field(wp_unslash((string) $_POST['zip'])) : '';
             $province_code = isset($_POST['province']) ? sanitize_text_field(wp_unslash((string) $_POST['province'])) : '';
-            $province = WebGSM_Packeta_Ro_Counties::province_for_api($province_code);
+            $province = WebGSM_Packeta_Config::ro_province_for_api($province_code);
             if ($street !== '') {
                 $attrs['street'] = $street;
             }
