@@ -7,6 +7,39 @@ $default_label_format = WebGSM_Packeta_Config::get_default_label_format();
 $label_formats = ['A6 on A6', 'A7 on A7', 'A6 on A4', 'A7 on A4', '105x35mm on A4', 'A8 on A8'];
 ?>
 <div class="webgsm-packeta-card webgsm-packeta-tracking-note" style="margin-bottom:16px;">
+    <h2>Două etichete — de ce adresele diferă</h2>
+    <p class="webgsm-packeta-help" style="margin-top:0;">
+        La <strong>Sameday HD / Fan</strong> prin Packeta apar <strong>două AWB-uri</strong>. Nu e o eroare din magazin — așa funcționează integrarea Packeta ↔ curier:
+    </p>
+    <table class="widefat striped" style="max-width:100%;margin-top:10px;">
+        <thead>
+            <tr>
+                <th>Etichetă</th>
+                <th>Expeditor / ridicare pe hârtie</th>
+                <th>Rol</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Z … (Packeta)</strong></td>
+                <td>Adresa ta (din <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a> → Expeditori / sender)</td>
+                <td>Înregistrare în Packeta; opțională la curieri externi</td>
+            </tr>
+            <tr>
+                <td><strong>TN Sameday / Fan</strong></td>
+                <td>Packeta, București (hub contractual)</td>
+                <td><strong>Eticheta principală</strong> — o lipești; curierul o scanează</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="webgsm-packeta-help" style="margin-bottom:0;">
+        Packeta recomandă pentru Sameday/Fan <strong>eticheta curierului</strong> (<code>packetCourierLabelPdf</code>), nu cea Z.
+        Ridicarea de la tine se programează în sistemul Sameday prin Packeta — chiar dacă pe eticheta Sameday expeditorul e „Packeta București”.
+        Adresa ta de ridicare se setează în <strong>contul Packeta</strong> (sender), nu în câmpurile destinatarului din formular.
+    </p>
+</div>
+
+<div class="webgsm-packeta-card webgsm-packeta-tracking-note" style="margin-bottom:16px;">
     <h2>Tracking Sameday / Fan</h2>
     <p class="webgsm-packeta-help" style="margin-top:0;">
         <strong><code>Z 383 2892 743</code> nu e AWB Sameday</strong> — e cod Packeta. Pe
@@ -19,9 +52,8 @@ $label_formats = ['A6 on A6', 'A7 on A7', 'A6 on A4', 'A7 on A4', '105x35mm on A
 <div class="webgsm-packeta-card">
     <h2>Descarcă etichetă PDF</h2>
     <p class="webgsm-packeta-help">
-        Pentru <strong>Sameday / Fan / Cargus</strong> (România) se descarcă automat <strong>eticheta curierului</strong>
-        (API: <code>packetCourierNumber</code> + <code>packetCourierLabelPdf</code>).
-        Poți lipi <strong>Packet ID</strong> sau barcode-ul citibil, ex. <code>Z 383 2892 743</code>.
+        API-ul Packeta generează <strong>două tipuri</strong> de etichete. La Sameday/Fan lipești pe colet
+        <strong>doar eticheta curierului</strong>. Eticheta Z (Packeta) e opțională.
     </p>
 
     <form method="post" action="">
@@ -35,18 +67,19 @@ $label_formats = ['A6 on A6', 'A7 on A7', 'A6 on A4', 'A7 on A4', '105x35mm on A
                 <input type="text" name="label_packet_id" id="label_packet_id" value="" placeholder="Z 383 2892 743 sau 3832892743" required />
             </div>
             <div class="webgsm-packeta-field">
-                <label for="label_format">Format (fallback Packeta)</label>
+                <label for="label_format">Format etichetă Packeta Z</label>
                 <select name="label_format" id="label_format">
                     <?php foreach ($label_formats as $fmt) : ?>
                         <option value="<?php echo esc_attr($fmt); ?>" <?php selected($default_label_format, $fmt); ?>><?php echo esc_html($fmt); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <p class="webgsm-packeta-help">La curieri RO, formatul e de obicei A6 (1/4 A4), setat de API curier.</p>
+                <p class="webgsm-packeta-help">Formatul se aplică doar la eticheta Z, nu la Sameday/Fan.</p>
             </div>
         </div>
 
-        <div class="webgsm-packeta-actions">
-            <?php submit_button('Descarcă PDF', 'primary', 'submit', false); ?>
+        <div class="webgsm-packeta-actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <button type="submit" name="label_kind" value="courier" class="button button-primary">Etichetă curier (Sameday/Fan)</button>
+            <button type="submit" name="label_kind" value="packeta" class="button button-secondary">Etichetă Packeta (Z)</button>
         </div>
     </form>
 </div>

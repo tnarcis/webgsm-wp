@@ -17,7 +17,8 @@ if ($has_carriers) {
 }
 $has_pickup = $pickup_carriers_list !== [];
 $has_home = $home_carriers_list !== [];
-$sender_label = isset($settings['eshop']) ? (string) $settings['eshop'] : '';
+$sender_base = isset($settings['sender_base']) ? (string) $settings['sender_base'] : '';
+$sender_label = $sender_base;
 $ro_counties = WebGSM_Packeta_Config::get_ro_counties();
 $awb_draft = isset($awb_draft) && is_array($awb_draft) ? $awb_draft : [];
 $awb_v = static function (string $key, string $default = '') use ($awb_draft): string {
@@ -66,16 +67,28 @@ $awb_is_home = $awb_flow_current === 'home';
 
 <div class="webgsm-packeta-card webgsm-packeta-sender-card">
     <h2>Expeditor</h2>
+    <?php if (empty($settings['sender_configured'])) : ?>
+        <p class="notice notice-error inline" style="margin:0 0 12px;">
+            <strong>Expeditor nesetat.</strong> Mergi la <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=settings')); ?>">Setări</a>
+            și completează <strong>No Limit Tech</strong> (exact ca în client.packeta.com).
+        </p>
+    <?php endif; ?>
     <p class="webgsm-packeta-sender-line">
-        <strong>Identificator magazin (sender):</strong>
+        <strong>Bază expeditor:</strong>
         <?php if ($sender_label !== '') : ?>
             <code><?php echo esc_html($sender_label); ?></code>
         <?php else : ?>
-            <em>— setează în WooCommerce → Packeta</em>
+            <em style="color:#d63638;">— nesetat</em>
         <?php endif; ?>
     </p>
+    <p class="webgsm-packeta-help" style="margin:0 0 8px;">
+        La trimitere, API primește automat expeditorul potrivit curierului, ca în Packeta:
+        <code>No Limit Tech - Sameday</code> (HD 7397 / Box 7455),
+        <code>No Limit Tech - FAN Courier</code> (762),
+        <code>No Limit Tech - Cargus</code> (590).
+    </p>
     <p class="webgsm-packeta-help" style="margin:0;">
-        Adresa fizică de expediere (de unde pleacă coletul) este cea din <strong>contul Packeta</strong> în client.packeta.com; nu se poate schimba din acest formular. Aici se trimite doar codul magazinului în API, ca la checkout.
+        <strong>Transportator</strong> (<code>addressId</code>) = alegi mai jos: RO Sameday HD <code>7397</code>, Box <code>7455</code>, etc. — al doilea câmp din Packeta.
     </p>
 </div>
 

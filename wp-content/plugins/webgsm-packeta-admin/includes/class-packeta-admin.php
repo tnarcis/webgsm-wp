@@ -143,6 +143,13 @@ class WebGSM_Packeta_Admin {
                     $rest_url = WebGSM_Packeta_Config::default_rest_url();
                 }
                 $stored['rest_url'] = $rest_url;
+                $eshop = isset($_POST['eshop']) ? sanitize_text_field(wp_unslash((string) $_POST['eshop'])) : '';
+                $sender_base = isset($_POST['sender_base']) ? sanitize_text_field(wp_unslash((string) $_POST['sender_base'])) : '';
+                if ($sender_base === '' && $eshop !== '') {
+                    $sender_base = $eshop;
+                }
+                $stored['sender_base'] = $sender_base;
+                $stored['eshop'] = $sender_base;
                 update_option(WEBGSM_PACKETA_OPTION, $stored);
                 $this->redirect_with_notice($tab, 'settings_saved');
                 break;
@@ -161,6 +168,10 @@ class WebGSM_Packeta_Admin {
                 $this->store_awb_form_draft_from_post();
                 if ($settings['api_password'] === '') {
                     $this->redirect_with_notice($tab, 'no_password');
+                    break;
+                }
+                if (empty($settings['sender_configured'])) {
+                    $this->redirect_with_notice($tab, 'missing_sender');
                     break;
                 }
                 $v = $this->validate_awb_post_before_api();
@@ -304,13 +315,23 @@ class WebGSM_Packeta_Admin {
                 if (!in_array($format, $allowed, true)) {
                     $format = 'A6 on A6';
                 }
+                $kind = isset($_POST['label_kind']) ? sanitize_key((string) $_POST['label_kind']) : 'courier';
+                if (!in_array($kind, ['courier', 'packeta', 'auto'], true)) {
+                    $kind = 'courier';
+                }
                 $client = $this->make_client($settings);
-                $res = $client->download_label_pdf($pid, $format, 0);
+                $res = $client->download_label_pdf($pid, $format, 0, $kind);
                 $pdf = $res['pdf'] ?? null;
                 if (!empty($res['ok']) && $pdf !== null && $pdf !== '') {
+                    $filename = 'eticheta-' . $pid . '.pdf';
+                    if (($res['label_type'] ?? '') === 'courier' && !empty($res['courier_number'])) {
+                        $filename = 'curier-' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $res['courier_number']) . '.pdf';
+                    } elseif (($res['label_type'] ?? '') === 'packeta') {
+                        $filename = 'packeta-Z-' . $pid . '.pdf';
+                    }
                     nocache_headers();
                     header('Content-Type: application/pdf');
-                    header('Content-Disposition: attachment; filename="packeta-' . $pid . '.pdf"');
+                    header('Content-Disposition: attachment; filename="' . $filename . '"');
                     echo $pdf;
                     exit;
                 }
@@ -680,6 +701,8 @@ class WebGSM_Packeta_Admin {
             $number = 'WG-' . gmdate('Ymd-His');
         }
 
+        $sender = WebGSM_Packeta_Sender_Mapper::resolve_from_post($settings);
+
         $attrs = [
             'number' => $number,
             'name' => isset($_POST['recipient_name']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_name'])) : '',
@@ -690,7 +713,7 @@ class WebGSM_Packeta_Admin {
             'value' => isset($_POST['value']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['value'])) : 0,
             'weight' => isset($_POST['weight']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['weight'])) : 1,
             'currency' => isset($_POST['currency']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_POST['currency']))) : $settings['default_currency'],
-            'eshop' => $settings['eshop'],
+            'eshop' => $sender['eshop'] !== '' ? $sender['eshop'] : (string) ($settings['eshop'] ?? ''),
         ];
 
         $cod = isset($_POST['cod']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['cod'])) : 0;

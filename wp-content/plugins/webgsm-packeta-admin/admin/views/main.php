@@ -21,6 +21,7 @@ $notices = [
     'missing_packet_id' => ['class' => 'notice-error', 'text' => 'Introdu Packet ID sau barcode (ex. Z 383 2892 743).'],
     'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos.'],
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
+    'missing_sender' => ['class' => 'notice-error', 'text' => 'Expeditor (sender) lipsă — setează „No Limit Tech” în Setări (exact ca în client.packeta.com).'],
     'missing_home_carrier' => ['class' => 'notice-error', 'text' => 'Pentru livrare la adresă completează addressId (transportator).'],
     'missing_home_address' => ['class' => 'notice-error', 'text' => 'Completează strada și orașul pentru livrarea la adresă.'],
     'missing_home_province' => ['class' => 'notice-error', 'text' => 'Selectează județul destinatarului (câmp province în API Packeta).'],

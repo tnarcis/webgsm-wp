@@ -10,6 +10,60 @@ $has_sender = !empty($pk['sender']);
 $packeta_url = WebGSM_Packeta_Config::packeta_plugin_settings_url();
 ?>
 <div class="webgsm-packeta-card">
+    <h2>Expeditor — ca în client.packeta.com</h2>
+    <p class="webgsm-packeta-help" style="margin-top:0;">
+        În Packeta ai <strong>două câmpuri</strong> la crearea AWB (vezi capturile):
+    </p>
+    <ol class="webgsm-packeta-help" style="margin:8px 0 16px 20px;">
+        <li><strong>Expeditor</strong> → API <code>eshop</code> — ex. <code>No Limit Tech - Sameday</code> (pluginul adaugă sufixul curierului automat)</li>
+        <li><strong>Punct pick-up / Transportator</strong> → API <code>addressId</code> — ex. RO Sameday HD <code>7397</code> (alegi la AWB nou)</li>
+    </ol>
+
+    <?php
+    $stored_opt = get_option(WEBGSM_PACKETA_OPTION, []);
+    $sender_base = is_array($stored_opt) && !empty($stored_opt['sender_base'])
+        ? (string) $stored_opt['sender_base']
+        : (string) ($settings['sender_base'] ?? '');
+    $sender_ok = !empty($settings['sender_configured']);
+    $suffix_map = WebGSM_Packeta_Sender_Mapper::carrier_suffix_map();
+    ?>
+
+    <table class="widefat striped" style="max-width:720px;margin-bottom:16px;">
+        <tbody>
+            <tr>
+                <th scope="row">Bază expeditor</th>
+                <td><?php echo $sender_ok ? '<code>' . esc_html($sender_base) . '</code>' : '<span style="color:#d63638;">nesetat</span>'; ?></td>
+            </tr>
+            <tr>
+                <th scope="row">Exemple auto la AWB</th>
+                <td>
+                    <?php foreach ($suffix_map as $cid => $suffix) : ?>
+                        <code><?php echo esc_html($sender_base . $suffix); ?></code> ← <?php echo esc_html($cid); ?><br>
+                    <?php endforeach; ?>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <form method="post" action="">
+        <?php wp_nonce_field('webgsm_packeta'); ?>
+        <input type="hidden" name="webgsm_packeta_action" value="save_settings" />
+        <input type="hidden" name="tab" value="settings" />
+
+        <div class="webgsm-packeta-field">
+            <label for="sender_base">Denumire bază expeditor *</label>
+            <input type="text" name="sender_base" id="sender_base" class="regular-text" value="<?php echo esc_attr($sender_base); ?>" placeholder="No Limit Tech" required />
+            <p class="webgsm-packeta-help">Doar partea comună. La trimitere AWB, pluginul completează automat <code> - Sameday</code>, <code> - FAN Courier</code> etc., după curierul ales (7397, 7455…).</p>
+        </div>
+
+        <div class="webgsm-packeta-actions">
+            <?php submit_button('Salvează expeditor'); ?>
+            <a class="button button-secondary" href="<?php echo esc_url($packeta_url); ?>">Validare sender în Packeta</a>
+        </div>
+    </form>
+</div>
+
+<div class="webgsm-packeta-card" style="margin-top:16px;">
     <h2>Conexiune API</h2>
     <p class="webgsm-packeta-help" style="margin-top:0;">
         Parola API, cheia pentru hartă (widget) și expeditorul se citesc automat din
@@ -30,7 +84,7 @@ $packeta_url = WebGSM_Packeta_Config::packeta_plugin_settings_url();
             </tr>
             <tr>
                 <th scope="row">Expeditor (sender)</th>
-                <td><?php echo $has_sender ? esc_html((string) $pk['sender']) : '—'; ?> <span class="description">(din Packeta)</span></td>
+                <td><?php echo $has_sender ? esc_html((string) $pk['sender']) : '—'; ?> <span class="description">(vezi secțiunea de sus)</span></td>
             </tr>
             <tr>
                 <th scope="row">Monedă magazin</th>

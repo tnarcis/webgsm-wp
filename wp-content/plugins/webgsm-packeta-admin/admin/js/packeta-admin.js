@@ -292,8 +292,10 @@
             var v = String($(this).val() || '').trim();
             if (v !== '') {
                 $('#address_id').val(v);
+                $('#carrier_filter').val(v);
             } else if (document.getElementById('awb_flow') && document.getElementById('awb_flow').value === 'home') {
                 $('#address_id').val('');
+                $('#carrier_filter').val('');
             }
         });
 

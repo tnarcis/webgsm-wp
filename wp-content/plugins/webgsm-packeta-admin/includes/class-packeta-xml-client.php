@@ -127,14 +127,28 @@ class WebGSM_Packeta_Xml_Client {
     }
 
     /**
-     * Încearcă etichetă curier (RO), apoi etichetă Packeta.
-     *
+     * @param 'courier'|'packeta'|'auto' $kind courier = doar Sameday/Fan; packeta = doar Z; auto = curier apoi fallback Z
      * @return array{ok: bool, pdf?: string, label_type?: string, error?: string, raw?: string}
      */
-    public function download_label_pdf(string $packet_id, string $format = 'A6 on A6', int $offset = 0): array {
+    public function download_label_pdf(string $packet_id, string $format = 'A6 on A6', int $offset = 0, string $kind = 'courier'): array {
         $packet_id = self::normalize_packet_id($packet_id);
         if ($packet_id === '') {
             return ['ok' => false, 'error' => 'Packet ID invalid. Poți lipi „Z 383 2892 743” sau doar cifrele.'];
+        }
+
+        if ($kind === 'packeta') {
+            $packeta = $this->packet_label_pdf($packet_id, $format, $offset);
+            if (!empty($packeta['ok']) && !empty($packeta['pdf'])) {
+                $packeta['label_type'] = 'packeta';
+
+                return $packeta;
+            }
+
+            return [
+                'ok' => false,
+                'error' => $packeta['error'] ?? 'Etichetă Packeta (Z) indisponibilă.',
+                'raw' => $packeta['raw'] ?? '',
+            ];
         }
 
         $courier_err = '';
@@ -143,12 +157,21 @@ class WebGSM_Packeta_Xml_Client {
             $carrier = $this->packet_courier_label_pdf($packet_id, (string) $courier['number']);
             if (!empty($carrier['ok']) && !empty($carrier['pdf'])) {
                 $carrier['label_type'] = 'courier';
+                $carrier['courier_number'] = (string) $courier['number'];
 
                 return $carrier;
             }
             $courier_err = $carrier['error'] ?? 'Etichetă curier indisponibilă.';
         } else {
-            $courier_err = $courier['error'] ?? '';
+            $courier_err = $courier['error'] ?? 'AWB curier încă indisponibil.';
+        }
+
+        if ($kind === 'courier') {
+            return [
+                'ok' => false,
+                'error' => $courier_err !== '' ? $courier_err : 'Etichetă curier indisponibilă.',
+                'raw' => $courier['raw'] ?? '',
+            ];
         }
 
         $packeta = $this->packet_label_pdf($packet_id, $format, $offset);

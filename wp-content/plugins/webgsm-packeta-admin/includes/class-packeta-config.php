@@ -23,6 +23,9 @@ class WebGSM_Packeta_Config {
      *   widget_api_key: string,
      *   rest_url: string,
      *   eshop: string,
+     *   sender_base: string,
+     *   sender_source: string,
+     *   sender_configured: bool,
      *   default_currency: string,
      *   credentials_from_packeta_plugin: bool
      * }
@@ -52,11 +55,26 @@ class WebGSM_Packeta_Config {
             $widget_api_key = (string) $stored['widget_api_key'];
         }
 
-        $eshop = 'WebGSM';
-        if (!empty($packetery['sender'])) {
-            $eshop = (string) $packetery['sender'];
-        } elseif (!empty($stored['eshop'])) {
-            $eshop = (string) $stored['eshop'];
+        $eshop = '';
+        $sender_base = '';
+        $sender_source = '';
+        if (!empty($stored['sender_base'])) {
+            $sender_base = trim((string) $stored['sender_base']);
+            $sender_source = 'webgsm_override';
+        }
+        if (!empty($stored['eshop'])) {
+            $eshop = trim((string) $stored['eshop']);
+            if ($sender_base === '') {
+                $sender_base = $eshop;
+            }
+            if ($sender_source === '') {
+                $sender_source = 'webgsm_override';
+            }
+        }
+        if ($sender_base === '' && !empty($packetery['sender'])) {
+            $sender_base = trim((string) $packetery['sender']);
+            $eshop = $sender_base;
+            $sender_source = 'packeta_plugin';
         }
 
         $currency = 'RON';
@@ -82,6 +100,9 @@ class WebGSM_Packeta_Config {
             'widget_api_key' => $widget_api_key,
             'rest_url' => $rest_url,
             'eshop' => $eshop,
+            'sender_base' => $sender_base,
+            'sender_source' => $sender_source,
+            'sender_configured' => $sender_base !== '',
             'default_currency' => $currency,
             'credentials_from_packeta_plugin' => !empty($packetery['api_password']) || !empty($packetery['api_key']),
         ];

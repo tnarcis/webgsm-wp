@@ -129,7 +129,15 @@ $label_format = WebGSM_Packeta_Config::get_default_label_format();
                                 <input type="hidden" name="webgsm_packeta_action" value="download_label" />
                                 <input type="hidden" name="label_packet_id" value="<?php echo esc_attr($packet_id); ?>" />
                                 <input type="hidden" name="label_format" value="<?php echo esc_attr($label_format); ?>" />
-                                <button type="submit" class="button button-small">Etichetă PDF</button>
+                                <button type="submit" name="label_kind" value="courier" class="button button-small button-primary">Etichetă curier</button>
+                            </form>
+                            <form method="post" class="webgsm-packeta-row-action">
+                                <?php wp_nonce_field('webgsm_packeta'); ?>
+                                <input type="hidden" name="tab" value="awb_list" />
+                                <input type="hidden" name="webgsm_packeta_action" value="download_label" />
+                                <input type="hidden" name="label_packet_id" value="<?php echo esc_attr($packet_id); ?>" />
+                                <input type="hidden" name="label_format" value="<?php echo esc_attr($label_format); ?>" />
+                                <button type="submit" name="label_kind" value="packeta" class="button button-small">Etichetă Z</button>
                             </form>
                             <form method="post" class="webgsm-packeta-row-action">
                                 <?php wp_nonce_field('webgsm_packeta'); ?>
