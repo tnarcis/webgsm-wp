@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Packeta Admin
  * Description: AWB Packeta, istoric livrări și urmărire curier pentru admin și clienți.
- * Version: 1.7.3
+ * Version: 1.7.4
  * Author: WebGSM
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('WEBGSM_PACKETA_VERSION', '1.7.3');
+define('WEBGSM_PACKETA_VERSION', '1.7.4');
 define('WEBGSM_PACKETA_DB_VERSION_OPTION', 'webgsm_packeta_db_version');
 define('WEBGSM_PACKETA_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_PACKETA_URL', plugin_dir_url(__FILE__));
@@ -34,6 +34,7 @@ require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-awb-repository.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-awb-sync.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-admin.php';
 require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-customer-tracking.php';
+require_once WEBGSM_PACKETA_PATH . 'includes/class-packeta-checkout-bridge.php';
 
 register_activation_hook(__FILE__, function () {
     WebGSM_Packeta_Awb_Repository::install();
@@ -56,4 +57,5 @@ add_action('plugins_loaded', function () {
     }
     new WebGSM_Packeta_Admin();
     new WebGSM_Packeta_Customer_Tracking();
+    new WebGSM_Packeta_Checkout_Bridge();
 });
