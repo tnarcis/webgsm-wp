@@ -277,6 +277,7 @@ if (!defined('ABSPATH')) exit;
                                     <option value="3-5 zile">3–5 zile</option>
                                     <option value="5-7 zile">5–7 zile</option>
                                     <option value="la comanda">La comandă</option>
+                                    <option value="la_comanda">La comandă (la_comanda)</option>
                                 </select>
                             </div>
                             <div class="field-group">

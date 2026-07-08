@@ -29,15 +29,73 @@ function webgsm_normalize_locatie_stoc($locatie) {
 }
 
 function webgsm_normalize_timp_livrare($timp) {
-    $timp = is_string($timp) ? trim($timp) : '';
+    if (!is_string($timp)) {
+        return '';
+    }
 
-    $map = array(
+    $timp = trim($timp);
+    if ($timp === '') {
+        return '';
+    }
+
+    if (function_exists('remove_accents')) {
+        $timp = remove_accents($timp);
+    }
+
+    $lower = strtolower(str_replace('_', ' ', $timp));
+    $lower = preg_replace('/\s+/', ' ', $lower);
+
+    $direct = array(
+        '24h'        => '24h',
+        '24-48h'     => '24-48h',
+        '48-72h'     => '48-72h',
+        '3-5 zile'   => '3-5 zile',
         '3-5zile'    => '3-5 zile',
+        '5-7 zile'   => '5-7 zile',
         '5-7zile'    => '5-7 zile',
-        'la_comanda' => 'la comanda',
+        'la comanda' => 'la comanda',
+        'la-comanda' => 'la comanda',
     );
 
-    return isset($map[$timp]) ? $map[$timp] : $timp;
+    if (isset($direct[$lower])) {
+        return $direct[$lower];
+    }
+    if (isset($direct[$timp])) {
+        return $direct[$timp];
+    }
+
+    if (preg_match('/^la\s+comand/', $lower)) {
+        return 'la comanda';
+    }
+    if (preg_match('/5\s*-\s*7/', $lower)) {
+        return '5-7 zile';
+    }
+    if (preg_match('/3\s*-\s*5/', $lower)) {
+        return '3-5 zile';
+    }
+
+    return $timp;
+}
+
+/** Citește timp_livrare din ACF sau post_meta (sync Gestiune). */
+function webgsm_get_product_timp_livrare($product_id) {
+    $timp = '';
+
+    if (function_exists('get_field')) {
+        $val = get_field('timp_livrare', $product_id, false);
+        if (is_string($val) && $val !== '') {
+            $timp = $val;
+        }
+    }
+
+    if ($timp === '') {
+        $meta = get_post_meta($product_id, 'timp_livrare', true);
+        if (is_string($meta) && $meta !== '') {
+            $timp = $meta;
+        }
+    }
+
+    return webgsm_normalize_timp_livrare($timp);
 }
 
 /** Termene livrare setate explicit din Gestiune — override față de locatie_stoc. */
@@ -71,7 +129,7 @@ function webgsm_get_delivery_lines($locatie_stoc, $timp_livrare_raw = '') {
         );
     }
 
-    $override_text = webgsm_timp_livrare_override_text($timp_livrare_raw);
+    $override_text = webgsm_timp_livrare_override_text(webgsm_normalize_timp_livrare($timp_livrare_raw));
     if ($override_text !== '') {
         $text = $override_text;
     } elseif ($locatie_stoc === 'furnizor_extern') {
@@ -106,7 +164,7 @@ function webgsm_resolve_stock_display(WC_Product $product) {
     $acf_active = function_exists('get_field');
     $locatie_raw = $acf_active ? get_field('locatie_stoc', $product_id) : '';
     $locatie_stoc = webgsm_normalize_locatie_stoc($locatie_raw);
-    $timp_raw = $acf_active ? (string) get_field('timp_livrare', $product_id) : '';
+    $timp_livrare = webgsm_get_product_timp_livrare($product_id);
 
     if (!$is_in_stock && !$preorder_enabled) {
         return array(
@@ -172,7 +230,7 @@ function webgsm_resolve_stock_display(WC_Product $product) {
         'badge_class'   => $badge_class,
         'badge_icon'    => $badge_icon,
         'badge_text'    => $badge_text,
-        'delivery_info' => webgsm_get_delivery_lines($locatie_stoc, $timp_raw),
+        'delivery_info' => webgsm_get_delivery_lines($locatie_stoc, $timp_livrare),
     );
 }
 

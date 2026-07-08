@@ -162,6 +162,7 @@ acf_add_local_field_group(array(
                 '3-5 zile' => '3–5 zile',
                 '5-7 zile' => '5–7 zile',
                 'la comanda' => 'La comandă',
+                'la_comanda' => 'La comandă (la_comanda)',
             ),
             'default_value' => '24h',
             'allow_null' => 0,
