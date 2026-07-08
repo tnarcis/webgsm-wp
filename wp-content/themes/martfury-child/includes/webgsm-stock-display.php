@@ -4,7 +4,7 @@
  *
  * Badge: locatie_stoc + quantity + preorder_enabled
  * Termen livrare: derivat din locatie_stoc (toată țara, o singură linie)
- *   — override DOAR dacă Gestiune trimite timp_livrare = "3-5 zile"
+ *   — override când Gestiune trimite timp_livrare: 3-5 zile | 5-7 zile | la comanda
  *
  * @package WebGSM
  */
@@ -32,17 +32,32 @@ function webgsm_normalize_timp_livrare($timp) {
     $timp = is_string($timp) ? trim($timp) : '';
 
     $map = array(
-        '3-5zile' => '3-5 zile',
+        '3-5zile'    => '3-5 zile',
+        '5-7zile'    => '5-7 zile',
+        'la_comanda' => 'la comanda',
     );
 
     return isset($map[$timp]) ? $map[$timp] : $timp;
+}
+
+/** Termene livrare setate explicit din Gestiune — override față de locatie_stoc. */
+function webgsm_timp_livrare_override_text($timp_livrare) {
+    $overrides = array(
+        '3-5 zile'   => 'Livrare estimată: 3–5 zile lucrătoare',
+        '5-7 zile'   => 'Livrare estimată: 5–7 zile lucrătoare',
+        'la comanda' => 'Livrare la comandă',
+    );
+
+    $timp = webgsm_normalize_timp_livrare($timp_livrare);
+
+    return isset($overrides[$timp]) ? $overrides[$timp] : '';
 }
 
 /**
  * Termen livrare afișat pe site — o linie, toată țara.
  *
  * Reguli:
- * - timp_livrare = "3-5 zile" din Gestiune → override (3–5 zile lucrătoare)
+ * - timp_livrare din Gestiune (3-5 zile | 5-7 zile | la comanda) → override
  * - magazin_webgsm / depozit_central → Livrare în 24–48h
  * - furnizor_extern → Livrare în 48–72h
  * - precomanda → Livrare estimată 3–5 zile lucrătoare
@@ -56,10 +71,9 @@ function webgsm_get_delivery_lines($locatie_stoc, $timp_livrare_raw = '') {
         );
     }
 
-    $timp = webgsm_normalize_timp_livrare($timp_livrare_raw);
-
-    if ($timp === '3-5 zile') {
-        $text = 'Livrare estimată: 3–5 zile lucrătoare';
+    $override_text = webgsm_timp_livrare_override_text($timp_livrare_raw);
+    if ($override_text !== '') {
+        $text = $override_text;
     } elseif ($locatie_stoc === 'furnizor_extern') {
         $text = 'Livrare în 48–72h';
     } elseif ($locatie_stoc === 'precomanda') {

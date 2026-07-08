@@ -147,7 +147,7 @@ acf_add_local_field_group(array(
             'label' => 'Timp Livrare',
             'name' => 'timp_livrare',
             'type' => 'select',
-            'instructions' => 'Override termen livrare pe site. Singura valoare care schimbă afișarea față de locație: „3-5 zile”. Celelalte valori se păstrează pentru sync Gestiune; site-ul le ignoră.',
+            'instructions' => 'Override termen livrare pe site. Valori care schimbă afișarea: „3-5 zile”, „5-7 zile”, „la comanda”. Restul se sincronizează din Gestiune; site-ul folosește termenul implicit din locatie_stoc.',
             'required' => 0,
             'conditional_logic' => 0,
             'wrapper' => array(
@@ -160,6 +160,8 @@ acf_add_local_field_group(array(
                 '24-48h' => '24–48h',
                 '48-72h' => '48–72h',
                 '3-5 zile' => '3–5 zile',
+                '5-7 zile' => '5–7 zile',
+                'la comanda' => 'La comandă',
             ),
             'default_value' => '24h',
             'allow_null' => 0,
