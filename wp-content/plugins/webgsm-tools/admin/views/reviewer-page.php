@@ -262,11 +262,19 @@ if (!defined('ABSPATH')) exit;
                             <div class="field-group">
                                 <label>Locație Stoc</label>
                                 <select id="editor-meta-location" class="regular-text">
-                                    <option value="indisponibil">Indisponibil (comandă la furnizor)</option>
-                                    <option value="depozit-principal">Depozit Principal</option>
-                                    <option value="depozit-secundar">Depozit Secundar</option>
-                                    <option value="magazin">Magazin</option>
-                                    <option value="in-tranzit">În Tranzit</option>
+                                    <option value="magazin_webgsm">Magazin WebGSM (stoc fizic local)</option>
+                                    <option value="depozit_central">Depozit Central (stoc virtual 24h)</option>
+                                    <option value="furnizor_extern">Furnizor Extern (48–72h)</option>
+                                    <option value="precomanda">Precomandă (3–5 zile)</option>
+                                </select>
+                            </div>
+                            <div class="field-group">
+                                <label>Timp Livrare (badge site)</label>
+                                <select id="editor-meta-delivery" class="regular-text">
+                                    <option value="24h">24h</option>
+                                    <option value="24-48h">24–48h</option>
+                                    <option value="48-72h">48–72h</option>
+                                    <option value="3-5 zile">3–5 zile</option>
                                 </select>
                             </div>
                             <div class="field-group">

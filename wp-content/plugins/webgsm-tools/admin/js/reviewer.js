@@ -248,7 +248,8 @@
         $('#editor-meta-sku-furnizor').val(product['meta:sku_furnizor'] || '');
         $('#editor-meta-furnizor').val(product['meta:furnizor_activ'] || '');
         $('#editor-meta-cost').val(product['meta:pret_achizitie'] || '');
-        $('#editor-meta-location').val(product['meta:locatie_stoc'] || 'indisponibil');
+        $('#editor-meta-location').val(product['meta:locatie_stoc'] || 'depozit_central');
+        $('#editor-meta-delivery').val(product['meta:timp_livrare'] || '24h');
         $('#editor-meta-warranty').val(product['meta:garantie_luni'] || '12');
         $('#editor-meta-source-url').val(product['meta:source_url'] || '').trigger('change');
         $('#editor-meta-ic-movable').prop('checked', product['meta:ic_movable'] === '1' || product['meta:ic_movable'] === 'true');
@@ -484,6 +485,7 @@
         product['meta:gtin_ean'] = $('#editor-meta-gtin').val();
         product['meta:pret_achizitie'] = $('#editor-meta-cost').val();
         product['meta:locatie_stoc'] = $('#editor-meta-location').val();
+        product['meta:timp_livrare'] = $('#editor-meta-delivery').val();
         product['meta:garantie_luni'] = $('#editor-meta-warranty').val();
         product['meta:ic_movable'] = $('#editor-meta-ic-movable').is(':checked') ? '1' : '0';
         product['meta:truetone_support'] = $('#editor-meta-truetone').is(':checked') ? '1' : '0';
