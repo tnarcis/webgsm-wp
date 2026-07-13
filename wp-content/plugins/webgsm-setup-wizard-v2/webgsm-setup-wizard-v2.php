@@ -3101,6 +3101,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
         
         $migrated = $this->migrate_unelte_products_to_new_categories();
         $migrated_piese = $this->migrate_huawei_xiaomi_camere_to_module_piese();
+        $pruned = $this->prune_obsolete_categories();
         
         update_option('webgsm_v2_categories', true);
         flush_rewrite_rules();
@@ -3110,6 +3111,12 @@ Dispozitive / Servicii → Dropdown simplu</div>
         }
         if ($migrated_piese > 0) {
             $msg .= " {$migrated_piese} produse mutate din Camere → Module & Piese (Huawei/Xiaomi).";
+        }
+        if (!empty($pruned['deleted'])) {
+            $msg .= ' ' . (int) $pruned['deleted'] . ' categorii vechi goale șterse.';
+        }
+        if (!empty($pruned['skipped'])) {
+            $msg .= ' Rămân cu produse (șterge manual după mutare): ' . implode(', ', $pruned['skipped']) . '.';
         }
         $msg .= ' Regulile de permalink au fost reîmprospătate.';
         wp_send_json_success(['message' => $msg]);
@@ -3282,7 +3289,47 @@ Dispozitive / Servicii → Dropdown simplu</div>
         return ['supraveghere-smart-home'];
     }
 
-    /** ID-uri product_cat din arborele unei categorii depreciate (root + descendenți). */
+    /**
+     * Slug-uri subcategorii înlocuite (Unelte 8→4, Huawei/Xiaomi camere→module-piese etc.).
+     *
+     * @return string[]
+     */
+    public static function get_obsolete_product_cat_slugs() {
+        $slugs = array_keys(self::get_unelte_subcategory_migration_map());
+        $slugs[] = 'camere-huawei';
+        $slugs[] = 'camere-xiaomi';
+
+        return array_values(array_unique($slugs));
+    }
+
+    /**
+     * Șterge categorii vechi goale (după migrare produse). Nu atinge termeni cu produse încă alocate.
+     *
+     * @return array{deleted: int, skipped: string[]}
+     */
+    private function prune_obsolete_categories() {
+        $deleted = 0;
+        $skipped = [];
+
+        foreach (self::get_obsolete_product_cat_slugs() as $slug) {
+            $term = get_term_by('slug', $slug, 'product_cat');
+            if (!$term || is_wp_error($term)) {
+                continue;
+            }
+            if ((int) $term->count > 0) {
+                $skipped[] = $slug . ' (' . (int) $term->count . ')';
+                continue;
+            }
+            $result = wp_delete_term((int) $term->term_id, 'product_cat');
+            if (!is_wp_error($result) && $result) {
+                $deleted++;
+            }
+        }
+
+        return ['deleted' => $deleted, 'skipped' => $skipped];
+    }
+
+    /** ID-uri product_cat din arborele unei categorii depreciate (root + descendenți + slug-uri înlocuite). */
     private function get_deprecated_product_cat_term_ids() {
         $term_ids = [];
         foreach ($this->get_deprecated_category_root_slugs() as $slug) {
@@ -3303,6 +3350,14 @@ Dispozitive / Servicii → Dropdown simplu</div>
                 }
             }
         }
+
+        foreach (self::get_obsolete_product_cat_slugs() as $slug) {
+            $term = get_term_by('slug', $slug, 'product_cat');
+            if ($term && !is_wp_error($term)) {
+                $term_ids[] = (int) $term->term_id;
+            }
+        }
+
         return array_values(array_unique($term_ids));
     }
 
@@ -3613,8 +3668,13 @@ Dispozitive / Servicii → Dropdown simplu</div>
         set_theme_mod('nav_menu_locations', $locations);
         
         $this->reorder_main_menu_by_category_structure($menu_id);
+        $removed_obsolete = $this->prune_deprecated_menu_category_items($menu_id);
         update_option('webgsm_v2_menu', true);
-        wp_send_json_success(['message' => "Meniu creat cu {$items_count} itemi!"]);
+        $menu_msg = "Meniu creat cu {$items_count} itemi!";
+        if ($removed_obsolete > 0) {
+            $menu_msg .= " Eliminate {$removed_obsolete} linkuri către categorii vechi.";
+        }
+        wp_send_json_success(['message' => $menu_msg]);
     }
 
     /**
