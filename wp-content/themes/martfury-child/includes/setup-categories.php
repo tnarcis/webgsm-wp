@@ -33,16 +33,12 @@ function webgsm_get_category_structure() {
     $cats[] = array('name' => 'Unelte', 'slug' => 'unelte', 'parent' => 0);
     $cats[] = array('name' => 'Accesorii', 'slug' => 'accesorii', 'parent' => 0);
 
-    // ═══ Unelte > subcategorii ═══
+    // ═══ Unelte > subcategorii (4 categorii mari) ═══
     $unelte_sub = array(
-        'Surubelnite' => 'surubelnite',
-        'Pensete' => 'pensete',
-        'Deschizatoare' => 'deschizatoare',
-        'Suporturi PCB' => 'suporturi-pcb',
-        'Lupe si Microscoape' => 'lupe-si-microscoape',
-        'Statii si Echipamente' => 'statii-si-echipamente',
-        'Testere' => 'testere',
-        'Consumabile' => 'consumabile',
+        'Unelte de Precizie' => 'unelte-de-precizie',
+        'Echipamente Service' => 'echipamente-service',
+        'Echipamente Optice & Separare' => 'echipamente-optice-separare',
+        'Programare & Consumabile' => 'programare-consumabile',
     );
     foreach ($unelte_sub as $name => $slug) {
         $cats[] = array('name' => $name, 'slug' => $slug, 'parent' => 'unelte');

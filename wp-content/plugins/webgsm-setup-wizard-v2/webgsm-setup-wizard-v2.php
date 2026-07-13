@@ -406,6 +406,7 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         'Baterii' => 'baterii',
         'Baterii Piese' => 'baterii-piese',
         'Camere' => 'camere',
+        'Module & Piese' => 'module-piese',
         'Carcase' => 'carcase',
         'Difuzoare' => 'difuzoare',
         'Flexuri' => 'flexuri',
@@ -484,7 +485,24 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         'mufe-incărcare' => 'mufe-incarcare',
         'mufe_incarcare' => 'mufe-incarcare',
         'baterii-piese' => 'baterii-piese',
+        'camere-huawei' => 'module-piese',
+        'camere-xiaomi' => 'module-piese',
     ];
+
+    /**
+     * Huawei/Xiaomi: „Camere” a fost înlocuit cu „Module & Piese” (slug module-piese).
+     */
+    public static function resolve_piese_tip_slug_for_subcat(string $subcat_slug, string $tip_slug): string {
+        $brand = str_replace('piese-', '', $subcat_slug);
+        if (!in_array($brand, ['huawei', 'xiaomi'], true)) {
+            return $tip_slug;
+        }
+        if ($tip_slug === 'camere') {
+            return 'module-piese';
+        }
+
+        return $tip_slug;
+    }
 
     /**
      * Normalizează tipurile de piese din URL la forma generică.
@@ -534,6 +552,8 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
         if (is_wp_error($children) || empty($children)) return null;
         $tip_q = preg_quote($tip_slug, '/');
         $brand_q = preg_quote($brand, '/');
+        $tip_slug = self::resolve_piese_tip_slug_for_subcat($subcat_slug, $tip_slug);
+        $tip_q = preg_quote($tip_slug, '/');
         foreach ($children as $c) {
             if ($c->slug === $tip_slug || strpos($c->slug, $tip_slug . '-') === 0) return $c->slug;
             if (preg_match('/^' . $tip_q . '-.*-' . $brand_q . '$/', $c->slug)) return $c->slug;
@@ -855,12 +875,13 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
             foreach ($children as $child) {
                 foreach ($tip_slugs as $tip_slug) {
+                    $tip_resolved = self::resolve_piese_tip_slug_for_subcat($subcat_slug, $tip_slug);
                     $child_name_slug = sanitize_title($child->name);
                     if (
-                        $child->slug === $tip_slug ||
-                        strpos($child->slug, $tip_slug . '-') === 0 ||
-                        $child_name_slug === $tip_slug ||
-                        strpos($child_name_slug, $tip_slug . '-') === 0
+                        $child->slug === $tip_resolved ||
+                        strpos($child->slug, $tip_resolved . '-') === 0 ||
+                        $child_name_slug === $tip_resolved ||
+                        strpos($child_name_slug, $tip_resolved . '-') === 0
                     ) {
                         $out[] = (int) $child->term_id;
                         break;
@@ -1081,7 +1102,7 @@ class WebGSM_Setup_Wizard_V2 {
                     'children' => [
                         'Ecrane' => 'ecrane',
                         'Baterii' => 'baterii',
-                        'Camere' => 'camere',
+                        'Module & Piese' => 'module-piese',
                     ]
                 ],
                 'Piese Xiaomi' => [
@@ -1089,24 +1110,32 @@ class WebGSM_Setup_Wizard_V2 {
                     'children' => [
                         'Ecrane' => 'ecrane',
                         'Baterii' => 'baterii',
-                        'Camere' => 'camere',
+                        'Module & Piese' => 'module-piese',
                     ]
                 ],
             ]
         ],
         'Unelte' => [
             'slug' => 'unelte',
-            'description' => 'Unelte și echipamente pentru service',
+            'description' => 'Unelte și echipamente profesionale pentru service GSM',
             'children' => [
-                'Șurubelnițe' => 'surubelnite',
-                'Pensete' => 'pensete',
-                'Stații Lipit' => 'statii-lipit',
-                'Separatoare Ecrane' => 'separatoare-ecrane',
-                'Microscoape' => 'microscoape',
-                'Programatoare' => 'programatoare',
-                'Kituri Complete' => 'kituri-complete',
-                'Consumabile' => 'consumabile',
-            ]
+                'Unelte de Precizie' => [
+                    'slug' => 'unelte-de-precizie',
+                    'description' => 'Șurubelnițe, pensete, leviere și seturi de deschidere pentru dezasamblare telefoane.',
+                ],
+                'Echipamente Service' => [
+                    'slug' => 'echipamente-service',
+                    'description' => 'Stații de lipit, stații aer cald, rework și preheaters pentru service electronic.',
+                ],
+                'Echipamente Optice & Separare' => [
+                    'slug' => 'echipamente-optice-separare',
+                    'description' => 'Microscoape, separatoare ecrane și prese OCA pentru reparații display.',
+                ],
+                'Programare & Consumabile' => [
+                    'slug' => 'programare-consumabile',
+                    'description' => 'Programatoare, jig-uri, soluții, adezivi, benzi și alcool izopropilic.',
+                ],
+            ],
         ],
         'Accesorii' => [
             'slug' => 'accesorii',
@@ -1340,15 +1369,18 @@ class WebGSM_Setup_Wizard_V2 {
             'columns' => [
                 'iPhone' => ['Ecrane', 'Baterii', 'Camere', 'Mufe Încărcare', 'Flexuri', 'Difuzoare', 'Carcase'],
                 'Samsung' => ['Ecrane', 'Baterii', 'Camere', 'Mufe Încărcare', 'Flexuri'],
-                'Huawei' => ['Ecrane', 'Baterii', 'Camere'],
-                'Xiaomi' => ['Ecrane', 'Baterii', 'Camere'],
+                'Huawei' => ['Ecrane', 'Baterii', 'Module & Piese'],
+                'Xiaomi' => ['Ecrane', 'Baterii', 'Module & Piese'],
             ]
         ],
         'Unelte' => [
             'icon' => '🛠️',
             'columns' => [
-                'Unelte' => ['Șurubelnițe', 'Pensete', 'Stații Lipit', 'Separatoare Ecrane', 'Microscoape', 'Programatoare', 'Kituri Complete', 'Consumabile'],
-            ]
+                'Unelte de Precizie' => ['Șurubelnițe', 'Pensete', 'Leviere', 'Seturi deschidere'],
+                'Echipamente Service' => ['Stații lipit', 'Stații aer cald', 'Rework', 'Preheaters'],
+                'Optice & Separare' => ['Microscoape', 'Separatoare ecrane', 'Prese OCA'],
+                'Programare & Consumabile' => ['Programatoare', 'Jig-uri', 'Soluții', 'Adezivi', 'Benzi', 'Alcool izopropilic'],
+            ],
         ],
         'Accesorii' => [
             'icon' => '📦',
@@ -1780,6 +1812,7 @@ class WebGSM_Setup_Wizard_V2 {
         if ($unelte_param !== '') {
             $unelte_slugs = array_map('trim', explode(',', $unelte_param));
             foreach ($unelte_slugs as $slug) {
+                $slug = WebGSM_Setup_Wizard_V2::resolve_unelte_filter_slug($slug);
                 $t = get_term_by('slug', $slug, 'product_cat');
                 if ($t && !is_wp_error($t)) {
                     // Verifică dacă este subcategorie a "unelte"
@@ -1955,6 +1988,7 @@ class WebGSM_Setup_Wizard_V2 {
         $unelte_param = isset($_GET['filter_unelte']) ? sanitize_text_field(wp_unslash($_GET['filter_unelte'])) : '';
         if ($unelte_param !== '') {
             foreach (array_map('trim', explode(',', $unelte_param)) as $slug) {
+                $slug = WebGSM_Setup_Wizard_V2::resolve_unelte_filter_slug($slug);
                 $t = get_term_by('slug', $slug, 'product_cat');
                 if ($t && !is_wp_error($t)) {
                     $parent = get_term($t->parent, 'product_cat');
@@ -2488,7 +2522,10 @@ class WebGSM_Setup_Wizard_V2 {
 ├── Piese Samsung → Ecrane, Baterii, Flexuri...
 ├── Piese Huawei, Piese Xiaomi...
 Unelte/
-├── Șurubelnițe, Pensete, Stații Lipit...
+├── Unelte de Precizie
+├── Echipamente Service
+├── Echipamente Optice & Separare
+├── Programare & Consumabile
 Accesorii/
 ├── Huse & Carcase, Folii Protecție...
 Dispozitive/
@@ -3036,8 +3073,13 @@ Dispozitive / Servicii → Dropdown simplu</div>
             foreach ($parent_data['children'] as $child_name => $child_value) {
                 // Nivel 2: fie slug simplu (name => slug), fie array cu slug + children (3 nivele)
                 if (is_array($child_value) && isset($child_value['slug'])) {
-                    // 3 nivele: Piese > Piese iPhone > Ecrane
-                    $level2_id = $this->create_category($child_name, $child_value['slug'], $parent_id);
+                    // 3 nivele: Piese > Piese iPhone > Ecrane (sau Unelte > subcategorie cu descriere SEO)
+                    $level2_id = $this->create_category(
+                        $child_name,
+                        $child_value['slug'],
+                        $parent_id,
+                        $child_value['description'] ?? ''
+                    );
                     if ($level2_id) $created++;
                     
                     if (!empty($child_value['children'])) {
@@ -3057,9 +3099,20 @@ Dispozitive / Servicii → Dropdown simplu</div>
             }
         }
         
+        $migrated = $this->migrate_unelte_products_to_new_categories();
+        $migrated_piese = $this->migrate_huawei_xiaomi_camere_to_module_piese();
+        
         update_option('webgsm_v2_categories', true);
         flush_rewrite_rules();
-        wp_send_json_success(['message' => "Au fost create {$created} categorii! Regulile de permalink au fost reîmprospătate."]);
+        $msg = "Au fost create {$created} categorii!";
+        if ($migrated > 0) {
+            $msg .= " {$migrated} produse mutate în noile subcategorii Unelte.";
+        }
+        if ($migrated_piese > 0) {
+            $msg .= " {$migrated_piese} produse mutate din Camere → Module & Piese (Huawei/Xiaomi).";
+        }
+        $msg .= ' Regulile de permalink au fost reîmprospătate.';
+        wp_send_json_success(['message' => $msg]);
     }
     
     private function create_category($name, $slug, $parent = 0, $desc = '') {
@@ -3090,6 +3143,120 @@ Dispozitive / Servicii → Dropdown simplu</div>
         }
         $brand_suffix = str_replace('piese-', '', $level2_slug);
         return $sub_slug . '-' . $brand_suffix;
+    }
+
+    /**
+     * Subcategorii Unelte înlocuite (8 → 4) — mapare slug vechi → slug nou pentru filtre și migrare produse.
+     *
+     * @return array<string, string>
+     */
+    public static function get_unelte_subcategory_migration_map() {
+        return [
+            'surubelnite' => 'unelte-de-precizie',
+            'pensete' => 'unelte-de-precizie',
+            'deschizatoare' => 'unelte-de-precizie',
+            'kituri-complete' => 'unelte-de-precizie',
+            'statii-lipit' => 'echipamente-service',
+            'statii-si-echipamente' => 'echipamente-service',
+            'suporturi-pcb' => 'echipamente-service',
+            'testere' => 'echipamente-service',
+            'separatoare-ecrane' => 'echipamente-optice-separare',
+            'microscoape' => 'echipamente-optice-separare',
+            'lupe-si-microscoape' => 'echipamente-optice-separare',
+            'programatoare' => 'programare-consumabile',
+            'consumabile' => 'programare-consumabile',
+        ];
+    }
+
+    /** Rezolvă slug Unelte (acceptă și slug-uri vechi din URL/bookmark). */
+    public static function resolve_unelte_filter_slug(string $slug): string {
+        $slug = trim($slug);
+        $map = self::get_unelte_subcategory_migration_map();
+
+        return $map[$slug] ?? $slug;
+    }
+
+    /** Mută produsele din subcategoriile Unelte vechi în cele 4 categorii noi. */
+    private function migrate_unelte_products_to_new_categories(): int {
+        $map = self::get_unelte_subcategory_migration_map();
+        $migrated = 0;
+
+        foreach ($map as $old_slug => $new_slug) {
+            $old_term = get_term_by('slug', $old_slug, 'product_cat');
+            $new_term = get_term_by('slug', $new_slug, 'product_cat');
+            if (!$old_term || is_wp_error($old_term) || !$new_term || is_wp_error($new_term)) {
+                continue;
+            }
+
+            $product_ids = get_posts([
+                'post_type' => 'product',
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+                'tax_query' => [
+                    [
+                        'taxonomy' => 'product_cat',
+                        'field' => 'term_id',
+                        'terms' => [(int) $old_term->term_id],
+                    ],
+                ],
+            ]);
+
+            foreach ($product_ids as $product_id) {
+                $product_id = (int) $product_id;
+                if ($product_id < 1) {
+                    continue;
+                }
+                wp_remove_object_terms($product_id, [(int) $old_term->term_id], 'product_cat');
+                wp_add_object_terms($product_id, [(int) $new_term->term_id], 'product_cat');
+                $migrated++;
+            }
+        }
+
+        return $migrated;
+    }
+
+    /** Mută produsele din camere-huawei / camere-xiaomi în module-piese-{brand}. */
+    private function migrate_huawei_xiaomi_camere_to_module_piese(): int {
+        $map = [
+            'camere-huawei' => 'module-piese-huawei',
+            'camere-xiaomi' => 'module-piese-xiaomi',
+        ];
+        $migrated = 0;
+
+        foreach ($map as $old_slug => $new_slug) {
+            $old_term = get_term_by('slug', $old_slug, 'product_cat');
+            $new_term = get_term_by('slug', $new_slug, 'product_cat');
+            if (!$old_term || is_wp_error($old_term) || !$new_term || is_wp_error($new_term)) {
+                continue;
+            }
+
+            $product_ids = get_posts([
+                'post_type' => 'product',
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+                'tax_query' => [
+                    [
+                        'taxonomy' => 'product_cat',
+                        'field' => 'term_id',
+                        'terms' => [(int) $old_term->term_id],
+                    ],
+                ],
+            ]);
+
+            foreach ($product_ids as $product_id) {
+                $product_id = (int) $product_id;
+                if ($product_id < 1) {
+                    continue;
+                }
+                wp_remove_object_terms($product_id, [(int) $old_term->term_id], 'product_cat');
+                wp_add_object_terms($product_id, [(int) $new_term->term_id], 'product_cat');
+                $migrated++;
+            }
+        }
+
+        return $migrated;
     }
 
     /** Verifică dacă termenul aparține arborelui Security & Smart Tech (inclusiv slug vechi). */
