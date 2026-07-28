@@ -2067,8 +2067,8 @@ class WebGSM_B2B_Pricing {
         }
         
         // ========================================
-        // HARD LIMIT FINAL – NICIODATĂ sub preț achiziție + marjă (indiferent de discount/tier)
-        // get_pret_minim() returnează întotdeauna >= cost + marjă%; aici forțăm respectarea.
+        // HARD LIMIT FINAL – NICIODATĂ sub preț minim din gestiune (_pret_minim_vanzare)
+        // sau fallback achiziție+marjă când meta lipsește.
         // ========================================
         if ($pret_minim > 0 && $pret_final < $pret_minim) {
             $pret_final = $pret_minim;
@@ -2084,29 +2084,28 @@ class WebGSM_B2B_Pricing {
     }
     
     /**
-     * Preț minim de vânzare: NICIODATĂ sub preț achiziție + marjă setată.
-     * Dacă există _pret_minim_vanzare (hard limit per produs), se folosește doar dacă e >= cost+marjă.
+     * Preț minim de vânzare (hard limit B2B).
+     * Sursa de adevăr: _pret_minim_vanzare din gestiune (achiziție + marjă, deja calculat).
+     * Fallback: _pret_achizitie × marja_minima% când meta minim lipsește.
      */
     public function get_pret_minim($product) {
         $product_id = $product->get_id();
         if (isset(self::$req_pret_minim[$product_id])) {
             return self::$req_pret_minim[$product_id];
         }
-        $pret_achizitie = get_post_meta($product_id, '_pret_achizitie', true);
-        $marja_minima = (float) get_option('webgsm_b2b_marja_minima', 5);
-
-        // Floor obligatoriu: preț achiziție + marjă (%) – indiferent de discount/tier
-        $floor_cost_marja = 0;
-        if (!empty($pret_achizitie) && (float) $pret_achizitie > 0) {
-            $floor_cost_marja = (float) $pret_achizitie * (1 + $marja_minima / 100);
-        }
 
         $pret_minim_setat = get_post_meta($product_id, '_pret_minim_vanzare', true);
         if (!empty($pret_minim_setat) && (float) $pret_minim_setat > 0) {
-            $explicit = (float) $pret_minim_setat;
-            $result = $floor_cost_marja > 0 ? max($floor_cost_marja, $explicit) : $explicit;
+            $result = (float) $pret_minim_setat;
             self::$req_pret_minim[$product_id] = $result;
             return $result;
+        }
+
+        $pret_achizitie = get_post_meta($product_id, '_pret_achizitie', true);
+        $marja_minima = (float) get_option('webgsm_b2b_marja_minima', 5);
+        $floor_cost_marja = 0;
+        if (!empty($pret_achizitie) && (float) $pret_achizitie > 0) {
+            $floor_cost_marja = (float) $pret_achizitie * (1 + $marja_minima / 100);
         }
         self::$req_pret_minim[$product_id] = $floor_cost_marja;
         return $floor_cost_marja;
