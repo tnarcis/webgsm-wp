@@ -188,8 +188,8 @@ add_action('wp_head', function() {
     
     /* HOVER - Albastru intens pe text SI iconiță */
     .topbar-menu .extra-menu-item.account-item .account-links li a:hover {
-        background: #eff6ff !important;
-        color: #3b82f6 !important;
+        background: #e6f7fd !important;
+        color: var(--wgsm-cta, #00A4EB) !important;
     }
     
     .topbar-menu .extra-menu-item.account-item .account-links li a svg.menu-icon {
@@ -209,7 +209,7 @@ add_action('wp_head', function() {
     /* HOVER - SVG devine albastru */
     .topbar-menu .extra-menu-item.account-item .account-links li a:hover svg.menu-icon,
     .topbar-menu .extra-menu-item.account-item .account-links li a:hover svg.menu-icon path {
-        stroke: #3b82f6 !important;
+        stroke: var(--wgsm-cta, #00A4EB) !important;
     }
     
     /* ASCUNDE items nedorite din meniu */
@@ -406,28 +406,28 @@ function webgsm_dashboard_welcome_with_badge() {
         gap: 16px;
         padding: 20px 24px;
         margin-bottom: 24px;
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 40%, #bfdbfe 100%);
-        border: 1px solid #93c5fd;
+        background: linear-gradient(135deg, #e6f7fd 0%, #ccf0fc 40%, #99e2f9 100%);
+        border: 1px solid #66d4f7;
         border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 164, 235, 0.2);
     ">
         <div style="display: flex; align-items: center; gap: 14px;">
             <div style="
                 width: 52px;
                 height: 52px;
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                background: linear-gradient(135deg, #33C4F5 0%, #00A4EB 100%);
                 border-radius: 14px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: #fff;
-                box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+                box-shadow: 0 4px 14px rgba(0, 164, 235, 0.4);
             ">
                 <?php echo $icon_reparatii; ?>
             </div>
             <div>
-                <p style="margin: 0; font-size: 14px; color: #2563eb; font-weight: 500;">Bine ai venit,</p>
-                <h2 style="margin: 0; font-size: 20px; color: #1e40af; font-weight: 700;">
+                <p style="margin: 0; font-size: 14px; color: #00A4EB; font-weight: 500;">Bine ai venit,</p>
+                <h2 style="margin: 0; font-size: 20px; color: #009ADA; font-weight: 700;">
                     <?php echo esc_html($display_name); ?>
                 </h2>
             </div>
@@ -447,7 +447,7 @@ function webgsm_dashboard_welcome_with_badge() {
             font-weight: 500;
             text-decoration: none;
             transition: all 0.2s ease;
-        " onmouseover="this.style.borderColor='#3b82f6'; this.style.color='#3b82f6';" 
+        " onmouseover="this.style.borderColor='#00A4EB'; this.style.color='#00A4EB';" 
            onmouseout="this.style.borderColor='#e2e8f0'; this.style.color='#475569';">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>

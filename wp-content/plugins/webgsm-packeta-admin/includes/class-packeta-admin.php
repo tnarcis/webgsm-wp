@@ -118,7 +118,12 @@ class WebGSM_Packeta_Admin {
                 'missingHomeZip' => 'Completează codul poștal (obligatoriu la livrare la adresă în Packeta).',
                 'missingHomeHouse' => 'Completează numărul străzii (obligatoriu la livrare la adresă).',
                 'parcelValueRequired' => 'Completează valoarea coletului (mai mare ca 0) — obligatoriu pentru asigurare în Packeta.',
+                'nlCodUnsupported' => 'Olanda HD nu suportă ramburs (COD). Lasă COD = 0.',
+                'invalidNlPhone' => 'Telefon NL invalid. Format: 31 + 9 cifre (ex. 31612345678).',
+                'invalidNlZip' => 'Cod poștal NL invalid. Format: 1234AB.',
+                'nlHomeHint' => 'Destinație Olanda: stradă, număr, oraș, cod poștal 1234AB, telefon 31XXXXXXXXX. Fără județ RO. COD indisponibil.',
             ],
+            'nlCarrierIds' => ['4329', '8000', '8001'],
         ]);
     }
 
@@ -525,6 +530,11 @@ class WebGSM_Packeta_Admin {
             return '';
         }
         $id = (string) $address_id;
+        foreach (WebGSM_Packeta_Carriers::get_awb_home_carriers() as $carrier) {
+            if ((string) ($carrier['carrier_id'] ?? '') === $id) {
+                return (string) ($carrier['title'] ?? '');
+            }
+        }
         foreach (WebGSM_Packeta_Carriers::get_checkout_carriers() as $carrier) {
             if ((string) ($carrier['carrier_id'] ?? '') === $id) {
                 return (string) ($carrier['title'] ?? '');
@@ -626,22 +636,42 @@ class WebGSM_Packeta_Admin {
             if ($aid < 1) {
                 return 'missing_home_carrier';
             }
+            $dest = WebGSM_Packeta_Carriers::destination_country_for_carrier((string) $aid);
             $street = isset($_POST['street']) ? sanitize_text_field(wp_unslash((string) $_POST['street'])) : '';
             $city = isset($_POST['city']) ? sanitize_text_field(wp_unslash((string) $_POST['city'])) : '';
             $province_code = isset($_POST['province']) ? sanitize_text_field(wp_unslash((string) $_POST['province'])) : '';
             $zip = isset($_POST['zip']) ? sanitize_text_field(wp_unslash((string) $_POST['zip'])) : '';
             $house = isset($_POST['house_number']) ? sanitize_text_field(wp_unslash((string) $_POST['house_number'])) : '';
+            $phone = isset($_POST['recipient_phone']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_phone'])) : '';
+            $cod = isset($_POST['cod']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['cod'])) : 0;
+
             if ($street === '' || $city === '') {
                 return 'missing_home_address';
-            }
-            if (!WebGSM_Packeta_Config::is_valid_ro_county_code($province_code)) {
-                return 'missing_home_province';
             }
             if ($zip === '') {
                 return 'missing_home_zip';
             }
             if ($house === '') {
                 return 'missing_home_house';
+            }
+
+            if ($dest === 'NL') {
+                if (!WebGSM_Packeta_Carriers::carrier_allows_cod((string) $aid) && $cod > 0) {
+                    return 'nl_cod_unsupported';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_nl_zip($zip)) {
+                    return 'invalid_nl_zip';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_nl_phone($phone)) {
+                    return 'invalid_nl_phone';
+                }
+
+                return null;
+            }
+
+            if (WebGSM_Packeta_Carriers::carrier_requires_province((string) $aid)
+                && !WebGSM_Packeta_Config::is_valid_ro_county_code($province_code)) {
+                return 'missing_home_province';
             }
 
             return null;
@@ -716,8 +746,17 @@ class WebGSM_Packeta_Admin {
             'eshop' => $sender['eshop'] !== '' ? $sender['eshop'] : (string) ($settings['eshop'] ?? ''),
         ];
 
+        $dest_country = WebGSM_Packeta_Carriers::destination_country_for_carrier((string) ($attrs['addressId'] ?? 0));
+        if ($dest_country === 'NL') {
+            $attrs['phone'] = WebGSM_Packeta_Config::normalize_nl_phone((string) $attrs['phone']);
+            // Packeta NL: valoarea declarată e tipic în EUR (COD indisponibil).
+            if (($attrs['currency'] ?? '') === '' || ($attrs['currency'] ?? '') === 'RON') {
+                $attrs['currency'] = 'EUR';
+            }
+        }
+
         $cod = isset($_POST['cod']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['cod'])) : 0;
-        if ($cod > 0) {
+        if ($cod > 0 && WebGSM_Packeta_Carriers::carrier_allows_cod((string) ($attrs['addressId'] ?? 0))) {
             $attrs['cod'] = $cod;
         }
 
@@ -737,7 +776,11 @@ class WebGSM_Packeta_Admin {
             $city = isset($_POST['city']) ? sanitize_text_field(wp_unslash((string) $_POST['city'])) : '';
             $zip = isset($_POST['zip']) ? sanitize_text_field(wp_unslash((string) $_POST['zip'])) : '';
             $province_code = isset($_POST['province']) ? sanitize_text_field(wp_unslash((string) $_POST['province'])) : '';
-            $province = WebGSM_Packeta_Config::ro_province_for_api($province_code);
+
+            if ($dest_country === 'NL') {
+                $zip = WebGSM_Packeta_Config::normalize_nl_zip($zip);
+            }
+
             if ($street !== '') {
                 $attrs['street'] = $street;
             }
@@ -750,8 +793,11 @@ class WebGSM_Packeta_Admin {
             if ($zip !== '') {
                 $attrs['zip'] = $zip;
             }
-            if ($province !== '') {
-                $attrs['province'] = $province;
+            if ($dest_country !== 'NL' && WebGSM_Packeta_Carriers::carrier_requires_province((string) ($attrs['addressId'] ?? 0))) {
+                $province = WebGSM_Packeta_Config::ro_province_for_api($province_code);
+                if ($province !== '') {
+                    $attrs['province'] = $province;
+                }
             }
         }
 

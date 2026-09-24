@@ -2,6 +2,7 @@
 /**
  * Trimite webhook către WebGSM la schimbare status comandă.
  * Payload conform SPEC-plugin-woocommerce-webgsm (order.status_changed).
+ * Trimiterea e asincronă (Action Scheduler / WP-Cron) ca să nu blocheze statusul comenzii.
  */
 
 namespace WebGSM_Woo_Sync;
@@ -17,7 +18,7 @@ class Webhook_Sender {
     const OPTION_STATUS_REFUNDED = 'webgsm_woo_sync_status_refunded';
     const OPTION_LOG = 'webgsm_woo_sync_log_requests';
     const TIMEOUT = 15;
-    const RETRY_DELAYS = [5, 15];
+    const ASYNC_HOOK = 'webgsm_woo_sync_send_webhook';
 
     /** @var self */
     private static $instance;
@@ -31,6 +32,7 @@ class Webhook_Sender {
 
     private function __construct() {
         add_action('woocommerce_order_status_changed', [$this, 'on_order_status_changed'], 10, 4);
+        add_action(self::ASYNC_HOOK, [$this, 'process_scheduled_webhook'], 10, 3);
     }
 
     /**
@@ -43,7 +45,6 @@ class Webhook_Sender {
         try {
             $url = get_option(self::OPTION_URL, '');
             $secret = get_option(self::OPTION_SECRET, '');
-            error_log('WEBHOOK TRIGGER: ' . $url);
             if (empty($url) || empty($secret)) {
                 $this->log('WebGSM Woo Sync: URL sau Secret lipsă în setări. Webhook netrimis.');
                 return;
@@ -63,6 +64,39 @@ class Webhook_Sender {
                 return;
             }
 
+            $args = [(int) $order_id, (string) $old_status, (string) $new_status];
+
+            if (function_exists('as_enqueue_async_action')) {
+                as_enqueue_async_action(self::ASYNC_HOOK, $args, 'webgsm-woo-sync');
+            } elseif (function_exists('as_schedule_single_action')) {
+                as_schedule_single_action(time() + 5, self::ASYNC_HOOK, $args, 'webgsm-woo-sync');
+            } else {
+                // Fallback WP-Cron (fără sleep în request-ul curent)
+                if (!wp_next_scheduled(self::ASYNC_HOOK, $args)) {
+                    wp_schedule_single_event(time() + 5, self::ASYNC_HOOK, $args);
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log(sprintf('WebGSM Woo Sync: eroare schedule order_id=%s - %s', $order_id, $e->getMessage()));
+        }
+    }
+
+    /**
+     * Worker asincron.
+     *
+     * @param int $order_id
+     * @param string $old_status
+     * @param string $new_status
+     */
+    public function process_scheduled_webhook($order_id, $old_status = '', $new_status = '') {
+        try {
+            $url = get_option(self::OPTION_URL, '');
+            $secret = get_option(self::OPTION_SECRET, '');
+            if (empty($url) || empty($secret)) {
+                return;
+            }
+
+            $order = wc_get_order($order_id);
             $payload = $this->build_order_payload($order_id, $old_status, $new_status, $order);
             if (!$payload) {
                 return;
@@ -70,11 +104,9 @@ class Webhook_Sender {
 
             $body = wp_json_encode($payload);
             $signature = $this->hmac_signature($body, $secret);
-
             $this->send_request($url, $body, $signature, $order_id, $new_status);
         } catch (\Throwable $e) {
-            $this->log(sprintf('WebGSM Woo Sync: eroare order_id=%s - %s', $order_id, $e->getMessage()));
-            error_log(sprintf('WebGSM Woo Sync: %s in %s:%d', $e->getMessage(), $e->getFile(), $e->getLine()));
+            $this->log(sprintf('WebGSM Woo Sync: eroare process order_id=%s - %s', $order_id, $e->getMessage()));
         }
     }
 
@@ -93,9 +125,18 @@ class Webhook_Sender {
             return null;
         }
 
-        $billing_cui = $order->get_meta('_billing_cif');
-        if (empty($billing_cui)) {
-            $billing_cui = '';
+        $billing_cui = '';
+        if (function_exists('webgsm_get_order_fiscal_data')) {
+            $fiscal = webgsm_get_order_fiscal_data($order);
+            $billing_cui = !empty($fiscal['cui']) ? $fiscal['cui'] : '';
+        } else {
+            $billing_cui = $order->get_meta('_billing_cui');
+            if (empty($billing_cui)) {
+                $billing_cui = $order->get_meta('_billing_cif');
+            }
+            if (empty($billing_cui)) {
+                $billing_cui = '';
+            }
         }
 
         $line_items = [];
@@ -167,7 +208,7 @@ class Webhook_Sender {
     }
 
     /**
-     * Trimite request cu retry (backoff 5s, 15s). Nu aruncă excepții — doar loghează; nu blochează WooCommerce.
+     * Trimite request o singură dată (retry-urile le face Action Scheduler la eșec).
      */
     private function send_request($url, $body, $signature, $order_id, $status_new) {
         try {
@@ -176,7 +217,7 @@ class Webhook_Sender {
                 $this->log(sprintf('WebGSM Woo Sync: trimitere order_id=%s status_new=%s', $order_id, $status_new));
             }
 
-            $args = [
+            $response = wp_remote_post($url, [
                 'method' => 'POST',
                 'timeout' => self::TIMEOUT,
                 'headers' => [
@@ -184,59 +225,39 @@ class Webhook_Sender {
                     'X-WebGSM-Signature' => $signature,
                 ],
                 'body' => $body,
-            ];
+            ]);
 
-            $attempt = 0;
-            $delays = [0] + self::RETRY_DELAYS;
-            $last_code = 0;
-
-            foreach ($delays as $delay) {
-                if ($delay > 0) {
-                    sleep($delay);
-                }
-                $attempt++;
-                $response = wp_remote_post($url, $args);
-
-                if (is_wp_error($response)) {
-                    $this->log(sprintf('WebGSM Woo Sync: order_id=%s attempt=%d WP_Error - %s', $order_id, $attempt, $response->get_error_message()));
-                    error_log(sprintf('WebGSM Woo Sync: order_id=%s %s', $order_id, $response->get_error_message()));
-                    continue;
-                }
-
-                $code = wp_remote_retrieve_response_code($response);
-                $last_code = $code;
-
-                if ($code >= 200 && $code < 300) {
-                    if ($log) {
-                        $this->log(sprintf('WebGSM Woo Sync: succes order_id=%s (attempt %d)', $order_id, $attempt));
-                    }
-                    return;
-                }
-
-                $body_res = wp_remote_retrieve_body($response);
-                $this->log(sprintf(
-                    'WebGSM Woo Sync: order_id=%s attempt=%d HTTP %s - %s',
-                    $order_id,
-                    $attempt,
-                    $code,
-                    wp_remote_retrieve_response_message($response)
-                ));
-                if (!empty($body_res)) {
-                    $this->log('WebGSM Woo Sync response body: ' . substr($body_res, 0, 500));
-                }
+            if (is_wp_error($response)) {
+                $this->log(sprintf('WebGSM Woo Sync: order_id=%s WP_Error - %s', $order_id, $response->get_error_message()));
+                throw new \RuntimeException($response->get_error_message());
             }
 
-            if ($last_code >= 400 && $last_code < 600) {
-                error_log(sprintf('WebGSM Woo Sync: eșec final order_id=%s HTTP %s', $order_id, $last_code));
+            $code = wp_remote_retrieve_response_code($response);
+            if ($code >= 200 && $code < 300) {
+                if ($log) {
+                    $this->log(sprintf('WebGSM Woo Sync: succes order_id=%s', $order_id));
+                }
+                return;
             }
+
+            $this->log(sprintf(
+                'WebGSM Woo Sync: order_id=%s HTTP %s - %s',
+                $order_id,
+                $code,
+                wp_remote_retrieve_response_message($response)
+            ));
+            throw new \RuntimeException('HTTP ' . $code);
         } catch (\Throwable $e) {
             $this->log(sprintf('WebGSM Woo Sync: send_request eroare order_id=%s - %s', $order_id, $e->getMessage()));
-            error_log(sprintf('WebGSM Woo Sync send_request: %s in %s:%d', $e->getMessage(), $e->getFile(), $e->getLine()));
+            // Re-throw so Action Scheduler can retry
+            if (did_action('action_scheduler_before_execute') || doing_action(self::ASYNC_HOOK)) {
+                throw $e;
+            }
         }
     }
 
     private function log($message) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        if ((defined('WP_DEBUG') && WP_DEBUG) || get_option(self::OPTION_LOG, 0)) {
             error_log($message);
         }
     }

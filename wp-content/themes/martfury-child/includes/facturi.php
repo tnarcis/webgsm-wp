@@ -1,65 +1,72 @@
 <?php
 /**
- * MODUL FACTURI - SmartBill
- * Generează facturi automate și permite descărcare PDF din cont client
- * Cu pagină de setări în admin
+ * MODUL FACTURI - Oblio
+ * Generează facturi automate (cu descărcare gestiune) și permite descărcare PDF din cont client
  */
 
 // =============================================
-// PAGINĂ SETĂRI SMARTBILL ÎN ADMIN
+// PAGINĂ SETĂRI OBLIO ÎN ADMIN
 // =============================================
 
 add_action('admin_menu', function() {
     add_submenu_page(
         'woocommerce',
-        'Setări SmartBill',
-        'Setări SmartBill',
+        'Setări Oblio',
+        'Setări Oblio',
         'manage_woocommerce',
-        'smartbill-settings',
-        'render_smartbill_settings_page'
+        'oblio-settings',
+        'render_oblio_settings_page'
     );
 });
 
-function render_smartbill_settings_page() {
-    // Salvare setări
-    if(isset($_POST['save_smartbill_settings']) && wp_verify_nonce($_POST['smartbill_nonce'], 'save_smartbill')) {
-        update_option('smartbill_api_active', isset($_POST['smartbill_api_active']) ? 1 : 0);
-        update_option('smartbill_auto_generate', isset($_POST['smartbill_auto_generate']) ? 1 : 0);
-        update_option('smartbill_username', sanitize_email($_POST['smartbill_username']));
-        update_option('smartbill_token', sanitize_text_field($_POST['smartbill_token']));
-        update_option('smartbill_cif', sanitize_text_field($_POST['smartbill_cif']));
-        update_option('smartbill_serie', sanitize_text_field($_POST['smartbill_serie']));
-        update_option('smartbill_tva', floatval($_POST['smartbill_tva']));
-        echo '<div class="notice notice-success"><p>Setarile au fost salvate!</p></div>';
+function render_oblio_settings_page() {
+    if (isset($_POST['save_oblio_settings']) && wp_verify_nonce($_POST['oblio_nonce'], 'save_oblio')) {
+        update_option('oblio_api_active', isset($_POST['oblio_api_active']) ? 1 : 0);
+        update_option('oblio_auto_generate', isset($_POST['oblio_auto_generate']) ? 1 : 0);
+        update_option('oblio_use_stock', isset($_POST['oblio_use_stock']) ? 1 : 0);
+        update_option('oblio_email', sanitize_email($_POST['oblio_email']));
+        update_option('oblio_secret', sanitize_text_field($_POST['oblio_secret']));
+        update_option('oblio_cif', sanitize_text_field($_POST['oblio_cif']));
+        update_option('oblio_serie', sanitize_text_field($_POST['oblio_serie']));
+        update_option('oblio_management', sanitize_text_field($_POST['oblio_management']));
+        update_option('oblio_workstation', sanitize_text_field($_POST['oblio_workstation']));
+        update_option('oblio_tva', floatval($_POST['oblio_tva']));
+        update_option('oblio_efactura_via_oblio', isset($_POST['oblio_efactura_via_oblio']) ? 1 : 0);
+        delete_transient('oblio_access_token');
+        echo '<div class="notice notice-success"><p>Setările au fost salvate!</p></div>';
     }
-    
-    $api_active = get_option('smartbill_api_active', 0);
-    $auto_generate = get_option('smartbill_auto_generate', 1);
-    $username = get_option('smartbill_username', 'info@webgsm.ro');
-    $token = get_option('smartbill_token', '003|5088be0e0850155eaa7713f3d324a63a');
-    $cif = get_option('smartbill_cif', 'RO31902941');
-    $serie = get_option('smartbill_serie', 'WEB');
-    $tva = get_option('smartbill_tva', 21);
+
+    $api_active = get_option('oblio_api_active', 0);
+    $auto_generate = get_option('oblio_auto_generate', 1);
+    $use_stock = get_option('oblio_use_stock', 1);
+    $efactura_via_oblio = get_option('oblio_efactura_via_oblio', 1);
+    $email = get_option('oblio_email', '');
+    $secret = get_option('oblio_secret', '');
+    $cif = get_option('oblio_cif', 'RO31902941');
+    $serie = get_option('oblio_serie', 'WEB');
+    $management = get_option('oblio_management', '');
+    $workstation = get_option('oblio_workstation', 'Sediu');
+    $tva = get_option('oblio_tva', 21);
     ?>
     <div class="wrap">
-        <h1>⚙️ Setări SmartBill</h1>
-        
+        <h1>Setări Oblio</h1>
+
         <form method="post">
-            <?php wp_nonce_field('save_smartbill', 'smartbill_nonce'); ?>
-            
+            <?php wp_nonce_field('save_oblio', 'oblio_nonce'); ?>
+
             <table class="form-table">
                 <tr>
                     <th>Status API</th>
                     <td>
                         <label style="display:inline-block; padding:10px 20px; background:<?php echo $api_active ? '#d4edda' : '#fff3cd'; ?>; border-radius:5px;">
-                            <input type="checkbox" name="smartbill_api_active" value="1" <?php checked($api_active, 1); ?>>
+                            <input type="checkbox" name="oblio_api_active" value="1" <?php checked($api_active, 1); ?>>
                             <strong style="font-size:16px;">API Activ</strong>
                         </label>
                         <p class="description" style="margin-top:10px;">
-                            <?php if($api_active): ?>
-                                <span style="color:green; font-size:14px;">✓ API-ul este <strong>ACTIV</strong></span>
+                            <?php if ($api_active): ?>
+                                <span style="color:green;">API-ul este ACTIV</span>
                             <?php else: ?>
-                                <span style="color:orange; font-size:14px;">⏸ API-ul este <strong>OPRIT</strong> (mod test) – poți genera facturi manual din comenzi</span>
+                                <span style="color:orange;">API-ul este OPRIT (mod test) – poți genera facturi manual din comenzi</span>
                             <?php endif; ?>
                         </p>
                     </td>
@@ -68,218 +75,323 @@ function render_smartbill_settings_page() {
                     <th>Generează factură automat</th>
                     <td>
                         <label style="display:inline-block; padding:8px 16px; background:#f0f6fc; border-radius:5px;">
-                            <input type="checkbox" name="smartbill_auto_generate" value="1" <?php checked($auto_generate, 1); ?>>
+                            <input type="checkbox" name="oblio_auto_generate" value="1" <?php checked($auto_generate, 1); ?>>
                             <strong>La plată online / la livrare (ramburs)</strong>
                         </label>
-                        <p class="description" style="margin-top:8px;">
-                            <?php if($auto_generate): ?>
-                                <span style="color:green;">✓ Factura se generează automat la Processing (card) sau Completed (ramburs).</span>
-                            <?php else: ?>
-                                <span style="color:#666;">Factura nu se generează automat. Folosește butonul <strong>„Generează factură”</strong> în fiecare comandă (lista Comenzi sau pagina comenzii).</span>
-                            <?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Descarcă stoc (gestiune)</th>
+                    <td>
+                        <label style="display:inline-block; padding:8px 16px; background:#f0f6fc; border-radius:5px;">
+                            <input type="checkbox" name="oblio_use_stock" value="1" <?php checked($use_stock, 1); ?>>
+                            <strong>useStock = 1 la emitere factură</strong>
+                        </label>
+                        <p class="description">Necesită gestiune activă în Oblio și produse cu același cod (SKU) ca în magazin.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>e-Factura (SPV)</th>
+                    <td>
+                        <label style="display:inline-block; padding:8px 16px; background:#f0f6fc; border-radius:5px;">
+                            <input type="checkbox" name="oblio_efactura_via_oblio" value="1" <?php checked($efactura_via_oblio, 1); ?>>
+                            <strong>e-Factura gestionată de Oblio</strong>
+                        </label>
+                        <p class="description">
+                            WebGSM <strong>nu</strong> trimite direct către ANAF SPV. Dacă e-Factura e activă în contul Oblio,
+                            statusul SPV este stocat pe comandă (<code>_oblio_efactura_status</code>) după emitere.
+                            Configurează e-Factura în Oblio → Setări → e-Factura.
                         </p>
                     </td>
                 </tr>
                 <tr>
-                    <th>Email SmartBill</th>
-                    <td><input type="email" name="smartbill_username" value="<?php echo esc_attr($username); ?>" class="regular-text"></td>
+                    <th>Email Oblio (client_id)</th>
+                    <td><input type="email" name="oblio_email" value="<?php echo esc_attr($email); ?>" class="regular-text" required></td>
                 </tr>
                 <tr>
-                    <th>Token API</th>
-                    <td><input type="text" name="smartbill_token" value="<?php echo esc_attr($token); ?>" class="regular-text"></td>
+                    <th>Token API (client_secret)</th>
+                    <td>
+                        <input type="text" name="oblio_secret" value="<?php echo esc_attr($secret); ?>" class="regular-text" autocomplete="off">
+                        <p class="description">Din Oblio → Setări → Date Cont. Se regenerează la resetare parolă.</p>
+                    </td>
                 </tr>
                 <tr>
                     <th>CIF Firmă</th>
-                    <td><input type="text" name="smartbill_cif" value="<?php echo esc_attr($cif); ?>" class="regular-text"></td>
+                    <td><input type="text" name="oblio_cif" value="<?php echo esc_attr($cif); ?>" class="regular-text"></td>
                 </tr>
                 <tr>
                     <th>Serie Factură</th>
-                    <td><input type="text" name="smartbill_serie" value="<?php echo esc_attr($serie); ?>" class="regular-text"></td>
+                    <td><input type="text" name="oblio_serie" value="<?php echo esc_attr($serie); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th>Gestiune</th>
+                    <td>
+                        <input type="text" name="oblio_management" value="<?php echo esc_attr($management); ?>" class="regular-text" placeholder="ex: Magazin">
+                        <p class="description">Numele exact al gestiunii din Oblio (nomenclator management).</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Punct de lucru</th>
+                    <td>
+                        <input type="text" name="oblio_workstation" value="<?php echo esc_attr($workstation); ?>" class="regular-text" placeholder="Sediu">
+                    </td>
                 </tr>
                 <tr>
                     <th>Cotă TVA Fallback (%)</th>
                     <td>
-                        <input type="number" name="smartbill_tva" value="<?php echo esc_attr($tva); ?>" class="small-text" step="1" min="0" max="100">
+                        <input type="number" name="oblio_tva" value="<?php echo esc_attr($tva); ?>" class="small-text" step="1" min="0" max="100">
                         <p class="description">
-                            TVA implicit: 19% (România)<br>
-                            <strong>Notă:</strong> TVA-ul se ia automat din <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=tax'); ?>">WooCommerce → Setări → Taxe</a>. 
-                            Această valoare e folosită doar dacă WooCommerce nu are taxe configurate.
+                            TVA-ul se ia din WooCommerce. Fallback doar dacă nu există taxe pe linie.
                         </p>
                     </td>
                 </tr>
             </table>
-            
+
             <p class="submit">
-                <button type="submit" name="save_smartbill_settings" class="button button-primary">Salveaza setarile</button>
+                <button type="submit" name="save_oblio_settings" class="button button-primary">Salvează setările</button>
             </p>
         </form>
-        
+
         <hr>
-        <h3>📋 Informații</h3>
+        <h3>Informații</h3>
         <ul>
-            <li><strong>Generează automat (bifat):</strong> La plată online → factură la Processing; la ramburs → factură la Completed.</li>
-            <li><strong>Generează automat (nebifat):</strong> Factura nu se generează singură; folosești butonul <strong>„Generează factură”</strong> în Comenzi (listă sau pagina comenzii).</li>
-            <li><strong>Factura PF:</strong> Pe numele clientului; <strong>Factura PJ:</strong> Pe firma (din Date Facturare).</li>
-            <li><strong>SKU:</strong> Produsele fără SKU primesc cod WEBGSM-{ID}.</li>
+            <li><strong>Automat:</strong> card → Processing; ramburs/BACS → Completed.</li>
+            <li><strong>Manual:</strong> buton „Generează” în listă / pagina comenzii.</li>
+            <li><strong>PF / PJ:</strong> date din Date Facturare / billing.</li>
+            <li><strong>SKU:</strong> trebuie să coincidă cu codul produsului din Oblio pentru descărcare stoc.</li>
         </ul>
-        
-        <div style="background:#fff3cd; padding:15px; border-left:4px solid #ffc107; margin:20px 0;">
-            <h4 style="margin-top:0;">⚙️ Setări SmartBill necesare:</h4>
-            
-            <p><strong>1. Pentru afișare SKU în facturi:</strong></p>
-            <ol style="margin:10px 0; padding-left:20px;">
-                <li>Loghează-te în <strong>SmartBill.ro</strong></li>
-                <li>Mergi la <strong>Setări → Setări Generale → Setări Facturi</strong></li>
-                <li>Secțiunea <strong>"Produse/Servicii"</strong></li>
-                <li>Bifează: <strong>☑ Afișează codul produsului în facturi</strong></li>
-                <li>Salvează setările</li>
-            </ol>
-            
-            <p><strong>2. Pentru cotă TVA corectă:</strong></p>
-            <ol style="margin:10px 0; padding-left:20px;">
-                <li>Mergi la <strong><a href="<?php echo admin_url('admin.php?page=wc-settings&tab=tax'); ?>">WooCommerce → Setări → Taxe</a></strong></li>
-                <li>Activează: <strong>☑ Activează taxele</strong></li>
-                <li>Click pe <strong>"Taxe standard"</strong></li>
-                <li>Adaugă rând: Țară <strong>RO</strong>, Cotă <strong>21.0000%</strong></li>
-                <li>Salvează modificările</li>
-            </ol>
-            
-            <p style="margin:5px 0 0 0; font-size:13px; color:#856404;">
-                💡 <strong>Notă:</strong> TVA-ul se calculează automat din prețurile WooCommerce. Cota "Fallback" de mai sus e folosită doar dacă WooCommerce nu are taxe configurate.
-            </p>
-        </div>
-        
+
         <hr>
-        <h3>🔧 Instrumente</h3>
+        <h3>Instrumente</h3>
         <p>
-            <a href="<?php echo admin_url('admin.php?page=smartbill-settings&action=generate_skus'); ?>" 
+            <a href="<?php echo esc_url(admin_url('admin.php?page=oblio-settings&action=generate_skus')); ?>"
                class="button button-secondary"
                onclick="return confirm('Generează SKU pentru toate produsele fără SKU?');">
-                🏷️ Generează SKU pentru toate produsele
+                Generează SKU pentru toate produsele
             </a>
         </p>
-        
+
         <?php
-        // Procesare generare SKU-uri
         if (isset($_GET['action']) && $_GET['action'] === 'generate_skus') {
             $generated = webgsm_bulk_generate_skus();
-            echo '<div class="notice notice-success"><p>✓ Au fost generate ' . $generated . ' SKU-uri!</p></div>';
+            echo '<div class="notice notice-success"><p>Au fost generate ' . (int) $generated . ' SKU-uri!</p></div>';
         }
         ?>
     </div>
     <?php
 }
 
-// Funcție bulk pentru generare SKU-uri
 function webgsm_bulk_generate_skus() {
-    $args = array(
+    $products = get_posts(array(
         'post_type' => 'product',
         'posts_per_page' => -1,
-        'post_status' => 'publish'
-    );
-    
-    $products = get_posts($args);
+        'post_status' => 'publish',
+    ));
     $generated = 0;
-    
+
     foreach ($products as $post) {
         $product = wc_get_product($post->ID);
-        if (!$product) continue;
-        
-        $current_sku = $product->get_sku();
-        
-        if (empty($current_sku)) {
-            $auto_sku = 'WEBGSM-' . $product->get_id();
-            $product->set_sku($auto_sku);
+        if (!$product) {
+            continue;
+        }
+        if (empty($product->get_sku())) {
+            $product->set_sku('WEBGSM-' . $product->get_id());
             $product->save();
             $generated++;
         }
     }
-    
+
     return $generated;
 }
 
 // =============================================
-// FUNCȚII SMARTBILL
+// API OBLIO
 // =============================================
 
-// Funcție pentru a face request la SmartBill API
-function smartbill_request($endpoint, $data = null, $method = 'POST') {
-    $username = get_option('smartbill_username', 'info@webgsm.ro');
-    $token = get_option('smartbill_token', '003|5088be0e0850155eaa7713f3d324a63a');
-    
-    $url = 'https://ws.smartbill.ro/SBORO/api/' . $endpoint;
-    
-    $args = array(
-        'method' => $method,
+/**
+ * Obține Bearer token Oblio (cache transient).
+ */
+function oblio_get_access_token() {
+    $cached = get_transient('oblio_access_token');
+    if (is_string($cached) && $cached !== '') {
+        return $cached;
+    }
+
+    $email = get_option('oblio_email', '');
+    $secret = get_option('oblio_secret', '');
+    if (!$email || !$secret) {
+        return new WP_Error('oblio_auth', 'Lipsesc email / token Oblio din setări.');
+    }
+
+    $response = wp_remote_post('https://www.oblio.eu/api/authorize/token', array(
         'timeout' => 30,
         'headers' => array(
-            'Authorization' => 'Basic ' . base64_encode($username . ':' . $token),
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json'
-        )
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ),
+        'body' => array(
+            'client_id' => $email,
+            'client_secret' => $secret,
+        ),
+    ));
+
+    if (is_wp_error($response)) {
+        return $response;
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if (empty($body['access_token'])) {
+        $msg = isset($body['statusMessage']) ? $body['statusMessage'] : 'Autorizare Oblio eșuată';
+        return new WP_Error('oblio_auth', $msg);
+    }
+
+    $expires = isset($body['expires_in']) ? max(60, intval($body['expires_in']) - 60) : 3000;
+    set_transient('oblio_access_token', $body['access_token'], $expires);
+
+    return $body['access_token'];
+}
+
+/**
+ * Request generic Oblio API.
+ *
+ * @param string     $path   Path relativ (ex: docs/invoice)
+ * @param array|null $data   Body JSON / form
+ * @param string     $method GET|POST|PUT|DELETE
+ * @param string     $format json|form
+ */
+function oblio_request($path, $data = null, $method = 'POST', $format = 'json') {
+    $token = oblio_get_access_token();
+    if (is_wp_error($token)) {
+        return array('error' => $token->get_error_message(), 'status' => 401);
+    }
+
+    $url = 'https://www.oblio.eu/api/' . ltrim($path, '/');
+    $args = array(
+        'method' => strtoupper($method),
+        'timeout' => 45,
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ),
     );
-    
-    if($data && $method === 'POST') {
-        $args['body'] = json_encode($data);
-        
-        // Log SKU-uri trimise (pentru debugging)
-        if (defined('WP_DEBUG') && WP_DEBUG && isset($data['products'])) {
-            error_log('=== SmartBill API Request ===');
-            error_log('Endpoint: ' . $endpoint);
-            foreach ($data['products'] as $product) {
-                error_log('Product: ' . $product['name'] . ' | Code/SKU: ' . $product['code']);
+
+    if ($data !== null) {
+        if ($format === 'form') {
+            $args['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+            $args['body'] = $data;
+        } else {
+            $args['headers']['Content-Type'] = 'application/json';
+            $args['body'] = wp_json_encode($data);
+        }
+    }
+
+    if (defined('WP_DEBUG') && WP_DEBUG && is_array($data) && isset($data['products'])) {
+        error_log('=== Oblio API Request === ' . $path);
+        foreach ($data['products'] as $product) {
+            if (isset($product['name'])) {
+                $code = isset($product['code']) ? $product['code'] : '';
+                error_log('Product: ' . $product['name'] . ' | Code/SKU: ' . $code);
             }
         }
     }
-    
+
     $response = wp_remote_request($url, $args);
-    
-    if(is_wp_error($response)) {
+    if (is_wp_error($response)) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('SmartBill API Error: ' . $response->get_error_message());
+            error_log('Oblio API Error: ' . $response->get_error_message());
         }
-        return array('error' => $response->get_error_message());
+        return array('error' => $response->get_error_message(), 'status' => 0);
     }
-    
-    $body = wp_remote_retrieve_body($response);
-    $result = json_decode($body, true);
-    
-    // Log răspuns (pentru debugging)
-    if (defined('WP_DEBUG') && WP_DEBUG && isset($result['errorText'])) {
-        error_log('SmartBill Error Response: ' . $result['errorText']);
+
+    $code = wp_remote_retrieve_response_code($response);
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if (!is_array($body)) {
+        $body = array();
     }
-    
-    return $result;
+    $body['http_status'] = $code;
+
+    if ($code === 401) {
+        delete_transient('oblio_access_token');
+    }
+
+    if ($code >= 400 || (isset($body['status']) && (int) $body['status'] >= 400)) {
+        $msg = isset($body['statusMessage']) ? $body['statusMessage'] : 'Eroare Oblio';
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Oblio Error Response: ' . $msg);
+        }
+        $body['error'] = $msg;
+    }
+
+    return $body;
 }
 
-// Funcție pentru a genera factura în SmartBill
-function genereaza_factura_smartbill($order_id) {
-    // Verifică dacă API-ul e activ
-    if(!get_option('smartbill_api_active', 0)) {
+/**
+ * Helper: citește meta factură Oblio (cu fallback SmartBill test, dacă există).
+ */
+function webgsm_get_invoice_meta($order_id, $key) {
+    $order = wc_get_order($order_id);
+    $map = array(
+        'number' => array('_oblio_invoice_number', '_smartbill_invoice_number'),
+        'series' => array('_oblio_invoice_series', '_smartbill_invoice_series'),
+        'date' => array('_oblio_invoice_date', '_smartbill_invoice_date'),
+        'link' => array('_oblio_invoice_link'),
+    );
+    if (!isset($map[$key])) {
+        return '';
+    }
+    foreach ($map[$key] as $meta_key) {
+        $val = $order ? $order->get_meta($meta_key) : get_post_meta($order_id, $meta_key, true);
+        if ($val !== '' && $val !== null) {
+            return $val;
+        }
+    }
+    return '';
+}
+
+function webgsm_save_invoice_meta($order, $number, $series, $link = '', $efactura_status = '') {
+    $order->update_meta_data('_oblio_invoice_number', $number);
+    $order->update_meta_data('_oblio_invoice_series', $series);
+    $order->update_meta_data('_oblio_invoice_date', gmdate('Y-m-d'));
+    if ($link) {
+        $order->update_meta_data('_oblio_invoice_link', $link);
+    }
+    if ($efactura_status !== '') {
+        $order->update_meta_data('_oblio_efactura_status', $efactura_status);
+        $order->update_meta_data('_oblio_efactura_updated', gmdate('c'));
+    }
+    $order->save();
+}
+
+/**
+ * Generează factura Oblio pentru o comandă.
+ *
+ * @param int  $order_id
+ * @param bool $force    Ignoră toggle-ul API Activ (generare manuală)
+ */
+function genereaza_factura_oblio($order_id, $force = false) {
+    if (!$force && !get_option('oblio_api_active', 0)) {
         $order = wc_get_order($order_id);
-        if($order) {
-            $order->add_order_note('SmartBill: API dezactivat (mod test) - factura nu a fost generată');
+        if ($order) {
+            $order->add_order_note('Oblio: API dezactivat (mod test) - factura nu a fost generată');
         }
         return false;
     }
-    
+
     $order = wc_get_order($order_id);
-    if(!$order) return false;
-    
-    // Verifică dacă factura există deja
-    $factura_existenta = get_post_meta($order_id, '_smartbill_invoice_number', true);
-    if($factura_existenta) {
-        $series_existenta = get_post_meta($order_id, '_smartbill_invoice_series', true);
+    if (!$order) {
+        return false;
+    }
+
+    $existing_number = webgsm_get_invoice_meta($order_id, 'number');
+    if ($existing_number) {
         return array(
-            'number' => $factura_existenta,
-            'series' => $series_existenta
+            'number' => $existing_number,
+            'series' => webgsm_get_invoice_meta($order_id, 'series'),
+            'seriesName' => webgsm_get_invoice_meta($order_id, 'series'),
         );
     }
 
-    // Prevent concurrent SmartBill invoice generations for the same order.
-    // This avoids duplicate external calls when Woo hooks or admin actions overlap.
-    $lock_key = 'webgsm_smartbill_invoice_lock_' . (int) $order_id;
-    $lock_group = 'webgsm_smartbill_locks';
+    $lock_key = 'webgsm_oblio_invoice_lock_' . (int) $order_id;
+    $lock_group = 'webgsm_oblio_locks';
     $lock_acquired = false;
     if (function_exists('wp_cache_add')) {
         $lock_acquired = wp_cache_add($lock_key, 1, $lock_group, 300);
@@ -290,209 +402,303 @@ function genereaza_factura_smartbill($order_id) {
             $lock_acquired = true;
         }
     }
-
     if (!$lock_acquired) {
-        // Another worker might have finished while we were trying to acquire the lock.
-        $num = get_post_meta($order_id, '_smartbill_invoice_number', true);
+        $num = webgsm_get_invoice_meta($order_id, 'number');
         if ($num) {
-            $series = get_post_meta($order_id, '_smartbill_invoice_series', true);
-            return array('number' => $num, 'series' => $series);
+            return array(
+                'number' => $num,
+                'series' => webgsm_get_invoice_meta($order_id, 'series'),
+                'seriesName' => webgsm_get_invoice_meta($order_id, 'series'),
+            );
         }
         return false;
     }
-    
-    $cif = get_option('smartbill_cif', 'RO31902941');
-    $serie = get_option('smartbill_serie', 'WEB');
-    $tva = get_option('smartbill_tva', 21);
-    
-    // Verifică dacă e factură PJ
-    $tip_facturare = get_post_meta($order_id, '_tip_facturare', true);
-    $billing_company = '';
-    $billing_cif = '';
-    $billing_reg_com = '';
-    
-    if($tip_facturare === 'pj') {
-        $billing_company = get_post_meta($order_id, '_billing_company_name', true);
-        $billing_cif = get_post_meta($order_id, '_billing_cif', true);
-        $billing_reg_com = get_post_meta($order_id, '_billing_reg_com', true);
-    }
-    
-    if(empty($billing_company)) {
-        $billing_company = $order->get_billing_company();
-    }
-    
+
+    $cif = get_option('oblio_cif', '');
+    $serie = get_option('oblio_serie', 'WEB');
+    $tva = (float) get_option('oblio_tva', 21);
+    $management = get_option('oblio_management', '');
+    $workstation = get_option('oblio_workstation', 'Sediu');
+    $use_stock = (int) get_option('oblio_use_stock', 1);
+
+    $fiscal = function_exists('webgsm_get_order_fiscal_data')
+        ? webgsm_get_order_fiscal_data($order)
+        : array('is_pj' => false, 'company' => '', 'cui' => '', 'reg_com' => '', 'iban' => '', 'bank' => '', 'vat_payer' => false);
+
+    $billing_company = !empty($fiscal['company']) ? $fiscal['company'] : $order->get_billing_company();
+    $billing_cif     = !empty($fiscal['cui']) ? $fiscal['cui'] : '';
+    $billing_reg_com = !empty($fiscal['reg_com']) ? $fiscal['reg_com'] : '';
+
     $client = array(
-        'name' => $billing_company ? $billing_company : $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
-        'vatCode' => $billing_cif ? $billing_cif : '',
-        'regCom' => $billing_reg_com ? $billing_reg_com : '',
-        'address' => $order->get_billing_address_1() . ' ' . $order->get_billing_address_2(),
+        'name' => $billing_company ? $billing_company : trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()),
+        'cif' => $billing_cif ? $billing_cif : '',
+        'rc' => $billing_reg_com ? $billing_reg_com : '',
+        'address' => trim($order->get_billing_address_1() . ' ' . $order->get_billing_address_2()),
         'city' => $order->get_billing_city(),
-        'county' => $order->get_billing_state(),
+        'state' => $order->get_billing_state(),
         'country' => $order->get_billing_country(),
         'email' => $order->get_billing_email(),
         'phone' => $order->get_billing_phone(),
-        'isTaxPayer' => !empty($billing_cif)
+        'vatPayer' => !empty($fiscal['vat_payer']) ? 1 : 0,
+        'save' => 0,
     );
-    
-    // Pregătește produsele cu SKU
+
+    if (!empty($fiscal['iban'])) {
+        $client['iban'] = $fiscal['iban'];
+    }
+    if (!empty($fiscal['bank'])) {
+        $client['bank'] = $fiscal['bank'];
+    }
+
     $products = array();
-    foreach($order->get_items() as $item) {
+    foreach ($order->get_items() as $item) {
         $product = $item->get_product();
-        
-        // Obține SKU - cu fallback la product ID dacă nu există
         $sku = '';
         if ($product) {
             $sku = $product->get_sku();
-            // Dacă nu are SKU, folosește Product ID
             if (empty($sku)) {
                 $sku = 'PROD-' . $product->get_id();
             }
         }
-        
-        // Calculează TVA din prețurile WooCommerce (mai precis)
-        $item_total = $item->get_total(); // Preț fără taxe
-        $item_total_tax = $item->get_total_tax(); // Taxe
-        $item_quantity = $item->get_quantity();
-        
-        // Calculează cota TVA efectivă
-        $item_tva_percentage = $tva; // Default din setări
+
+        $item_total = (float) $item->get_total();
+        $item_total_tax = (float) $item->get_total_tax();
+        $item_quantity = (float) $item->get_quantity();
+        if ($item_quantity <= 0) {
+            continue;
+        }
+
+        $item_tva_percentage = $tva;
         if ($item_total > 0 && $item_total_tax > 0) {
-            // Calculează TVA efectiv: (tax / total_fara_tax) * 100
             $item_tva_percentage = round(($item_total_tax / $item_total) * 100, 2);
         }
-        
-        $products[] = array(
+
+        $line = array(
             'name' => $item->get_name(),
-            'code' => $sku, // SKU sau PROD-{ID}
-            'measuringUnitName' => 'buc',
+            'code' => $sku,
+            'measuringUnit' => 'buc',
             'currency' => $order->get_currency(),
             'quantity' => $item_quantity,
             'price' => $item_total / $item_quantity,
-            'isTaxIncluded' => false, // Preț FĂRĂ TVA
-            'taxPercentage' => $item_tva_percentage,
-            'saveToDb' => false
+            'vatIncluded' => 0,
+            'vatPercentage' => $item_tva_percentage,
+            'productType' => 'Marfa',
+            'save' => 0,
         );
-        
-        // Log pentru debugging
+        if ($use_stock && $management !== '') {
+            $line['management'] = $management;
+        }
+
+        $products[] = $line;
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('SmartBill Product: ' . $item->get_name() . ' | SKU: ' . $sku . ' | TVA: ' . $item_tva_percentage . '%');
+            error_log('Oblio Product: ' . $item->get_name() . ' | SKU: ' . $sku . ' | TVA: ' . $item_tva_percentage . '%');
         }
     }
-    
-    // Adaugă transport dacă există
-    $shipping_total = $order->get_shipping_total();
-    if($shipping_total > 0) {
+
+    $shipping_total = (float) $order->get_shipping_total();
+    $shipping_tax = (float) $order->get_shipping_tax();
+    if ($shipping_total > 0) {
+        $ship_tva = $tva;
+        if ($shipping_total > 0 && $shipping_tax > 0) {
+            $ship_tva = round(($shipping_tax / $shipping_total) * 100, 2);
+        }
         $products[] = array(
             'name' => 'Transport',
             'code' => 'TRANSPORT',
-            'measuringUnitName' => 'buc',
+            'measuringUnit' => 'buc',
             'currency' => $order->get_currency(),
             'quantity' => 1,
             'price' => $shipping_total,
-            'isTaxIncluded' => true,
-            'taxPercentage' => $tva,
-            'saveToDb' => false
+            'vatIncluded' => 0,
+            'vatPercentage' => $ship_tva,
+            'productType' => 'Serviciu',
+            'save' => 0,
         );
     }
-    
-    // Datele facturii
+
+    if (empty($products)) {
+        $order->add_order_note('Eroare Oblio: comanda nu are linii de facturat');
+        return false;
+    }
+
     $invoice_data = array(
-        'companyVatCode' => $cif,
-        'seriesName' => $serie,
+        'cif' => $cif,
         'client' => $client,
-        'products' => $products,
-        'issueDate' => date('Y-m-d'),
-        'dueDate' => date('Y-m-d', strtotime('+15 days')),
+        'seriesName' => $serie,
+        'issueDate' => gmdate('Y-m-d'),
+        'dueDate' => gmdate('Y-m-d', strtotime('+15 days')),
         'currency' => $order->get_currency(),
         'language' => 'RO',
-        'observations' => 'Comandă online #' . $order->get_order_number()
+        'precision' => 2,
+        'products' => $products,
+        'mentions' => 'Comandă online #' . $order->get_order_number(),
+        'orderNumber' => (string) $order->get_order_number(),
+        'idempotencyKey' => 'webgsm-order-' . $order_id,
+        'useStock' => $use_stock ? 1 : 0,
+        'workStation' => $workstation ? $workstation : 'Sediu',
     );
-    
-    // Trimite la SmartBill
-    $response = smartbill_request('invoice', $invoice_data);
-    
-    if(isset($response['errorText']) && !empty($response['errorText'])) {
-        $order->add_order_note('Eroare SmartBill: ' . $response['errorText']);
+
+    $response = oblio_request('docs/invoice', $invoice_data, 'POST', 'json');
+
+    if (!empty($response['error'])) {
+        $order->add_order_note('Eroare Oblio: ' . $response['error']);
         return false;
     }
-    
-    if(isset($response['number'])) {
-        // Salvează numărul facturii
-        update_post_meta($order_id, '_smartbill_invoice_number', $response['number']);
-        update_post_meta($order_id, '_smartbill_invoice_series', $response['series']);
-        update_post_meta($order_id, '_smartbill_invoice_date', date('Y-m-d'));
-        
-        // Adaugă notă la comandă
-        $order->add_order_note('Factură SmartBill generată: ' . $response['series'] . $response['number']);
-        
-        return $response;
+
+    $data = isset($response['data']) && is_array($response['data']) ? $response['data'] : $response;
+    $number = isset($data['number']) ? $data['number'] : '';
+    $series = isset($data['seriesName']) ? $data['seriesName'] : (isset($data['series']) ? $data['series'] : $serie);
+    $link = isset($data['link']) ? $data['link'] : '';
+
+    if ($number === '' || $number === null) {
+        $order->add_order_note('Eroare Oblio: răspuns fără număr factură');
+        return false;
     }
-    
-    return false;
+
+    webgsm_save_invoice_meta($order, $number, $series, $link);
+    $order->add_order_note('Factură Oblio generată: ' . $series . $number);
+
+    // e-Factura: site-ul nu apelează SPV direct; Oblio o trimite dacă e activă în contul lor.
+    if (get_option('oblio_efactura_via_oblio', 1)) {
+        $ef_status = '';
+        if (isset($data['eFacturaStatus'])) {
+            $ef_status = (string) $data['eFacturaStatus'];
+        } elseif (isset($data['efacturaStatus'])) {
+            $ef_status = (string) $data['efacturaStatus'];
+        } elseif (isset($data['eInvoiceStatus'])) {
+            $ef_status = (string) $data['eInvoiceStatus'];
+        } else {
+            $ef_status = 'delegated_to_oblio';
+        }
+        $order->update_meta_data('_oblio_efactura_status', sanitize_text_field($ef_status));
+        $order->update_meta_data('_oblio_efactura_updated', gmdate('c'));
+        $order->save();
+        $order->add_order_note('e-Factura (via Oblio): status=' . $ef_status);
+    }
+
+    return array(
+        'number' => $number,
+        'series' => $series,
+        'seriesName' => $series,
+        'link' => $link,
+    );
 }
 
-// Funcție pentru a descărca PDF-ul facturii
+/** Alias vechi – compatibilitate dacă ceva apelează încă numele SmartBill. */
+function genereaza_factura_smartbill($order_id) {
+    return genereaza_factura_oblio($order_id);
+}
+
+/**
+ * Descarcă PDF factură Oblio (prin link document).
+ */
+function get_factura_pdf_oblio($order_id) {
+    $series = webgsm_get_invoice_meta($order_id, 'series');
+    $number = webgsm_get_invoice_meta($order_id, 'number');
+    if (!$series || $number === '' || $number === null) {
+        return false;
+    }
+
+    $link = webgsm_get_invoice_meta($order_id, 'link');
+    if (!$link) {
+        $cif = get_option('oblio_cif', '');
+        $response = oblio_request(
+            'docs/invoice?cif=' . rawurlencode($cif) . '&seriesName=' . rawurlencode($series) . '&number=' . rawurlencode($number),
+            null,
+            'GET'
+        );
+        if (!empty($response['data']['link'])) {
+            $link = $response['data']['link'];
+            $order = wc_get_order($order_id);
+            if ($order) {
+                $order->update_meta_data('_oblio_invoice_link', $link);
+                $order->save();
+            }
+        }
+    }
+
+    if (!$link) {
+        return false;
+    }
+
+    $response = wp_remote_get($link, array(
+        'timeout' => 45,
+        'redirection' => 5,
+    ));
+    if (is_wp_error($response)) {
+        return false;
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $ctype = wp_remote_retrieve_header($response, 'content-type');
+    if ($body && (strpos((string) $ctype, 'pdf') !== false || substr($body, 0, 4) === '%PDF')) {
+        return $body;
+    }
+
+    // Link-ul Oblio poate fi HTML viewer – returnează URL pentru redirect
+    return array('redirect' => $link);
+}
+
 function get_factura_pdf_smartbill($order_id) {
-    $series = get_post_meta($order_id, '_smartbill_invoice_series', true);
-    $number = get_post_meta($order_id, '_smartbill_invoice_number', true);
-    
-    if(!$series || !$number) return false;
-    
-    $username = get_option('smartbill_username', 'info@webgsm.ro');
-    $token = get_option('smartbill_token', '003|5088be0e0850155eaa7713f3d324a63a');
-    $cif = get_option('smartbill_cif', 'RO31902941');
-    
-    $url = 'https://ws.smartbill.ro/SBORO/api/invoice/pdf?cif=' . $cif . '&seriesname=' . $series . '&number=' . $number;
-    
-    $args = array(
-        'method' => 'GET',
-        'timeout' => 30,
-        'headers' => array(
-            'Authorization' => 'Basic ' . base64_encode($username . ':' . $token),
-            'Accept' => 'application/octet-stream'
-        )
-    );
-    
-    $response = wp_remote_get($url, $args);
-    
-    if(is_wp_error($response)) {
-        return false;
-    }
-    
-    return wp_remote_retrieve_body($response);
+    return get_factura_pdf_oblio($order_id);
 }
 
 // =============================================
-// GENERARE AUTOMATĂ FACTURI
+// GENERARE AUTOMATĂ FACTURI (asincron)
 // =============================================
 
-// Plată online (card) → la procesare (doar dacă „Generează factură automat” e bifat)
-add_action('woocommerce_order_status_processing', function($order_id) {
-    if (!get_option('smartbill_auto_generate', 1)) {
+/**
+ * Programează generarea facturii Oblio fără a bloca schimbarea de status.
+ */
+function webgsm_schedule_oblio_invoice($order_id) {
+    $order_id = (int) $order_id;
+    if ($order_id <= 0) {
         return;
     }
-    $order = wc_get_order($order_id);
-    $payment_method = $order->get_payment_method();
-    
-    $metode_online = array('stripe', 'paypal', 'netopia', 'mobilpay', 'euplatesc', 'twispay', 'payu', 'revolut', 'revolut_pay');
-    
-    if(in_array($payment_method, $metode_online)) {
-        genereaza_factura_smartbill($order_id);
+    $args = array($order_id);
+    if (function_exists('as_enqueue_async_action')) {
+        as_enqueue_async_action('webgsm_oblio_generate_invoice', $args, 'webgsm-oblio');
+    } elseif (function_exists('as_schedule_single_action')) {
+        as_schedule_single_action(time() + 5, 'webgsm_oblio_generate_invoice', $args, 'webgsm-oblio');
+    } else {
+        if (!wp_next_scheduled('webgsm_oblio_generate_invoice', $args)) {
+            wp_schedule_single_event(time() + 5, 'webgsm_oblio_generate_invoice', $args);
+        }
+    }
+}
+
+add_action('webgsm_oblio_generate_invoice', function($order_id) {
+    if (function_exists('genereaza_factura_oblio')) {
+        genereaza_factura_oblio((int) $order_id);
     }
 });
 
-// Plată ramburs/offline → la finalizare (doar dacă „Generează factură automat” e bifat)
-add_action('woocommerce_order_status_completed', function($order_id) {
-    if (!get_option('smartbill_auto_generate', 1)) {
+add_action('woocommerce_order_status_processing', function($order_id) {
+    if (!get_option('oblio_auto_generate', 1)) {
         return;
     }
     $order = wc_get_order($order_id);
-    $payment_method = $order->get_payment_method();
-    
+    if (!$order) {
+        return;
+    }
+    $metode_online = array('stripe', 'paypal', 'netopia', 'mobilpay', 'euplatesc', 'twispay', 'payu', 'revolut', 'revolut_pay');
+    if (in_array($order->get_payment_method(), $metode_online, true)) {
+        webgsm_schedule_oblio_invoice($order_id);
+    }
+});
+
+add_action('woocommerce_order_status_completed', function($order_id) {
+    if (!get_option('oblio_auto_generate', 1)) {
+        return;
+    }
+    $order = wc_get_order($order_id);
+    if (!$order) {
+        return;
+    }
     $metode_offline = array('cod', 'bacs', 'cheque', 'sameday_easybox', 'easybox');
-    
-    if(in_array($payment_method, $metode_offline)) {
-        genereaza_factura_smartbill($order_id);
+    if (in_array($order->get_payment_method(), $metode_offline, true)) {
+        webgsm_schedule_oblio_invoice($order_id);
     }
 });
 
@@ -501,161 +707,190 @@ add_action('woocommerce_order_status_completed', function($order_id) {
 // =============================================
 
 add_action('wp_ajax_download_factura_pdf', function() {
-    if(!is_user_logged_in()) {
+    if (!is_user_logged_in()) {
         wp_die('Neautorizat');
     }
-    
-    $order_id = intval($_GET['order_id']);
+
+    $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
     $order = wc_get_order($order_id);
-    
-    // Verifică dacă comanda aparține userului curent sau e admin
-    if(!$order || ($order->get_customer_id() !== get_current_user_id() && !current_user_can('manage_woocommerce'))) {
+    if (!$order || ($order->get_customer_id() !== get_current_user_id() && !current_user_can('manage_woocommerce'))) {
         wp_die('Acces interzis');
     }
-    
-    $pdf = get_factura_pdf_smartbill($order_id);
-    
-    if(!$pdf) {
+
+    $pdf = get_factura_pdf_oblio($order_id);
+    if (!$pdf) {
         wp_die('Factura nu a putut fi descărcată');
     }
-    
-    $series = get_post_meta($order_id, '_smartbill_invoice_series', true);
-    $number = get_post_meta($order_id, '_smartbill_invoice_number', true);
-    
+
+    if (is_array($pdf) && !empty($pdf['redirect'])) {
+        wp_redirect($pdf['redirect']);
+        exit;
+    }
+
+    $series = webgsm_get_invoice_meta($order_id, 'series');
+    $number = webgsm_get_invoice_meta($order_id, 'number');
+
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="Factura_' . $series . $number . '.pdf"');
     header('Content-Length: ' . strlen($pdf));
-    
     echo $pdf;
     exit;
 });
 
 // =============================================
-// AFIȘARE ÎN CONT CLIENT - COMENZI
+// AFIȘARE ÎN CONT CLIENT
 // =============================================
 
-// Adaugă buton descărcare factură în lista de comenzi
 add_action('woocommerce_account_orders_actions', function($actions, $order) {
-    $invoice_number = get_post_meta($order->get_id(), '_smartbill_invoice_number', true);
-    
-    if($invoice_number) {
-        $invoice_series = get_post_meta($order->get_id(), '_smartbill_invoice_series', true);
+    $invoice_number = webgsm_get_invoice_meta($order->get_id(), 'number');
+    if ($invoice_number) {
+        $invoice_series = webgsm_get_invoice_meta($order->get_id(), 'series');
         $actions['factura'] = array(
             'url' => admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order->get_id()),
-            'name' => '📄 Factură ' . $invoice_series . $invoice_number
+            'name' => 'Factură ' . $invoice_series . $invoice_number,
         );
     }
-    
     return $actions;
 }, 10, 2);
 
-// Adaugă buton și în pagina de detalii comandă
 add_action('woocommerce_order_details_after_order_table', function($order) {
-    $invoice_number = get_post_meta($order->get_id(), '_smartbill_invoice_number', true);
-    
-    if($invoice_number) {
-        $series = get_post_meta($order->get_id(), '_smartbill_invoice_series', true);
-        echo '<p><a href="' . admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order->get_id()) . '" class="button button-download-invoice" target="_blank"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Factura ' . $series . $invoice_number . '</a></p>';
+    $invoice_number = webgsm_get_invoice_meta($order->get_id(), 'number');
+    if (!$invoice_number) {
+        return;
     }
+    $series = webgsm_get_invoice_meta($order->get_id(), 'series');
+    echo '<p><a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order->get_id())) . '" class="button button-download-invoice" target="_blank">Factura ' . esc_html($series . $invoice_number) . '</a></p>';
 });
 
 // =============================================
-// ADMIN - COLOANĂ FACTURĂ ÎN COMENZI (legacy + HPOS)
+// ADMIN - COLOANĂ FACTURĂ
 // =============================================
 
-function smartbill_add_factura_column($columns) {
+function oblio_add_factura_column($columns) {
     $new_columns = array();
     $added = false;
-    foreach($columns as $key => $value) {
+    foreach ($columns as $key => $value) {
         $new_columns[$key] = $value;
-        if($key === 'order_total' || $key === 'total') {
+        if ($key === 'order_total' || $key === 'total') {
             $new_columns['factura'] = 'Factură';
             $added = true;
         }
     }
-    if(!$added) {
+    if (!$added) {
         $new_columns['factura'] = 'Factură';
     }
     return $new_columns;
 }
 
-add_filter('manage_edit-shop_order_columns', 'smartbill_add_factura_column');
-add_filter('manage_woocommerce_page_wc-orders_columns', 'smartbill_add_factura_column');
+add_filter('manage_edit-shop_order_columns', 'oblio_add_factura_column');
+add_filter('manage_woocommerce_page_wc-orders_columns', 'oblio_add_factura_column');
 
-function smartbill_render_factura_column_legacy($column) {
+function oblio_render_factura_column_legacy($column) {
     global $post;
-    if($column !== 'factura' || !$post) return;
+    if ($column !== 'factura' || !$post) {
+        return;
+    }
     $order = wc_get_order($post->ID);
-    if(!$order) return;
-    smartbill_render_factura_cell($order->get_id(), $order);
+    if (!$order) {
+        return;
+    }
+    oblio_render_factura_cell($order->get_id(), $order);
 }
 
-function smartbill_render_factura_column_hpos($column, $order) {
-    if($column !== 'factura' || !$order) return;
-    smartbill_render_factura_cell($order->get_id(), $order);
+function oblio_render_factura_column_hpos($column, $order) {
+    if ($column !== 'factura' || !$order) {
+        return;
+    }
+    oblio_render_factura_cell($order->get_id(), $order);
 }
 
-function smartbill_render_factura_cell($order_id, $order = null) {
-    if(!$order) $order = wc_get_order($order_id);
-    if(!$order) return;
-    $invoice_number = $order->get_meta('_smartbill_invoice_number');
-    if($invoice_number) {
-        $series = $order->get_meta('_smartbill_invoice_series');
+function oblio_render_factura_cell($order_id, $order = null) {
+    if (!$order) {
+        $order = wc_get_order($order_id);
+    }
+    if (!$order) {
+        return;
+    }
+    $invoice_number = webgsm_get_invoice_meta($order_id, 'number');
+    if ($invoice_number) {
+        $series = webgsm_get_invoice_meta($order_id, 'series');
         echo '<a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order_id)) . '" target="_blank">' . esc_html($series . $invoice_number) . '</a>';
     } else {
-        $api_active = get_option('smartbill_api_active', 0);
-        if($api_active) {
-            echo '<button type="button" class="button genereaza-factura" data-order="' . esc_attr($order_id) . '" title="Generează factură SmartBill">Generează</button>';
+        $api_active = get_option('oblio_api_active', 0);
+        if ($api_active) {
+            echo '<button type="button" class="button genereaza-factura" data-order="' . esc_attr($order_id) . '" title="Generează factură Oblio">Generează</button>';
         } else {
             echo '<span style="color:#999;">API oprit</span>';
         }
     }
 }
 
-add_action('manage_shop_order_posts_custom_column', 'smartbill_render_factura_column_legacy');
-add_action('manage_woocommerce_page_wc-orders_custom_column', 'smartbill_render_factura_column_hpos', 10, 2);
+add_action('manage_shop_order_posts_custom_column', 'oblio_render_factura_column_legacy');
+add_action('manage_woocommerce_page_wc-orders_custom_column', 'oblio_render_factura_column_hpos', 10, 2);
 
-// AJAX pentru generare manuală factură din admin
+add_action('woocommerce_admin_order_data_after_billing_address', function($order) {
+    if (!is_a($order, 'WC_Order')) {
+        return;
+    }
+    $ef = $order->get_meta('_oblio_efactura_status');
+    if ($ef === '' || $ef === null || $ef === false) {
+        return;
+    }
+    $updated = $order->get_meta('_oblio_efactura_updated');
+    echo '<div style="margin-top:12px;padding:10px;border-radius:6px;background:#f3e8ff;border:1px solid #c4b5fd;">';
+    echo '<strong>e-Factura (Oblio / SPV)</strong><br>';
+    echo 'Status: <code>' . esc_html($ef) . '</code>';
+    if ($updated) {
+        echo '<br><small>Actualizat: ' . esc_html($updated) . '</small>';
+    }
+    echo '<p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Transmiterea către ANAF SPV este gestionată de Oblio, nu de site.</p>';
+    echo '</div>';
+}, 25);
+
 add_action('wp_ajax_genereaza_factura_manual', function() {
-    if(!current_user_can('manage_woocommerce')) {
+    if (!current_user_can('manage_woocommerce')) {
         wp_send_json_error('Neautorizat');
     }
-    
-    // Forțează generarea chiar dacă API-ul e oprit
-    $order_id = intval($_POST['order_id']);
+    check_ajax_referer('webgsm_oblio_manual', 'nonce');
+
+    $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
     $order = wc_get_order($order_id);
-    if(!$order) {
+    if (!$order) {
         wp_send_json_error('Comanda nu există');
     }
-    
-    // Activează temporar API-ul pentru generare manuală
-    $original_status = get_option('smartbill_api_active', 0);
-    update_option('smartbill_api_active', 1);
-    
-    $result = genereaza_factura_smartbill($order_id);
-    
-    // Restaurează statusul original
-    update_option('smartbill_api_active', $original_status);
-    
-    if($result && isset($result['number'])) {
+
+    $result = genereaza_factura_oblio($order_id, true);
+
+    if ($result && isset($result['number'])) {
         wp_send_json_success(array(
             'series' => $result['series'],
-            'number' => $result['number']
+            'number' => $result['number'],
         ));
-    } else {
-        wp_send_json_error('Eroare la generarea facturii');
     }
+
+    $error_msg = 'Eroare la generarea facturii. Vezi notele comenzii.';
+    if (function_exists('wc_get_order_notes')) {
+        $notes = wc_get_order_notes(array('order_id' => $order_id, 'limit' => 5, 'orderby' => 'date_created', 'order' => 'DESC'));
+        foreach ($notes as $note) {
+            if (!empty($note->content) && strpos($note->content, 'Eroare Oblio') !== false) {
+                $error_msg = $note->content;
+                break;
+            }
+        }
+    }
+
+    wp_send_json_error($error_msg);
 });
 
-// Script pentru butonul de generare manuală (listă comenzi + pagina unei comenzi) — legacy și HPOS
 add_action('admin_footer', function() {
     global $pagenow, $post;
     $is_order_list_legacy = ($pagenow === 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] === 'shop_order');
-    $is_order_list_hpos  = ($pagenow === 'admin.php' && isset($_GET['page']) && $_GET['page'] === 'wc-orders');
+    $is_order_list_hpos = ($pagenow === 'admin.php' && isset($_GET['page']) && $_GET['page'] === 'wc-orders');
     $is_order_edit = ($pagenow === 'post.php' && $post && get_post_type($post) === 'shop_order');
     if (!$is_order_list_legacy && !$is_order_list_hpos && !$is_order_edit) {
         return;
     }
+    $nonce = wp_create_nonce('webgsm_oblio_manual');
     ?>
     <script>
     jQuery(document).ready(function($) {
@@ -663,19 +898,14 @@ add_action('admin_footer', function() {
             e.preventDefault();
             var btn = $(this);
             var orderId = btn.data('order');
-            
             btn.prop('disabled', true).text('...');
-            
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'genereaza_factura_manual',
-                    order_id: orderId
-                },
+                data: { action: 'genereaza_factura_manual', order_id: orderId, nonce: '<?php echo esc_js($nonce); ?>' },
                 success: function(response) {
-                    if(response.success) {
-                        if (window.location.href.indexOf('post.php') !== -1) {
+                    if (response.success) {
+                        if (window.location.href.indexOf('post.php') !== -1 || window.location.href.indexOf('wc-orders') !== -1 && window.location.href.indexOf('action=edit') !== -1) {
                             window.location.reload();
                         } else {
                             var link = '<a href="' + ajaxurl + '?action=download_factura_pdf&order_id=' + orderId + '" target="_blank">' + response.data.series + response.data.number + '</a>';
@@ -697,13 +927,14 @@ add_action('admin_footer', function() {
     <?php
 });
 
-// Stil buton „Generează” compact (~40% mărime)
 add_action('admin_head', function() {
     global $pagenow, $post;
     $is_orders = ($pagenow === 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] === 'shop_order')
         || ($pagenow === 'admin.php' && isset($_GET['page']) && $_GET['page'] === 'wc-orders')
         || ($pagenow === 'post.php' && $post && get_post_type($post) === 'shop_order');
-    if (!$is_orders) return;
+    if (!$is_orders) {
+        return;
+    }
     echo '<style>
     .genereaza-factura {
         font-size: 11px !important;
@@ -723,46 +954,46 @@ add_action('admin_head', function() {
     </style>';
 });
 
-// Meta box în pagina comenzii pentru factură (legacy + HPOS)
 add_action('add_meta_boxes', function() {
     $screen = 'shop_order';
     if (class_exists('\Automattic\WooCommerce\Utilities\OrderUtil') && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() && function_exists('wc_get_page_screen_id')) {
         $screen = wc_get_page_screen_id('shop-order');
     }
     add_meta_box(
-        'smartbill_factura',
-        'Factură SmartBill',
-        'render_smartbill_order_metabox',
+        'oblio_factura',
+        'Factură Oblio',
+        'render_oblio_order_metabox',
         $screen,
         'side',
         'high'
     );
 });
 
-function render_smartbill_order_metabox($order_or_post) {
+function render_oblio_order_metabox($order_or_post) {
     $order = is_a($order_or_post, 'WP_Post') ? wc_get_order($order_or_post->ID) : $order_or_post;
-    if (!$order) return;
+    if (!$order) {
+        return;
+    }
     $order_id = $order->get_id();
-
-    $invoice_number = $order->get_meta('_smartbill_invoice_number');
-    $invoice_series = $order->get_meta('_smartbill_invoice_series');
-    $invoice_date = $order->get_meta('_smartbill_invoice_date');
-    $api_active = get_option('smartbill_api_active', 0);
+    $invoice_number = webgsm_get_invoice_meta($order_id, 'number');
+    $invoice_series = webgsm_get_invoice_meta($order_id, 'series');
+    $invoice_date = webgsm_get_invoice_meta($order_id, 'date');
+    $api_active = get_option('oblio_api_active', 0);
 
     if ($invoice_number) {
         echo '<p><strong>Factură:</strong> ' . esc_html($invoice_series . $invoice_number) . '</p>';
         if ($invoice_date) {
-            echo '<p><strong>Data:</strong> ' . esc_html(date('d.m.Y', strtotime($invoice_date))) . '</p>';
+            echo '<p><strong>Data:</strong> ' . esc_html(date_i18n('d.m.Y', strtotime($invoice_date))) . '</p>';
         }
-        echo '<p><a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order_id)) . '" class="button" target="_blank">📄 Descarcă PDF</a></p>';
+        echo '<p><a href="' . esc_url(admin_url('admin-ajax.php?action=download_factura_pdf&order_id=' . $order_id)) . '" class="button" target="_blank">Descarcă PDF</a></p>';
     } else {
+        echo '<p>Factura nu a fost generată.</p>';
         if ($api_active) {
-            echo '<p>Factura nu a fost generată.</p>';
             echo '<button type="button" class="button button-primary genereaza-factura" data-order="' . esc_attr($order_id) . '">Generează</button>';
         } else {
-            echo '<p>Factura nu a fost generată.</p>';
-            echo '<p style="color:orange;">⏸ API SmartBill dezactivat</p>';
-            echo '<p><a href="' . esc_url(admin_url('admin.php?page=smartbill-settings')) . '">Activează API</a></p>';
+            echo '<p style="color:orange;">API Oblio dezactivat</p>';
+            echo '<p><a href="' . esc_url(admin_url('admin.php?page=oblio-settings')) . '">Activează API</a></p>';
+            echo '<p><button type="button" class="button genereaza-factura" data-order="' . esc_attr($order_id) . '">Generează oricum</button></p>';
         }
     }
 }

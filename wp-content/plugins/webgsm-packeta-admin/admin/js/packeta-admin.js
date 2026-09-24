@@ -115,6 +115,63 @@
         }, buildOptions());
     }
 
+    function getSelectedHomeCarrierMeta() {
+        var sel = document.getElementById('webgsm_packeta_home_carrier_select');
+        if (!sel || !sel.value) {
+            return { country: 'RO', codAllowed: true, provinceRequired: true };
+        }
+        var opt = sel.options[sel.selectedIndex];
+        return {
+            country: (opt.getAttribute('data-destination-country') || 'RO').toUpperCase(),
+            codAllowed: opt.getAttribute('data-cod-allowed') !== '0',
+            provinceRequired: opt.getAttribute('data-province-required') !== '0'
+        };
+    }
+
+    function applyHomeDestinationUi() {
+        var meta = getSelectedHomeCarrierMeta();
+        var isNl = meta.country === 'NL';
+        var $provinceWrap = $('#packeta_province_wrap');
+        var $hint = $('#webgsm_packeta_home_carrier_hint');
+        var $fieldsHelp = $('#webgsm_packeta_home_fields_help');
+        var $zip = $('#zip');
+        var $cod = $('#cod');
+
+        if (isNl) {
+            $provinceWrap.hide();
+            $('#province').prop('required', false);
+            $zip.attr('maxlength', 10).attr('placeholder', '1234AB');
+            $('#zip_help').text('NL: 1234AB (4 cifre + 2 litere).');
+            $('#recipient_phone').attr('placeholder', '31612345678');
+            $cod.val('0').prop('readonly', true);
+            if (($('#currency').val() || '').toUpperCase() === 'RON') {
+                $('#currency').val('EUR');
+            }
+            if ($hint.length) {
+                $hint.text(msg('nlHomeHint'));
+            }
+            if ($fieldsHelp.length) {
+                $fieldsHelp.html('Destinație <strong>Olanda</strong>: stradă, număr, oraș, cod poștal <code>1234AB</code>, telefon <code>31XXXXXXXXX</code>, monedă tipic <code>EUR</code>. Fără județ RO. COD = 0.');
+            }
+        } else {
+            $provinceWrap.show();
+            $('#province').prop('required', true);
+            $zip.attr('maxlength', 6).attr('placeholder', '');
+            $('#zip_help').text('RO: 6 cifre. NL: 1234AB.');
+            $('#recipient_phone').attr('placeholder', '+40…');
+            $cod.prop('readonly', false);
+            if (($('#currency').val() || '').toUpperCase() === 'EUR') {
+                $('#currency').val('RON');
+            }
+            if ($hint.length) {
+                $hint.text('');
+            }
+            if ($fieldsHelp.length) {
+                $fieldsHelp.html('Completează adresa destinatarului: stradă, număr, oraș, <strong>județ</strong> și cod poștal — câmpuri cerute de API Packeta la livrare la adresă (Fan, Sameday etc.). <code>addressId</code> = ID-ul curierului HD.');
+            }
+        }
+    }
+
     function syncFlowFromUi() {
         var home = document.getElementById('awb_flow_home');
         var pickup = document.getElementById('awb_flow_pickup');
@@ -142,7 +199,7 @@
             clearPoint();
             $('#carrier_cpp_wrap').hide();
             $('#street, #city, #house_number, #zip').prop('required', true);
-            $('#province').prop('required', true);
+            applyHomeDestinationUi();
             if (addrHelp) addrHelp.textContent = msg('addressIdHomeHelp');
             if (formTitle) formTitle.textContent = msg('formTitleHome');
         } else {
@@ -157,6 +214,7 @@
             if (homeFields) homeFields.style.display = 'none';
             $('#street, #city, #house_number, #zip').prop('required', false);
             $('#province').prop('required', false);
+            $('#cod').prop('readonly', false);
             if (addrHelp) addrHelp.textContent = msg('addressIdPickupHelp');
             if (formTitle) formTitle.textContent = msg('formTitlePickup');
         }
@@ -181,12 +239,13 @@
             var house = ($('#house_number').val() || '').trim();
             var zip = ($('#zip').val() || '').trim();
             var province = ($('#province').val() || '').trim();
+            var meta = getSelectedHomeCarrierMeta();
             if (!st || !city) {
                 e.preventDefault();
                 window.alert(msg('addressFieldsRequired'));
                 return false;
             }
-            if (!province) {
+            if (meta.provinceRequired && !province) {
                 e.preventDefault();
                 window.alert(msg('missingHomeProvince'));
                 return false;
@@ -200,6 +259,28 @@
                 e.preventDefault();
                 window.alert(msg('missingHomeZip'));
                 return false;
+            }
+            if (meta.country === 'NL') {
+                var zipNorm = zip.replace(/\s+/g, '').toUpperCase();
+                if (!/^[1-9][0-9]{3}[A-Z]{2}$/.test(zipNorm)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidNlZip'));
+                    return false;
+                }
+                var phoneDigits = String($('#recipient_phone').val() || '').replace(/\D/g, '');
+                if (phoneDigits.indexOf('0031') === 0) phoneDigits = phoneDigits.slice(2);
+                if (phoneDigits.charAt(0) === '0' && phoneDigits.length === 10) phoneDigits = '31' + phoneDigits.slice(1);
+                if (!/^31[0-9]{9}$/.test(phoneDigits)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidNlPhone'));
+                    return false;
+                }
+                var codVal = parseFloat(String($('#cod').val() || '0').replace(',', '.'));
+                if (codVal > 0) {
+                    e.preventDefault();
+                    window.alert(msg('nlCodUnsupported'));
+                    return false;
+                }
             }
             var hid = parseInt($('#address_id').val(), 10);
             if (!hid || hid < 1) {
@@ -296,6 +377,9 @@
             } else if (document.getElementById('awb_flow') && document.getElementById('awb_flow').value === 'home') {
                 $('#address_id').val('');
                 $('#carrier_filter').val('');
+            }
+            if (document.getElementById('awb_flow') && document.getElementById('awb_flow').value === 'home') {
+                applyHomeDestinationUi();
             }
         });
 

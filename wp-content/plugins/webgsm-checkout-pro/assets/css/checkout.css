@@ -131,7 +131,7 @@
     flex-shrink: 0 !important;
 }
 .webgsm-packeta-open-btn:hover .webgsm-packeta-btn-pin {
-    color: #3b82f6 !important;
+    color: #33C4F5 !important;
 }
 /* Zone logouri – Sameday și Fan Courier, mai mari */
 .webgsm-packeta-btn-logos {
@@ -596,22 +596,23 @@ form.checkout.webgsm-form-integrated {
 .btn-add:hover { background: #e3f2fd; }
 
 .btn-primary {
-    background: #2196f3;
+    background: linear-gradient(180deg, #0088B8 0%, #0078AD 100%);
     color: #fff;
     border: none;
     padding: 12px 30px;
     border-radius: 25px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1.4;
     min-height: 44px;
+    text-shadow: 0 1px 2px rgba(0, 30, 50, 0.5);
 }
 
-.btn-primary:hover { background: #1976d2; }
+.btn-primary:hover { background: linear-gradient(180deg, #0078AD 0%, #006994 100%); }
 
 .btn-secondary {
     background: #f5f5f5;
@@ -678,7 +679,7 @@ form.checkout.webgsm-form-integrated {
 #company_popup .anaf-hint { display: none; }
 
 .webgsm-summary-box .summary-header {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #0088B8 0%, #0078AD 100%) !important;
     color: #fff !important;
     padding: 14px 18px !important;
     border-radius: 10px 10px 0 0 !important;
@@ -882,8 +883,8 @@ form.checkout.webgsm-form-integrated {
     color: #111827;
 }
 .webgsm-summary-box .summary-shipping-list li.summary-shipping-item.is-selected::before {
-    border-color: #3b82f6;
-    background: #3b82f6;
+    border-color: #33C4F5;
+    background: #33C4F5;
 }
 
 /* Popup - now positioned absolutely within parent section */
@@ -1674,7 +1675,7 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
 .webgsm-popup .popup-footer #save_address_btn,
 .webgsm-popup .popup-footer #save_company_btn,
 .webgsm-popup .popup-footer #save_person_btn {
-    background: linear-gradient(135deg, #2563eb 0%, #10b981 100%) !important;
+    background: linear-gradient(135deg, #0078AD 0%, #10b981 100%) !important;
     color: #fff !important;
     border: none !important;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
@@ -1684,9 +1685,9 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
 .webgsm-popup .popup-footer #save_address_btn:hover,
 .webgsm-popup .popup-footer #save_company_btn:hover,
 .webgsm-popup .popup-footer #save_person_btn:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #059669 100%) !important;
+    background: linear-gradient(135deg, #006994 0%, #059669 100%) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(0, 120, 173, 0.4) !important;
 }
 
 /* Buton Anulează - Gri deschis */
@@ -1854,7 +1855,7 @@ body.webgsm-popup-open #wpadminbar { display: none !important; }
     .webgsm-popup .popup-footer #save_address_btn,
     .webgsm-popup .popup-footer #save_company_btn,
     .webgsm-popup .popup-footer #save_person_btn {
-        background: linear-gradient(135deg, #2563eb 0%, #10b981 100%) !important;
+        background: linear-gradient(135deg, #0078AD 0%, #10b981 100%) !important;
         color: #fff !important;
         border: none !important;
     }

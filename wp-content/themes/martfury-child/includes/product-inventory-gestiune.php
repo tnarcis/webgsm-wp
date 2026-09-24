@@ -44,6 +44,10 @@ function webgsm_pret_achizitie_fallback_for_import($value, $object_id, $meta_key
     if ($meta_key !== '_pret_achizitie') {
         return $value;
     }
+    // Pe frontend evită 2 query-uri SQL per citire meta (doar admin/import).
+    if (!is_admin() && !(defined('WP_CLI') && WP_CLI)) {
+        return $value;
+    }
     // Only do the fallback query when meta is actually missing/empty.
     if ($value !== null && $value !== '') {
         return $value;
@@ -72,6 +76,9 @@ function webgsm_pret_achizitie_fallback_for_import($value, $object_id, $meta_key
 add_filter('get_post_metadata', 'webgsm_source_url_fallback_for_import', 10, 4);
 function webgsm_source_url_fallback_for_import($value, $object_id, $meta_key, $single) {
     if ($meta_key !== '_source_url') {
+        return $value;
+    }
+    if (!is_admin() && !(defined('WP_CLI') && WP_CLI)) {
         return $value;
     }
     // Only do the fallback query when meta is actually missing/empty.

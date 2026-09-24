@@ -251,6 +251,29 @@ class WebGSM_B2B_Approval_System {
     }
     
     /**
+     * AJAX handler for deleting certificate
+     */
+    public function ajax_delete_certificate() {
+        check_ajax_referer('webgsm_delete_cert', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permisiuni insuficiente.'));
+        }
+
+        $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        if (!$user_id) {
+            wp_send_json_error(array('message' => 'ID utilizator invalid.'));
+        }
+
+        $result = $this->file_upload->delete_certificate($user_id);
+        if ($result) {
+            wp_send_json_success(array('message' => 'Certificat șters.'));
+        }
+
+        wp_send_json_error(array('message' => 'Nu s-a putut șterge certificatul.'));
+    }
+
+    /**
      * Send admin notification email
      */
     private function send_admin_notification($user_id) {

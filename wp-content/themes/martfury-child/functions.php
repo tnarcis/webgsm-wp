@@ -52,63 +52,78 @@ add_action('wp_footer', function() {
     <?php
 }, 1);
 
-// Ascunde butonul mare "Vezi cos" din popup "Adăugat în coș"
+// Ascunde butonul mare "Vezi cos" din popup "Adăugat în coș" — doar unde există add-to-cart
 add_action('wp_footer', function() {
+    if (is_admin() || !function_exists('is_woocommerce')) {
+        return;
+    }
     ?>
     <script>
-    jQuery(document).ready(function($) {
-        // Funcție pentru a elimina butoanele "View Cart" DOAR din popup-ul "Adăugat în coș"
+    jQuery(function($) {
         function hideViewCartButton() {
-            // Țintire PRECISĂ: DOAR butoane din .message-box (popup-ul "Produs adăugat")
             $('.message-box .btn-button, .message-box .button.wc-forward, .message-box a.button[href*="cart"]').hide();
-            
-            // Backup: verifică doar în .message-box
-            $('.message-box a, .message-box button').each(function() {
-                var $el = $(this);
-                var text = $el.text().toLowerCase().trim();
-                var href = $el.attr('href') || '';
-                
-                // Dacă conține "vezi", "view", "cart", "coș" SAU link-ul duce la cart
-                if (text.includes('vezi') || text.includes('view') || 
-                    text.includes('cart') || text.includes('coș') || 
-                    text.includes('cos') || href.includes('cart')) {
-                    $el.hide();
-                }
-            });
-            
-            // NU ascunde din mini-cart (.woocommerce-mini-cart__buttons)
         }
-        
-        // Rulează la pornire
-        hideViewCartButton();
-        
-        // Rulează când se adaugă produs în coș
         $(document.body).on('added_to_cart', function() {
             setTimeout(hideViewCartButton, 50);
             setTimeout(hideViewCartButton, 200);
-        });
-        
-        // Observer pentru popup-uri noi
-        var observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length) {
-                    hideViewCartButton();
-                }
-            });
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
         });
     });
     </script>
     <?php
 }, 999);
 
+/**
+ * Modul catalog ratings — doar shop/categorii (nu homepage: zeci de produse Elementor).
+ */
+add_action('wp', function () {
+    if (is_admin()) {
+        return;
+    }
+    if (!function_exists('is_shop')) {
+        return;
+    }
+    if (!is_shop() && !is_product_category() && !is_product_tag() && !is_product_taxonomy()) {
+        return;
+    }
+    require_once get_stylesheet_directory() . '/includes/webgsm-catalog-ratings.php';
+}, 1);
+
+/**
+ * Repair Reel — ~65KB PHP; încarcă doar pe rutele /r/ și /estimeaza-reparatia/ (+ flush rewrite).
+ */
+add_action('after_setup_theme', function () {
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+    $need = (strpos($uri, '/r/') !== false || strpos($uri, 'estimeaza-reparatia') !== false);
+    if (!$need && get_option('webgsm_rr_rewrite_ver') !== '20260821') {
+        $need = true;
+    }
+    if (!$need) {
+        return;
+    }
+    require_once get_stylesheet_directory() . '/includes/repair-reel.php';
+}, 6);
+
 // ============================================
-// LAZY LOAD - My Account files (doar pe pagina My Account)
+// LAZY LOAD - My Account + înregistrare (nu pe catalog/shop)
 // ============================================
+add_action('after_setup_theme', function () {
+    if (is_admin() && !(defined('DOING_AJAX') && DOING_AJAX)) {
+        return;
+    }
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+    $account_ctx = (strpos($uri, 'my-account') !== false || strpos($uri, 'wp-login.php') !== false);
+    if (!$account_ctx && defined('DOING_AJAX') && DOING_AJAX) {
+        $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+        $account_ctx = (strpos($action, 'webgsm_') === 0)
+            || in_array($action, array('resend_confirmation', 'admin_confirm_email'), true);
+    }
+    if (!$account_ctx) {
+        return;
+    }
+    require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
+    require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
+}, 5);
+
 add_action('wp', function() {
     if (is_account_page()) {
         require_once get_stylesheet_directory() . '/includes/my-account-styling.php';
@@ -135,6 +150,8 @@ add_filter('nonce_life', function($seconds) {
 // ============================================
 // ÎNCARCĂ NORMAL - Fișiere cu hook-uri globale sau multiple contexte
 // ============================================
+require_once get_stylesheet_directory() . '/includes/webgsm-order-fiscal.php';
+require_once get_stylesheet_directory() . '/includes/webgsm-anaf.php';
 require_once get_stylesheet_directory() . '/includes/retururi.php';
 require_once get_stylesheet_directory() . '/includes/garantie.php';
 require_once get_stylesheet_directory() . '/includes/awb-tracking.php';
@@ -142,11 +159,10 @@ require_once get_stylesheet_directory() . '/includes/facturi.php';
 require_once get_stylesheet_directory() . '/includes/notificari.php';
 require_once get_stylesheet_directory() . '/includes/n8n-webhooks.php';
 require_once get_stylesheet_directory() . '/includes/facturare-pj.php';
-require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
+require_once get_stylesheet_directory() . '/includes/login-register-ux.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
 require_once get_stylesheet_directory() . '/includes/fix-catalog-duplicate-add-to-cart.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-header-primary-menu.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
 require_once get_stylesheet_directory() . '/includes/setup-categories.php';
 require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
 require_once get_stylesheet_directory() . '/includes/setup-acf-fields.php';
@@ -154,6 +170,8 @@ require_once get_stylesheet_directory() . '/includes/product-specs-tab.php';
 require_once get_stylesheet_directory() . '/includes/product-inventory-gestiune.php';
 require_once get_stylesheet_directory() . '/includes/webgsm-stock-display.php';
 require_once get_stylesheet_directory() . '/includes/checkout-persist-selections.php';
+require_once get_stylesheet_directory() . '/includes/webgsm-montaj.php';
+// repair-reel.php — lazy load (after_setup_theme) doar pe /r/ și /estimeaza-reparatia/
 
 // ============================================
 // WebGSM B2B Teaser - mesaj simplu, fără preț/discount (performanță)
@@ -229,10 +247,10 @@ function webgsm_b2b_teaser_cart() {
     <tr class="webgsm-b2b-cart-alert">
         <th colspan="2" style="border-top:2px dashed #bfdbfe !important;padding-top:15px !important;padding-bottom:15px !important;">
             <div style="background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1px solid #bfdbfe;border-radius:8px;padding:15px;text-align:center;">
-                <div style="color:#1e40af;font-weight:600;font-size:15px;margin-bottom:12px;">Beneficiezi de prețuri B2B și discounturi permanente pentru parteneri.</div>
+                <div style="color:#009ADA;font-weight:600;font-size:15px;margin-bottom:12px;">Beneficiezi de prețuri B2B și discounturi permanente pentru parteneri.</div>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                    <a href="<?php echo esc_url(wc_get_page_permalink('myaccount')); ?>" class="button alt" style="background:#2563eb !important;color:#fff !important;padding:10px 20px !important;border-radius:6px !important;text-decoration:none !important;">Cont gratuit</a>
-                    <a href="<?php echo esc_url(home_url('/despre-b2b/')); ?>" class="button" style="background:transparent !important;color:#2563eb !important;border:1px solid #2563eb !important;padding:10px 20px !important;border-radius:6px !important;text-decoration:none !important;">Află mai multe</a>
+                    <a href="<?php echo esc_url(wc_get_page_permalink('myaccount')); ?>" class="button alt" style="background:#0078AD !important;color:#fff !important;padding:10px 20px !important;border-radius:6px !important;text-decoration:none !important;text-shadow:0 1px 2px rgba(0,30,50,0.5) !important;font-weight:700 !important;">Cont gratuit</a>
+                    <a href="<?php echo esc_url(home_url('/despre-b2b/')); ?>" class="button" style="background:transparent !important;color:#0078AD !important;border:1px solid #0078AD !important;padding:10px 20px !important;border-radius:6px !important;text-decoration:none !important;">Află mai multe</a>
                 </div>
             </div>
         </th>

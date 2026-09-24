@@ -278,6 +278,34 @@ class WebGSM_Site_Audit_Link_Checker {
             if ($term && !is_wp_error($term)) return ['status' => 'ok', 'code' => 200];
         }
 
+        if (preg_match('#^r/[^/]+/?$#', $clean_path)) {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        if ($clean_path === 'estimeaza-reparatia') {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        if (preg_match('#^categorie-produs/(.+)$#', $clean_path, $m)) {
+            $term_path = trim($m[1], '/');
+            $term = get_term_by('slug', basename($term_path), 'product_cat');
+            if (!$term || is_wp_error($term)) {
+                $parts = explode('/', $term_path);
+                $term = get_term_by('slug', end($parts), 'product_cat');
+            }
+            if ($term && !is_wp_error($term)) {
+                return ['status' => 'ok', 'code' => 200];
+            }
+        }
+
+        if (preg_match('#^produs/(.+)$#', $clean_path)) {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
+        if (preg_match('#^shop/?$#', $clean_path)) {
+            return ['status' => 'ok', 'code' => 200];
+        }
+
         $page = get_page_by_path($clean_path);
         if ($page && $page->post_status === 'publish') {
             return ['status' => 'ok', 'code' => 200];

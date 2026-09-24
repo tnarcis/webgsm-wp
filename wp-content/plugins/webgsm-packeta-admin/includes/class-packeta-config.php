@@ -229,4 +229,46 @@ class WebGSM_Packeta_Config {
 
         return isset(self::get_ro_counties()[$code]) && $code !== '';
     }
+
+    /**
+     * Normalizează telefon NL pentru Packeta: 31 + 9 cifre.
+     */
+    public static function normalize_nl_phone(string $phone): string {
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+        if (str_starts_with($digits, '0031')) {
+            $digits = substr($digits, 2);
+        }
+        if (str_starts_with($digits, '0') && strlen($digits) === 10) {
+            $digits = '31' . substr($digits, 1);
+        }
+        if (str_starts_with($digits, '6') && strlen($digits) === 9) {
+            $digits = '31' . $digits;
+        }
+
+        return $digits;
+    }
+
+    public static function is_valid_nl_phone(string $phone): bool {
+        $normalized = self::normalize_nl_phone($phone);
+
+        return (bool) preg_match('/^31[0-9]{9}$/', $normalized);
+    }
+
+    /**
+     * Cod poștal NL: 1234AB (spațiu opțional).
+     */
+    public static function normalize_nl_zip(string $zip): string {
+        $zip = strtoupper(preg_replace('/\s+/', '', trim($zip)) ?? '');
+
+        return $zip;
+    }
+
+    public static function is_valid_nl_zip(string $zip): bool {
+        $zip = self::normalize_nl_zip($zip);
+
+        return (bool) preg_match('/^[1-9][0-9]{3}[A-Z]{2}$/', $zip);
+    }
 }

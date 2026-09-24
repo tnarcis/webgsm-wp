@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WebGSM Setup Wizard v2
- * Description: Creează structura finală cu 6 taburi: Parts, Tools, Accessories, Devices, Smart Tech, Services
+ * Description: Creează structura magazin: Piese (iPhone/Samsung), Unelte, Accesorii, Servicii
  * Version: 2.0.0
  * Author: WebGSM
  * Requires PHP: 7.4
@@ -33,14 +33,6 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         'accesorii' => [
             'name' => 'Accesorii',
             'filter_param' => 'filter_accesorii',
-        ],
-        'dispozitive' => [
-            'name' => 'Dispozitive',
-            'filter_param' => 'filter_dispozitive',
-        ],
-        'security-smart-tech' => [
-            'name' => 'Security & Smart Tech',
-            'filter_param' => 'filter_supraveghere',
         ],
         'servicii' => [
             'name' => 'Servicii',
@@ -216,7 +208,7 @@ class WebGSM_Widget_Category_Filter extends WP_Widget {
         parent::__construct(
             'webgsm_category_filter',
             'WebGSM Filtru Categorii (Dinamic)',
-            ['description' => 'Filtre dinamice care citesc subcategoriile din WooCommerce. Funcționează pentru Piese, Unelte, Accesorii, Dispozitive, Security & Smart Tech, Servicii.']
+            ['description' => 'Filtre dinamice care citesc subcategoriile din WooCommerce. Funcționează pentru Piese, Unelte, Accesorii, Servicii.']
         );
     }
 
@@ -396,10 +388,6 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
     private static $subcat_config = [
         'Piese iPhone' => 'piese-iphone',
         'Piese Samsung' => 'piese-samsung',
-        'Piese Huawei' => 'piese-huawei',
-        'Piese Xiaomi' => 'piese-xiaomi',
-        'Piese Ipad' => 'piese-ipad',
-        'Piese Macbook' => 'piese-macbook',
     ];
     private static $tip_config = [
         'Ecrane' => 'ecrane',
@@ -1068,12 +1056,12 @@ class WebGSM_Setup_Wizard_V2 {
     }
     
     // ===========================================
-    // STRUCTURA CATEGORIILOR - 6 TABURI (Piese are 3 nivele: Piese > Piese iPhone > Ecrane)
+    // STRUCTURA CATEGORIILOR — 4 TABURI (Piese: doar iPhone + Samsung)
     // ===========================================
     private $categories = [
         'Piese' => [
             'slug' => 'piese',
-            'description' => 'Piese și componente pentru telefoane',
+            'description' => 'Piese și componente pentru iPhone și Samsung',
             'children' => [
                 'Piese iPhone' => [
                     'slug' => 'piese-iphone',
@@ -1095,22 +1083,6 @@ class WebGSM_Setup_Wizard_V2 {
                         'Camere' => 'camere',
                         'Mufe Încărcare' => 'mufe-incarcare',
                         'Flexuri' => 'flexuri',
-                    ]
-                ],
-                'Piese Huawei' => [
-                    'slug' => 'piese-huawei',
-                    'children' => [
-                        'Ecrane' => 'ecrane',
-                        'Baterii' => 'baterii',
-                        'Module & Piese' => 'module-piese',
-                    ]
-                ],
-                'Piese Xiaomi' => [
-                    'slug' => 'piese-xiaomi',
-                    'children' => [
-                        'Ecrane' => 'ecrane',
-                        'Baterii' => 'baterii',
-                        'Module & Piese' => 'module-piese',
                     ]
                 ],
             ]
@@ -1146,54 +1118,6 @@ class WebGSM_Setup_Wizard_V2 {
                 'Cabluri & Încărcătoare' => 'cabluri-incarcatoare',
                 'Adezivi & Consumabile' => 'adezivi-consumabile',
             ]
-        ],
-        'Dispozitive' => [
-            'slug' => 'dispozitive',
-            'description' => 'Telefoane și tablete',
-            'children' => [
-                'Telefoane Folosite' => 'telefoane-folosite',
-                'Telefoane Refurbished' => 'telefoane-refurbished',
-                'Tablete' => 'tablete',
-                'Smartwatch' => 'smartwatch',
-            ]
-        ],
-        'Security & Smart Tech' => [
-            'slug' => 'security-smart-tech',
-            'description' => 'Camere IP, NVR, alarme smart și automatizări — categorie separată de piese și accesorii de telefon.',
-            'level3_slug_mode' => 'flat',
-            'children' => [
-                'Camere & Video Supraveghere' => [
-                    'slug' => 'camere-video-supraveghere',
-                    'children' => [
-                        'Camere WiFi / IP' => 'camere-wifi-ip',
-                        'NVR & DVR' => 'nvr-dvr',
-                        'Accesorii pentru camere' => 'accesorii-pentru-camere',
-                    ],
-                ],
-                'Smart Home & Securitate Casă' => [
-                    'slug' => 'smart-home-securitate-casa',
-                    'children' => [
-                        'Alarme smart' => 'alarme-smart',
-                        'Automatizări & acces' => 'automatizari-acces',
-                    ],
-                ],
-                'Consumabile Video & Smart' => [
-                    'slug' => 'consumabile-video-smart',
-                    'children' => [
-                        'Carduri memorie (camere)' => 'carduri-memorie-camere',
-                        'Baterii camere & alarme' => 'baterii-camere-alarme',
-                        'Cabluri & suporturi montaj' => 'cabluri-suporturi-montaj',
-                        'Accesorii montaj video' => 'accesorii-montaj-video',
-                    ],
-                ],
-                'Gadgeturi Tech & Smart' => [
-                    'slug' => 'gadgeturi-tech-smart',
-                    'children' => [
-                        'Gadgeturi tech' => 'gadgeturi-tech',
-                        'Dispozitive speciale' => 'dispozitive-speciale-smart',
-                    ],
-                ],
-            ],
         ],
         'Servicii' => [
             'slug' => 'servicii',
@@ -1369,8 +1293,6 @@ class WebGSM_Setup_Wizard_V2 {
             'columns' => [
                 'iPhone' => ['Ecrane', 'Baterii', 'Camere', 'Mufe Încărcare', 'Flexuri', 'Difuzoare', 'Carcase'],
                 'Samsung' => ['Ecrane', 'Baterii', 'Camere', 'Mufe Încărcare', 'Flexuri'],
-                'Huawei' => ['Ecrane', 'Baterii', 'Module & Piese'],
-                'Xiaomi' => ['Ecrane', 'Baterii', 'Module & Piese'],
             ]
         ],
         'Unelte' => [
@@ -1387,10 +1309,6 @@ class WebGSM_Setup_Wizard_V2 {
             'columns' => [
                 'Accesorii' => ['Huse & Carcase', 'Folii Protecție', 'Cabluri & Încărcătoare', 'Adezivi & Consumabile'],
             ]
-        ],
-        'Dispozitive' => [
-            'icon' => '📱',
-            'simple' => true,
         ],
         'Servicii' => [
             'icon' => '⚡',
@@ -1669,98 +1587,74 @@ class WebGSM_Setup_Wizard_V2 {
     }
     
     public function register_piese_filter_widget() {
-        register_widget('WebGSM_Widget_Piese_Filter');
-        register_widget('WebGSM_Widget_Category_Filter'); // Widget generic dinamic
-        
-        // Adaugă automat widget-ul generic în sidebar dacă nu există deja
-        $this->ensure_category_filter_widget();
+        // Nu mai înregistrăm filtrele-static (Piese / Tip piesă ca linkuri în sidebar).
+        // Cleanup o singură dată — nu scriem în DB la fiecare request.
+        if (get_option('webgsm_static_piese_filters_removed') === '1' || get_option('webgsm_static_piese_filters_removed') === 1) {
+            return;
+        }
+        $this->remove_static_category_filter_widgets();
     }
     
     /**
-     * Asigură că widget-ul generic pentru categorii este în sidebar-ul folosit pe shop/categorii.
-     * Dacă widget-ul e doar în „blog sidebar”, îl copiază și în sidebar-ul de shop.
+     * Scoate din toate sidebar-urile widget-urile WebGSM „Piese” / „Tip piesă” (linkuri statice).
      */
-    private function ensure_category_filter_widget() {
-        if (get_option('webgsm_category_filter_widget_checked')) {
+    private function remove_static_category_filter_widgets() {
+        if (get_option('webgsm_static_piese_filters_removed') === '1' || get_option('webgsm_static_piese_filters_removed') === 1) {
             return;
         }
+
         $sidebars = get_option('sidebars_widgets', []);
-        $shop_sidebar_ids = [
-            'catalog-sidebar', 'shop-sidebar', 'sidebar-shop', 'woocommerce-sidebar',
-            'mf-catalog-sidebar', 'martfury-sidebar-shop', 'sidebar-1', 'primary-sidebar',
-            'content-sidebar', 'blog-sidebar',
-        ];
-        $shop_sidebar_ids = apply_filters('webgsm_filter_shop_sidebar_ids', $shop_sidebar_ids);
-        $shop_sidebar = null;
-        foreach ($shop_sidebar_ids as $s) {
-            if (isset($sidebars[$s]) && $s !== 'wp_inactive_widgets') {
-                $shop_sidebar = $s;
-                break;
-            }
-        }
-        if (!$shop_sidebar) {
-            update_option('webgsm_category_filter_widget_checked', true);
+        if (!is_array($sidebars)) {
+            update_option('webgsm_static_piese_filters_removed', 1, false);
             return;
         }
-        $has_category_filter = false;
-        if (isset($sidebars[$shop_sidebar]) && is_array($sidebars[$shop_sidebar])) {
-            foreach ($sidebars[$shop_sidebar] as $widget_id) {
-                if (strpos($widget_id, 'webgsm_category_filter-') === 0) {
-                    $has_category_filter = true;
-                    break;
-                }
+
+        $changed = false;
+        foreach ($sidebars as $sid => $widgets) {
+            if ($sid === 'array_version' || !is_array($widgets)) {
+                continue;
+            }
+            $filtered = array_values(array_filter($widgets, static function ($id) {
+                $id = (string) $id;
+                return strpos($id, 'webgsm_category_filter-') !== 0
+                    && strpos($id, 'webgsm_piese_filter-') !== 0;
+            }));
+            if ($filtered !== array_values($widgets)) {
+                $sidebars[$sid] = $filtered;
+                $changed = true;
             }
         }
-        if (!$has_category_filter) {
-            $widget_in_other = null;
-            foreach ($sidebars as $sid => $widgets) {
-                if ($sid === 'wp_inactive_widgets' || !is_array($widgets)) continue;
-                foreach ($widgets as $widget_id) {
-                    if (strpos($widget_id, 'webgsm_category_filter-') === 0) {
-                        $widget_in_other = $widget_id;
-                        break 2;
-                    }
-                }
-            }
-            $category_filter_widget = get_option('widget_webgsm_category_filter', []);
-            $category_filter_id = 1;
-            while (isset($category_filter_widget[$category_filter_id])) {
-                $category_filter_id++;
-            }
-            if ($widget_in_other) {
-                $existing_id = (int) str_replace('webgsm_category_filter-', '', $widget_in_other);
-                $category_filter_widget[$category_filter_id] = isset($category_filter_widget[$existing_id])
-                    ? $category_filter_widget[$existing_id]
-                    : ['title' => ''];
-            } else {
-                $category_filter_widget[$category_filter_id] = ['title' => ''];
-            }
-            update_option('widget_webgsm_category_filter', $category_filter_widget);
-            if (!isset($sidebars[$shop_sidebar])) {
-                $sidebars[$shop_sidebar] = [];
-            }
-            array_unshift($sidebars[$shop_sidebar], 'webgsm_category_filter-' . $category_filter_id);
+
+        if ($changed) {
             update_option('sidebars_widgets', $sidebars);
         }
-        update_option('webgsm_category_filter_widget_checked', true);
+
+        update_option('webgsm_category_filter_widget_checked', 'removed', false);
+        update_option('webgsm_static_piese_filters_removed', 1, false);
     }
     
     /**
-     * Adaugă widget-ul generic în sidebar la activarea plugin-ului.
-     * Resetează și flag-ul de verificare ca la următoarea încărcare să poată copia widget-ul din blog în sidebar-ul de shop.
+     * @deprecated Filtrele Piese/Tip piesă ca widget-uri au fost eliminate.
+     */
+    private function ensure_category_filter_widget() {
+        $this->remove_static_category_filter_widgets();
+    }
+    
+    /**
+     * @deprecated
      */
     public function activate_category_filter_widget() {
-        delete_option('webgsm_category_filter_widget_checked');
-        $this->ensure_category_filter_widget();
+        $this->remove_static_category_filter_widgets();
     }
     
     /**
-     * Verifică și adaugă widget-ul generic în admin (doar o dată)
+     * La admin: asigură că widget-urile statice Piese/Tip piesă sunt scoase din sidebar.
      */
     public function ensure_category_filter_widget_admin() {
-        if (!get_option('webgsm_category_filter_widget_checked')) {
-            $this->ensure_category_filter_widget();
+        if (get_option('webgsm_static_piese_filters_removed') === '1' || get_option('webgsm_static_piese_filters_removed') === 1) {
+            return;
         }
+        $this->remove_static_category_filter_widgets();
     }
     
     /**
@@ -2458,7 +2352,7 @@ class WebGSM_Setup_Wizard_V2 {
             <div class="webgsm-setup-hero webgsm-animate webgsm-d1">
                 <div class="webgsm-setup-hero-inner">
                     <h1>WebGSM Setup Wizard</h1>
-                    <p>Flux recomandat: <strong>Categorii</strong> → <strong>Atribute</strong> → <strong>Meniu</strong> → <strong>Filtre</strong>. Structură magazin: Piese · Unelte · Accesorii · Dispozitive · Servicii.</p>
+                    <p>Flux recomandat: <strong>Categorii</strong> → <strong>Atribute</strong> → <strong>Meniu</strong> → <strong>Filtre</strong>. Structură magazin: Piese (iPhone/Samsung) · Unelte · Accesorii · Servicii.</p>
                 </div>
             </div>
 
@@ -2478,7 +2372,6 @@ class WebGSM_Setup_Wizard_V2 {
                         <span class="webgsm-tab active">Piese</span>
                         <span class="webgsm-tab">Unelte</span>
                         <span class="webgsm-tab">Accesorii</span>
-                        <span class="webgsm-tab">Dispozitive</span>
                         <span class="webgsm-tab">Servicii</span>
                     </div>
                     <div class="webgsm-structure-viewer">
@@ -2516,11 +2409,10 @@ class WebGSM_Setup_Wizard_V2 {
                             <p class="webgsm-card-lead">Pasul 1 · categorii principale și subcategorii</p>
                         </div>
                     </div>
-                    <p>Creează 5 categorii principale și subcategoriile din wizard. <strong>Prima dată: Creează.</strong> Ulterior poți rula din nou (completare, fără să șteargă ce există).</p>
+                    <p>Creează 4 categorii principale (Piese, Unelte, Accesorii, Servicii). <strong>Prima dată: Creează.</strong> Ulterior poți rula din nou — completează și șterge categoriile vechi goale (Dispozitive, Smart Tech, Huawei, Xiaomi).</p>
                     <div class="webgsm-preview">Piese/
 ├── Piese iPhone → Ecrane, Baterii, Camere...
 ├── Piese Samsung → Ecrane, Baterii, Flexuri...
-├── Piese Huawei, Piese Xiaomi...
 Unelte/
 ├── Unelte de Precizie
 ├── Echipamente Service
@@ -2528,8 +2420,6 @@ Unelte/
 ├── Programare & Consumabile
 Accesorii/
 ├── Huse & Carcase, Folii Protecție...
-Dispozitive/
-├── Telefoane Folosite, Tablete...
 Servicii/
 ├── Reparații, Training, Buy-back...</div>
                     <div class="webgsm-btn-row">
@@ -2587,12 +2477,12 @@ Culoare: Negru, Alb, Auriu...</div>
                         </div>
                     </div>
                     <p>Meniul este doar <strong>linkuri</strong> către categorii. Îl poți refăce fără să atingi produsele. Produsele devin fără categorie doar dacă ștergi <strong>termenii</strong> din WooCommerce sau folosești <strong>Șterge tot</strong> jos.</p>
-                    <div class="webgsm-preview">┌─────────┬─────────┬─────────────┬───────────┬──────────┐
-│  Piese  │ Unelte  │  Accesorii  │ Dispozitive│ Servicii │
-└─────────┴─────────┴─────────────┴───────────┴──────────┘
-Piese → 3 nivele: Piese iPhone > Ecrane, Baterii...
+                    <div class="webgsm-preview">┌─────────┬─────────┬─────────────┬──────────┐
+│  Piese  │ Unelte  │  Accesorii  │ Servicii │
+└─────────┴─────────┴─────────────┴──────────┘
+Piese → iPhone / Samsung (Ecrane, Baterii…)
 Unelte / Accesorii → Dropdown cu categorii
-Dispozitive / Servicii → Dropdown simplu</div>
+Servicii → Dropdown simplu</div>
                     <div class="webgsm-btn-row">
                         <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-menu">
                             <?php echo $menu_done ? '🔄 Refă meniul complet' : '🍔 Creează meniu'; ?>
@@ -2652,7 +2542,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
                             <p class="webgsm-card-lead">Pasul 4 · widget-uri în sidebar-ul catalogului</p>
                         </div>
                     </div>
-                    <p>Bifează filtrele dorite, apoi <strong>Aplică</strong>. <strong>Șterge doar filtre</strong> scoate widget-urile din sidebar; produsele rămân mapate la atribute.</p>
+                    <p>Bifează filtrele pe <strong>atribute</strong> (Model, Calitate…). Filtrele vechi tip meniu <em>Piese / Tip piesă</em> (linkuri) au fost eliminate — nu mai apar în sidebar.</p>
                     <?php
                     $available_filters = [
                         'model-compatibil' => 'Compatibilitate (Model compatibil)',
@@ -3284,13 +3174,21 @@ Dispozitive / Servicii → Dropdown simplu</div>
         return false;
     }
 
-    /** Categorii principale înlocuite — nu mai apar în meniu (doar în filtre/URL vechi). */
+    /** Categorii principale scoase din magazin — nu mai apar în meniu. */
     private function get_deprecated_category_root_slugs() {
-        return ['supraveghere-smart-home'];
+        return [
+            'supraveghere-smart-home',
+            'security-smart-tech',
+            'dispozitive',
+            'piese-huawei',
+            'piese-xiaomi',
+            'piese-ipad',
+            'piese-macbook',
+        ];
     }
 
     /**
-     * Slug-uri subcategorii înlocuite (Unelte 8→4, Huawei/Xiaomi camere→module-piese etc.).
+     * Slug-uri subcategorii înlocuite (Unelte 8→4 etc.).
      *
      * @return string[]
      */
@@ -3298,12 +3196,22 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $slugs = array_keys(self::get_unelte_subcategory_migration_map());
         $slugs[] = 'camere-huawei';
         $slugs[] = 'camere-xiaomi';
+        $slugs[] = 'module-piese-huawei';
+        $slugs[] = 'module-piese-xiaomi';
+        $slugs[] = 'ecrane-huawei';
+        $slugs[] = 'baterii-huawei';
+        $slugs[] = 'ecrane-xiaomi';
+        $slugs[] = 'baterii-xiaomi';
+        $slugs[] = 'telefoane-folosite';
+        $slugs[] = 'telefoane-refurbished';
+        $slugs[] = 'tablete';
+        $slugs[] = 'smartwatch';
 
         return array_values(array_unique($slugs));
     }
 
     /**
-     * Șterge categorii vechi goale (după migrare produse). Nu atinge termeni cu produse încă alocate.
+     * Șterge categorii vechi goale (după migrare). Nu atinge termeni cu produse încă alocate.
      *
      * @return array{deleted: int, skipped: string[]}
      */
@@ -3311,13 +3219,14 @@ Dispozitive / Servicii → Dropdown simplu</div>
         $deleted = 0;
         $skipped = [];
 
+        // Mai întâi frunzele / slug-uri simple
         foreach (self::get_obsolete_product_cat_slugs() as $slug) {
             $term = get_term_by('slug', $slug, 'product_cat');
             if (!$term || is_wp_error($term)) {
                 continue;
             }
-            if ((int) $term->count > 0) {
-                $skipped[] = $slug . ' (' . (int) $term->count . ')';
+            if ($this->category_tree_has_products((int) $term->term_id)) {
+                $skipped[] = $slug;
                 continue;
             }
             $result = wp_delete_term((int) $term->term_id, 'product_cat');
@@ -3326,7 +3235,42 @@ Dispozitive / Servicii → Dropdown simplu</div>
             }
         }
 
+        // Apoi arbori întregi scoși din magazin (Dispozitive, Smart Tech, Huawei, Xiaomi…)
+        foreach ($this->get_deprecated_category_root_slugs() as $slug) {
+            $term = get_term_by('slug', $slug, 'product_cat');
+            if (!$term || is_wp_error($term)) {
+                continue;
+            }
+            if ($this->category_tree_has_products((int) $term->term_id)) {
+                if (!in_array($slug, $skipped, true)) {
+                    $skipped[] = $slug;
+                }
+                continue;
+            }
+            $this->delete_category_and_children((int) $term->term_id);
+            $deleted++;
+        }
+
         return ['deleted' => $deleted, 'skipped' => $skipped];
+    }
+
+    private function category_tree_has_products(int $term_id): bool {
+        $ids = get_posts([
+            'post_type' => 'product',
+            'post_status' => 'any',
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'tax_query' => [
+                [
+                    'taxonomy' => 'product_cat',
+                    'field' => 'term_id',
+                    'terms' => [$term_id],
+                    'include_children' => true,
+                ],
+            ],
+        ]);
+
+        return !empty($ids);
     }
 
     /** ID-uri product_cat din arborele unei categorii depreciate (root + descendenți + slug-uri înlocuite). */
@@ -3555,7 +3499,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
             $parent_term = get_term_by('slug', $parent_data['slug'], 'product_cat');
             if (!$parent_term) continue;
             
-            $is_mega = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii', 'Security & Smart Tech'], true);
+            $is_mega = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii'], true);
             
             $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
                 'menu-item-title' => $this->get_category_menu_label($parent_name),
@@ -3726,7 +3670,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
             }
 
             $parent_tid = (int) $parent_term->term_id;
-            $is_mega    = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii', 'Security & Smart Tech'], true);
+            $is_mega    = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii'], true);
 
             if (!isset($term_to_item[$parent_tid])) {
                 $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
@@ -4044,9 +3988,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
             'tehnologie' => 'Tehnologie',
         ];
         foreach ($sidebars[$shop_sidebar] as $id) {
-            if (strpos($id, 'webgsm_piese_filter-') === 0) {
-                $labels[] = 'Subcategorie + Tip piesă';
-            } elseif (strpos($id, 'woocommerce_layered_nav-') === 0) {
+            if (strpos($id, 'woocommerce_layered_nav-') === 0) {
                 $num = (int) str_replace('woocommerce_layered_nav-', '', $id);
                 $opts = get_option('widget_woocommerce_layered_nav', []);
                 $title = isset($opts[$num]['title']) ? $opts[$num]['title'] : (isset($opts[$num]['attribute']) ? ($attr_labels[$opts[$num]['attribute']] ?? $opts[$num]['attribute']) : $id);
@@ -4064,7 +4006,7 @@ Dispozitive / Servicii → Dropdown simplu</div>
     public function ajax_setup_filters() {
         check_ajax_referer('webgsm_v2', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
-        delete_option('webgsm_category_filter_widget_checked');
+        $this->remove_static_category_filter_widgets();
 
         $filter_attrs = isset($_POST['filter_attrs']) && is_array($_POST['filter_attrs']) ? array_map('sanitize_text_field', $_POST['filter_attrs']) : get_option('webgsm_v2_filter_attributes', ['model-compatibil', 'model', 'calitate', 'brand-piesa', 'tehnologie', 'price']);
         if (empty($filter_attrs)) {
@@ -4088,32 +4030,13 @@ Dispozitive / Servicii → Dropdown simplu</div>
             if (!isset($sidebars[$sid]) || !is_array($sidebars[$sid])) {
                 $sidebars[$sid] = [];
             }
-            // Curăță doar widget-urile de filtre, nu distruge alte widget-uri din sidebar.
+            // Curăță widget-urile de filtre (inclusiv Piese/Tip piesă — nu le mai reintroducem).
             $sidebars[$sid] = array_values(array_filter($sidebars[$sid], function ($id) {
                 return strpos($id, 'webgsm_category_filter-') !== 0
                     && strpos($id, 'webgsm_piese_filter-') !== 0
                     && strpos($id, 'woocommerce_layered_nav-') !== 0
                     && strpos($id, 'woocommerce_price_filter-') !== 0;
             }));
-        }
-        
-        // Widget generic dinamic pentru toate categoriile (Piese, Unelte, Accesorii)
-        $category_filter_widget = get_option('widget_webgsm_category_filter', []);
-        $category_filter_id = 1;
-        $category_filter_widget[$category_filter_id] = ['title' => ''];
-        update_option('widget_webgsm_category_filter', $category_filter_widget);
-        foreach ($target_sidebars as $sid) {
-            $sidebars[$sid][] = 'webgsm_category_filter-' . $category_filter_id;
-        }
-        
-        // Widget filtre cu bifă: Subcategorie Piese (iPhone, Samsung…) + Tip piesă (Ecrane, Baterii…)
-        // Păstrăm și widget-ul vechi pentru compatibilitate, dar widget-ul generic va avea prioritate
-        $piese_widget = get_option('widget_webgsm_piese_filter', []);
-        $piese_id = 1;
-        $piese_widget[$piese_id] = ['title' => ''];
-        update_option('widget_webgsm_piese_filter', $piese_widget);
-        foreach ($target_sidebars as $sid) {
-            $sidebars[$sid][] = 'webgsm_piese_filter-' . $piese_id;
         }
         
         $attr_labels = [

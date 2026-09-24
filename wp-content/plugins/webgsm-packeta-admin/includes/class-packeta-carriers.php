@@ -150,6 +150,128 @@ class WebGSM_Packeta_Carriers {
     }
 
     /**
+     * Curieri HD internaționali disponibili mereu la AWB manual (nu depind de checkout WC).
+     *
+     * @return array<int, array{
+     *   carrier_id: string,
+     *   title: string,
+     *   vendor: array<string, string>,
+     *   is_pickup: bool,
+     *   pricing_hint: string,
+     *   wc_method_id: string,
+     *   destination_country: string,
+     *   cod_allowed: bool,
+     *   province_required: bool,
+     *   manual: bool
+     * }>
+     */
+    public static function get_manual_international_home_carriers(): array {
+        $out = [
+            [
+                'carrier_id' => '4329',
+                'title' => 'Olanda — NL Dutch Post HD (PostNL)',
+                'vendor' => ['carrierId' => '4329'],
+                'is_pickup' => false,
+                'pricing_hint' => 'de la ~55,66 lei cu TVA (1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'NL',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '8000',
+                'title' => 'Olanda — NL DHL HD',
+                'vendor' => ['carrierId' => '8000'],
+                'is_pickup' => false,
+                'pricing_hint' => 'de la ~55,66 lei cu TVA (1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'NL',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
+        ];
+
+        return apply_filters('webgsm_packeta_admin_manual_international_home_carriers', $out);
+    }
+
+    /**
+     * Lista curieri HD pentru tab AWB: checkout RO + Olanda HD manual.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function get_awb_home_carriers(): array {
+        $home = [];
+        foreach (self::get_checkout_carriers() as $c) {
+            if (!empty($c['is_pickup'])) {
+                continue;
+            }
+            $c['destination_country'] = $c['destination_country'] ?? 'RO';
+            $c['cod_allowed'] = $c['cod_allowed'] ?? true;
+            $c['province_required'] = $c['province_required'] ?? true;
+            $c['manual'] = false;
+            $home[] = $c;
+        }
+
+        $seen = [];
+        foreach ($home as $c) {
+            $seen[(string) ($c['carrier_id'] ?? '')] = true;
+        }
+
+        foreach (self::get_manual_international_home_carriers() as $c) {
+            $cid = (string) ($c['carrier_id'] ?? '');
+            if ($cid === '' || isset($seen[$cid])) {
+                continue;
+            }
+            $home[] = $c;
+            $seen[$cid] = true;
+        }
+
+        usort(
+            $home,
+            static function ($a, $b) {
+                return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+            }
+        );
+
+        return $home;
+    }
+
+    public static function destination_country_for_carrier(string $carrier_id): string {
+        $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
+        foreach (self::get_manual_international_home_carriers() as $c) {
+            if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
+                return strtoupper((string) ($c['destination_country'] ?? 'RO'));
+            }
+        }
+
+        return 'RO';
+    }
+
+    public static function carrier_allows_cod(string $carrier_id): bool {
+        $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
+        foreach (self::get_manual_international_home_carriers() as $c) {
+            if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
+                return !empty($c['cod_allowed']);
+            }
+        }
+
+        return true;
+    }
+
+    public static function carrier_requires_province(string $carrier_id): bool {
+        $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
+        foreach (self::get_manual_international_home_carriers() as $c) {
+            if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
+                return !empty($c['province_required']);
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @deprecated Folosește get_checkout_carriers()
      * @return array<int, array{carrier_id: string, title: string, vendor: array<string, string>}>
      */

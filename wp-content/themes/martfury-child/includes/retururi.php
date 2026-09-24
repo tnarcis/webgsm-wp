@@ -157,29 +157,39 @@ function upload_poze_retur($files, $retur_id) {
 }
 
 // =============================================
-// GENERARE STORNO SMARTBILL LA APROBARE RETUR
+// GENERARE STORNO OBLIO LA APROBARE RETUR
 // =============================================
 
 function genereaza_storno_retur($retur_id) {
+    if (!function_exists('oblio_request')) {
+        return array('error' => 'Modulul Oblio nu este încărcat');
+    }
+
     $order_id = get_post_meta($retur_id, '_order_id', true);
     $product_id = get_post_meta($retur_id, '_product_id', true);
     $qty_retur = get_post_meta($retur_id, '_qty_retur', true);
-    
-    if(!$qty_retur) $qty_retur = 1;
-    
-    // Verifică dacă storno-ul a fost deja generat
-    $storno_existent = get_post_meta($retur_id, '_smartbill_storno_number', true);
-    if($storno_existent) {
-        $series_existenta = get_post_meta($retur_id, '_smartbill_storno_series', true);
+
+    if (!$qty_retur) {
+        $qty_retur = 1;
+    }
+
+    $storno_existent = get_post_meta($retur_id, '_oblio_storno_number', true);
+    if (!$storno_existent) {
+        $storno_existent = get_post_meta($retur_id, '_smartbill_storno_number', true);
+    }
+    if ($storno_existent) {
+        $series_existenta = get_post_meta($retur_id, '_oblio_storno_series', true);
+        if (!$series_existenta) {
+            $series_existenta = get_post_meta($retur_id, '_smartbill_storno_series', true);
+        }
         return array(
             'number' => $storno_existent,
-            'series' => $series_existenta
+            'series' => $series_existenta,
         );
     }
 
-    // Prevent concurrent SmartBill storno generations for the same retur.
-    $lock_key = 'webgsm_smartbill_storno_lock_' . (int) $retur_id;
-    $lock_group = 'webgsm_smartbill_locks';
+    $lock_key = 'webgsm_oblio_storno_lock_' . (int) $retur_id;
+    $lock_group = 'webgsm_oblio_locks';
     $lock_acquired = false;
     if (function_exists('wp_cache_add')) {
         $lock_acquired = wp_cache_add($lock_key, 1, $lock_group, 300);
@@ -192,104 +202,151 @@ function genereaza_storno_retur($retur_id) {
     }
 
     if (!$lock_acquired) {
-        $num = get_post_meta($retur_id, '_smartbill_storno_number', true);
+        $num = get_post_meta($retur_id, '_oblio_storno_number', true);
         if ($num) {
-            $series = get_post_meta($retur_id, '_smartbill_storno_series', true);
-            return array('number' => $num, 'series' => $series);
+            return array(
+                'number' => $num,
+                'series' => get_post_meta($retur_id, '_oblio_storno_series', true),
+            );
         }
         return false;
     }
-    
-    // Verifică dacă comanda are factură
-    $invoice_series = get_post_meta($order_id, '_smartbill_invoice_series', true);
-    $invoice_number = get_post_meta($order_id, '_smartbill_invoice_number', true);
-    
-    if(!$invoice_series || !$invoice_number) {
+
+    $invoice_series = function_exists('webgsm_get_invoice_meta')
+        ? webgsm_get_invoice_meta($order_id, 'series')
+        : get_post_meta($order_id, '_oblio_invoice_series', true);
+    $invoice_number = function_exists('webgsm_get_invoice_meta')
+        ? webgsm_get_invoice_meta($order_id, 'number')
+        : get_post_meta($order_id, '_oblio_invoice_number', true);
+
+    if (!$invoice_series || $invoice_number === '' || $invoice_number === null) {
         return array('error' => 'Comanda nu are factură generată');
     }
-    
+
     $order = wc_get_order($order_id);
-    if(!$order) return array('error' => 'Comanda nu există');
-    
-    // Găsește produsul în comandă pentru a lua prețul corect
+    if (!$order) {
+        return array('error' => 'Comanda nu există');
+    }
+
     $product_price = 0;
     $product_name = '';
     $product_sku = '';
-    
-    foreach($order->get_items() as $item) {
-        if($item->get_product_id() == $product_id) {
-            $product_price = $item->get_total() / $item->get_quantity();
+    $item_tva = (float) get_option('oblio_tva', 21);
+
+    foreach ($order->get_items() as $item) {
+        if ((int) $item->get_product_id() === (int) $product_id) {
+            $qty = (float) $item->get_quantity();
+            $product_price = $qty > 0 ? ((float) $item->get_total() / $qty) : 0;
             $product_name = $item->get_name();
             $product = $item->get_product();
             $product_sku = $product ? $product->get_sku() : '';
+            $item_total = (float) $item->get_total();
+            $item_tax = (float) $item->get_total_tax();
+            if ($item_total > 0 && $item_tax > 0) {
+                $item_tva = round(($item_tax / $item_total) * 100, 2);
+            }
             break;
         }
     }
-    
-    if(!$product_name) {
+
+    if (!$product_name) {
         return array('error' => 'Produsul nu a fost găsit în comandă');
     }
-    
-    // Pregătește datele clientului
-    $billing_company = $order->get_billing_company();
-    $billing_cif = get_post_meta($order_id, '_billing_cif', true);
-    
+
+    $fiscal = function_exists('webgsm_get_order_fiscal_data')
+        ? webgsm_get_order_fiscal_data($order)
+        : array('company' => '', 'cui' => '', 'reg_com' => '', 'iban' => '', 'bank' => '', 'vat_payer' => false);
+
+    $billing_company = !empty($fiscal['company']) ? $fiscal['company'] : $order->get_billing_company();
+    $billing_cif     = !empty($fiscal['cui']) ? $fiscal['cui'] : '';
+    $billing_reg_com = !empty($fiscal['reg_com']) ? $fiscal['reg_com'] : '';
+
+    $management = get_option('oblio_management', '');
+    $workstation = get_option('oblio_workstation', 'Sediu');
+    $use_stock = (int) get_option('oblio_use_stock', 1);
+    $cif = get_option('oblio_cif', '');
+    $serie = get_option('oblio_serie', 'WEB');
+
     $client = array(
-        'name' => $billing_company ? $billing_company : $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
-        'vatCode' => $billing_cif ? $billing_cif : '',
-        'address' => $order->get_billing_address_1() . ' ' . $order->get_billing_address_2(),
+        'name' => $billing_company ? $billing_company : trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()),
+        'cif' => $billing_cif ? $billing_cif : '',
+        'rc' => $billing_reg_com ? $billing_reg_com : '',
+        'address' => trim($order->get_billing_address_1() . ' ' . $order->get_billing_address_2()),
         'city' => $order->get_billing_city(),
-        'county' => $order->get_billing_state(),
+        'state' => $order->get_billing_state(),
         'country' => $order->get_billing_country(),
         'email' => $order->get_billing_email(),
         'phone' => $order->get_billing_phone(),
-        'isTaxPayer' => !empty($billing_cif)
+        'vatPayer' => !empty($fiscal['vat_payer']) ? 1 : 0,
+        'save' => 0,
     );
-    
-    // Produsul pentru storno (cu valoare negativă)
-    $products = array(
-        array(
-            'name' => $product_name,
-            'code' => $product_sku,
-            'measuringUnitName' => 'buc',
-            'currency' => $order->get_currency(),
-            'quantity' => $qty_retur,
-            'price' => -abs($product_price), // Preț negativ pentru storno
-            'isTaxIncluded' => true,
-            'taxPercentage' => 19,
-            'saveToDb' => false
-        )
+
+    if (!empty($fiscal['iban'])) {
+        $client['iban'] = $fiscal['iban'];
+    }
+    if (!empty($fiscal['bank'])) {
+        $client['bank'] = $fiscal['bank'];
+    }
+
+    $line = array(
+        'name' => $product_name,
+        'code' => $product_sku,
+        'measuringUnit' => 'buc',
+        'currency' => $order->get_currency(),
+        'quantity' => -abs((float) $qty_retur),
+        'price' => abs($product_price),
+        'vatIncluded' => 0,
+        'vatPercentage' => $item_tva,
+        'productType' => 'Marfa',
+        'save' => 0,
     );
-    
-    // Datele facturii storno
+    if ($use_stock && $management !== '') {
+        $line['management'] = $management;
+    }
+
     $storno_data = array(
-        'companyVatCode' => SMARTBILL_CIF,
-        'seriesName' => SMARTBILL_SERIE_FACTURA,
+        'cif' => $cif,
         'client' => $client,
-        'products' => $products,
-        'issueDate' => date('Y-m-d'),
+        'seriesName' => $serie,
+        'issueDate' => gmdate('Y-m-d'),
         'currency' => $order->get_currency(),
         'language' => 'RO',
-        'observations' => 'Storno pentru retur - Factura originală: ' . $invoice_series . $invoice_number . ' | Comandă #' . $order->get_order_number()
+        'precision' => 2,
+        'products' => array($line),
+        'mentions' => 'Storno retur - Factura originală: ' . $invoice_series . $invoice_number . ' | Comandă #' . $order->get_order_number(),
+        'idempotencyKey' => 'webgsm-storno-retur-' . $retur_id,
+        'useStock' => $use_stock ? 1 : 0,
+        'workStation' => $workstation ? $workstation : 'Sediu',
     );
-    
-    // Trimite la SmartBill
-    $response = smartbill_request('invoice', $storno_data);
-    
-    if(isset($response['errorText']) && !empty($response['errorText'])) {
-        return array('error' => $response['errorText']);
+
+    $response = oblio_request('docs/invoice', $storno_data, 'POST', 'json');
+
+    if (!empty($response['error'])) {
+        return array('error' => $response['error']);
     }
-    
-    if(isset($response['number'])) {
-        // Salvează datele storno-ului la cererea de retur
-        update_post_meta($retur_id, '_smartbill_storno_number', $response['number']);
-        update_post_meta($retur_id, '_smartbill_storno_series', $response['series']);
-        update_post_meta($retur_id, '_smartbill_storno_date', date('Y-m-d'));
-        
-        return $response;
+
+    $data = isset($response['data']) && is_array($response['data']) ? $response['data'] : $response;
+    $number = isset($data['number']) ? $data['number'] : '';
+    $series = isset($data['seriesName']) ? $data['seriesName'] : (isset($data['series']) ? $data['series'] : $serie);
+    $link = isset($data['link']) ? $data['link'] : '';
+
+    if ($number === '' || $number === null) {
+        return array('error' => 'Răspuns necunoscut de la Oblio');
     }
-    
-    return array('error' => 'Răspuns necunoscut de la SmartBill');
+
+    update_post_meta($retur_id, '_oblio_storno_number', $number);
+    update_post_meta($retur_id, '_oblio_storno_series', $series);
+    update_post_meta($retur_id, '_oblio_storno_date', gmdate('Y-m-d'));
+    if ($link) {
+        update_post_meta($retur_id, '_oblio_storno_link', $link);
+    }
+
+    return array(
+        'number' => $number,
+        'series' => $series,
+        'seriesName' => $series,
+        'link' => $link,
+    );
 }
 
 // Hook: Generează storno când returul e aprobat
@@ -327,8 +384,8 @@ add_action('admin_notices', function() {
         delete_transient('storno_error_' . $post->ID);
     }
     
-    $storno_number = get_post_meta($post->ID, '_smartbill_storno_number', true);
-    $storno_series = get_post_meta($post->ID, '_smartbill_storno_series', true);
+    $storno_number = get_post_meta($post->ID, '_oblio_storno_number', true) ?: get_post_meta($post->ID, '_smartbill_storno_number', true);
+    $storno_series = get_post_meta($post->ID, '_oblio_storno_series', true) ?: get_post_meta($post->ID, '_smartbill_storno_series', true);
     if($storno_number && isset($_GET['storno_generated'])) {
         echo '<div class="notice notice-success"><p>Storno generat cu succes: ' . esc_html($storno_series . $storno_number) . '</p></div>';
     }
@@ -452,8 +509,8 @@ add_action('woocommerce_account_retururi_endpoint', function() {
             $product = wc_get_product($product_id);
             
             // Storno info
-            $storno_number = get_post_meta($retur->ID, '_smartbill_storno_number', true);
-            $storno_series = get_post_meta($retur->ID, '_smartbill_storno_series', true);
+            $storno_number = get_post_meta($retur->ID, '_oblio_storno_number', true) ?: get_post_meta($retur->ID, '_smartbill_storno_number', true);
+            $storno_series = get_post_meta($retur->ID, '_oblio_storno_series', true) ?: get_post_meta($retur->ID, '_smartbill_storno_series', true);
             
             $status_label = array(
                 'nou' => '<span style="color:orange;">Nou</span>',
@@ -739,37 +796,48 @@ add_action('wp_ajax_download_storno_pdf', function() {
         wp_die('Acces interzis');
     }
     
-    $series = get_post_meta($retur_id, '_smartbill_storno_series', true);
-    $number = get_post_meta($retur_id, '_smartbill_storno_number', true);
-    
-    if(!$series || !$number) {
+    $series = get_post_meta($retur_id, '_oblio_storno_series', true) ?: get_post_meta($retur_id, '_smartbill_storno_series', true);
+    $number = get_post_meta($retur_id, '_oblio_storno_number', true) ?: get_post_meta($retur_id, '_smartbill_storno_number', true);
+    $link = get_post_meta($retur_id, '_oblio_storno_link', true);
+
+    if (!$series || $number === '' || $number === null) {
         wp_die('Storno-ul nu există');
     }
-    
-    $url = SMARTBILL_API_URL . 'invoice/pdf?cif=' . SMARTBILL_CIF . '&seriesname=' . $series . '&number=' . $number;
-    
-    $args = array(
-        'method' => 'GET',
-        'timeout' => 30,
-        'headers' => array(
-            'Authorization' => 'Basic ' . base64_encode(SMARTBILL_USERNAME . ':' . SMARTBILL_TOKEN),
-            'Accept' => 'application/octet-stream'
-        )
-    );
-    
-    $response = wp_remote_get($url, $args);
-    
-    if(is_wp_error($response)) {
-        wp_die('Eroare la descărcare');
+
+    if (!$link && function_exists('oblio_request')) {
+        $cif = get_option('oblio_cif', '');
+        $response = oblio_request(
+            'docs/invoice?cif=' . rawurlencode($cif) . '&seriesName=' . rawurlencode($series) . '&number=' . rawurlencode($number),
+            null,
+            'GET'
+        );
+        if (!empty($response['data']['link'])) {
+            $link = $response['data']['link'];
+            update_post_meta($retur_id, '_oblio_storno_link', $link);
+        }
     }
-    
-    $pdf = wp_remote_retrieve_body($response);
-    
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="Storno_' . $series . $number . '.pdf"');
-    header('Content-Length: ' . strlen($pdf));
-    
-    echo $pdf;
+
+    if (!$link) {
+        wp_die('Link-ul storno nu este disponibil');
+    }
+
+    $file_response = wp_remote_get($link, array('timeout' => 45, 'redirection' => 5));
+    if (is_wp_error($file_response)) {
+        wp_redirect($link);
+        exit;
+    }
+
+    $pdf = wp_remote_retrieve_body($file_response);
+    $ctype = wp_remote_retrieve_header($file_response, 'content-type');
+    if ($pdf && (strpos((string) $ctype, 'pdf') !== false || substr($pdf, 0, 4) === '%PDF')) {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="Storno_' . $series . $number . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        echo $pdf;
+        exit;
+    }
+
+    wp_redirect($link);
     exit;
 });
 
@@ -817,10 +885,10 @@ add_action('manage_cerere_retur_posts_custom_column', function($column, $post_id
             echo '<span style="color:' . ($colors[$status] ?? 'black') . '; font-weight:bold;">' . ucfirst($status) . '</span>';
             break;
         case 'storno':
-            $storno_number = get_post_meta($post_id, '_smartbill_storno_number', true);
-            $storno_series = get_post_meta($post_id, '_smartbill_storno_series', true);
+            $storno_number = get_post_meta($post_id, '_oblio_storno_number', true) ?: get_post_meta($post_id, '_smartbill_storno_number', true);
+            $storno_series = get_post_meta($post_id, '_oblio_storno_series', true) ?: get_post_meta($post_id, '_smartbill_storno_series', true);
             if($storno_number) {
-                echo '<a href="' . admin_url('admin-ajax.php?action=download_storno_pdf&retur_id=' . $post_id) . '" target="_blank">' . $storno_series . $storno_number . '</a>';
+                echo '<a href="' . admin_url('admin-ajax.php?action=download_storno_pdf&retur_id=' . $post_id) . '" target="_blank">' . esc_html($storno_series . $storno_number) . '</a>';
             } else {
                 echo '-';
             }
@@ -844,9 +912,9 @@ function render_retur_metabox($post) {
     $poze = get_post_meta($post->ID, '_poze_retur', true);
     
     // Storno info
-    $storno_number = get_post_meta($post->ID, '_smartbill_storno_number', true);
-    $storno_series = get_post_meta($post->ID, '_smartbill_storno_series', true);
-    $storno_date = get_post_meta($post->ID, '_smartbill_storno_date', true);
+    $storno_number = get_post_meta($post->ID, '_oblio_storno_number', true) ?: get_post_meta($post->ID, '_smartbill_storno_number', true);
+    $storno_series = get_post_meta($post->ID, '_oblio_storno_series', true) ?: get_post_meta($post->ID, '_smartbill_storno_series', true);
+    $storno_date = get_post_meta($post->ID, '_oblio_storno_date', true) ?: get_post_meta($post->ID, '_smartbill_storno_date', true);
     
     $customer = get_user_by('id', $customer_id);
     $product = wc_get_product($product_id);
@@ -912,7 +980,7 @@ function render_retur_metabox($post) {
                     <option value="finalizat" <?php selected($status, 'finalizat'); ?>>Finalizat</option>
                 </select>
                 <?php if(!$storno_number && $status !== 'finalizat'): ?>
-                <p class="description">Cand Statusul Finalizat este selectat  se va genera automat factura storno în SmartBill.</p>
+                <p class="description">Când statusul Finalizat este selectat se va genera automat factura storno în Oblio.</p>
                 <?php endif; ?>
             </td>
         </tr>

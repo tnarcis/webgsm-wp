@@ -139,7 +139,26 @@ class WebGSM_Checkout_Pro {
     }
     
     public function start_session() {
-        if (!session_id() && !headers_sent()) session_start();
+        // Doar pe checkout / AJAX checkout — pe restul site-ului blochează cache-ul și încetinește.
+        if (is_admin()) {
+            return;
+        }
+        $need = false;
+        if (function_exists('is_checkout') && is_checkout() && !(function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-received'))) {
+            $need = true;
+        }
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+            if (strpos($action, 'webgsm_') === 0) {
+                $need = true;
+            }
+        }
+        if (!$need) {
+            return;
+        }
+        if (!session_id() && !headers_sent()) {
+            session_start();
+        }
     }
     
     public function enqueue_assets() {
@@ -610,6 +629,7 @@ class WebGSM_Checkout_Pro {
         echo '<input type="hidden" name="billing_j" id="billing_j" value="'.$b('billing_j').'">';
         echo '<input type="hidden" name="billing_iban" id="billing_iban" value="'.$b('billing_iban').'">';
         echo '<input type="hidden" name="billing_bank" id="billing_bank" value="'.$b('billing_bank').'">';
+        echo '<input type="hidden" name="billing_vat_payer" id="billing_vat_payer" value="'.$b('billing_vat_payer').'">';
         echo '<input type="hidden" name="billing_cnp" id="billing_cnp" value="'.$b('billing_cnp').'">';
         echo '<input type="hidden" name="billing_first_name" id="billing_first_name" value="'.$b('billing_first_name').'">';
         echo '<input type="hidden" name="billing_last_name" id="billing_last_name" value="'.$b('billing_last_name').'">';
@@ -1127,16 +1147,25 @@ class WebGSM_Checkout_Pro {
     }
     
     public function ajax_update_cart_item() {
-        WC()->cart->set_quantity(sanitize_text_field($_POST['key']), intval($_POST['qty']));
+        check_ajax_referer('webgsm_nonce', 'nonce');
+        if (!WC()->cart) {
+            wp_send_json_error(['message' => 'Cos indisponibil.']);
+        }
+        WC()->cart->set_quantity(sanitize_text_field($_POST['key'] ?? ''), intval($_POST['qty'] ?? 0));
         wp_send_json_success(['subtotal' => WC()->cart->get_cart_subtotal(), 'total' => WC()->cart->get_total()]);
     }
     
     public function ajax_remove_cart_item() {
-        WC()->cart->remove_cart_item(sanitize_text_field($_POST['key']));
+        check_ajax_referer('webgsm_nonce', 'nonce');
+        if (!WC()->cart) {
+            wp_send_json_error(['message' => 'Cos indisponibil.']);
+        }
+        WC()->cart->remove_cart_item(sanitize_text_field($_POST['key'] ?? ''));
         wp_send_json_success(['cart_count' => WC()->cart->get_cart_contents_count()]);
     }
     
     public function ajax_apply_coupon() {
+        check_ajax_referer('webgsm_nonce', 'nonce');
         if (!WC()->cart || WC()->cart->is_empty()) {
             wp_send_json_error(['message' => 'Cosul este gol.']);
             return;

@@ -351,6 +351,11 @@ add_action('wp_head', function() {
     <?php
 });
 
+// =============================================
+// CHECKOUT LEGACY — dezactivat când rulează webgsm-checkout-pro
+// =============================================
+if (!class_exists('WebGSM_Checkout_Pro')) {
+
 // Afișează alegerea PF/PJ la începutul checkout-ului
 add_action('woocommerce_before_checkout_billing_form', function() {
     $customer_id = get_current_user_id();
@@ -537,6 +542,8 @@ add_action('woocommerce_admin_order_data_after_billing_address', function($order
     }
 });
 
+} // end !class_exists('WebGSM_Checkout_Pro') — checkout legacy
+
 // =============================================
 // AJAX: CĂUTARE CUI ÎN ANAF
 // =============================================
@@ -545,104 +552,46 @@ add_action('wp_ajax_cauta_cui_anaf', 'cauta_cui_anaf_callback');
 add_action('wp_ajax_nopriv_cauta_cui_anaf', 'cauta_cui_anaf_callback');
 
 function cauta_cui_anaf_callback() {
-    // ✅ SECURITATE: Rate limiting ANAF API (10 requests/min per IP)
-    $user_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    // Rate limiting ANAF API (10 requests/min per IP)
+    $user_ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
     $transient_key = 'anaf_rate_limit_' . md5($user_ip);
-    $request_count = get_transient($transient_key) ?: 0;
+    $request_count = (int) get_transient($transient_key);
     
     if ($request_count >= 10) {
         wp_send_json_error('Prea multe cereri. Te rugăm să aștepți 1 minut.');
     }
+    set_transient($transient_key, $request_count + 1, 60);
     
-    // Incrementează counter
-    set_transient($transient_key, $request_count + 1, 60); // 60 secunde
+    $cui = isset($_POST['cui']) ? preg_replace('/[^0-9]/', '', wp_unslash($_POST['cui'])) : '';
     
-    // ✅ SECURITATE: Validare CUI format corect
-    $cui = preg_replace('/[^0-9]/', '', $_POST['cui']);
-    
-    if(empty($cui)) {
-        wp_send_json_error('CUI invalid');
+    if (empty($cui) || strlen($cui) < 2 || strlen($cui) > 10) {
+        wp_send_json_error('CUI invalid. Trebuie să aibă între 2 și 10 cifre.');
     }
-    
-    // Validare lungime CUI (6-10 cifre pentru România)
-    if(strlen($cui) < 6 || strlen($cui) > 10) {
-        wp_send_json_error('CUI invalid. Trebuie să aibă între 6 și 10 cifre.');
+
+    if (!function_exists('webgsm_query_anaf')) {
+        wp_send_json_error('Serviciul ANAF nu este disponibil.');
     }
-    
-    // Pas 1: Trimite cererea la ANAF
-    $url = 'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva';
-    
-    $body = json_encode(array(
-        array(
-            'cui' => intval($cui),
-            'data' => date('Y-m-d')
-        )
+
+    $result = webgsm_query_anaf($cui);
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    // Format compatibil cu JS-ul din My Account (denumire, nrRegCom, adresa, is_tva)
+    wp_send_json_success(array(
+        'denumire' => $result['name'],
+        'nrRegCom' => $result['j'],
+        'adresa'   => $result['address'],
+        'oras'     => $result['city'],
+        'judet'    => $result['county'],
+        'cui'      => $result['cui'],
+        'is_tva'   => !empty($result['is_tva']),
+        'tva'      => !empty($result['is_tva']),
+        'name'     => $result['name'],
+        'j'        => $result['j'],
+        'address'  => $result['address'],
+        'city'     => $result['city'],
+        'county'   => $result['county'],
+        'localitate' => $result['city'],
     ));
-    
-    $response = wp_remote_post($url, array(
-        'timeout' => 30,
-        'headers' => array(
-            'Content-Type' => 'application/json'
-        ),
-        'body' => $body
-    ));
-    
-    if(is_wp_error($response)) {
-        wp_send_json_error('Eroare conexiune ANAF');
-    }
-    
-    $data = json_decode(wp_remote_retrieve_body($response), true);
-    
-    if(!isset($data['correlationId'])) {
-        wp_send_json_error('Eroare ANAF - nu s-a primit ID');
-    }
-    
-    // Pas 2: cerem rezultatul (evităm sleep(2) care crește durata request-ului și implicit concurența DB).
-    $url_result = 'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva?id=' . $data['correlationId'];
-
-    $result = null;
-    for ($attempt = 0; $attempt < 3; $attempt++) {
-        $response2 = wp_remote_get($url_result, array(
-            'timeout' => 30
-        ));
-
-        if (is_wp_error($response2)) {
-            wp_send_json_error('Eroare la preluare rezultat');
-        }
-
-        $candidate = json_decode(wp_remote_retrieve_body($response2), true);
-        if (isset($candidate['found'][0]['date_generale'])) {
-            $result = $candidate;
-            break;
-        }
-
-        // Mic backoff; ANAF poate avea procesare asincronă.
-        usleep(400000); // 400ms
-    }
-
-    if(isset($result['found'][0]['date_generale'])) {
-        $firma = $result['found'][0]['date_generale'];
-        $adresa_sediu = $result['found'][0]['adresa_sediu_social'] ?? array();
-        $tva_info = $result['found'][0]['inregistrare_scop_Tva'] ?? array();
-        
-        $judet = $adresa_sediu['sdenumire_Judet'] ?? '';
-        $localitate = $adresa_sediu['sdenumire_Localitate'] ?? '';
-        $strada = ($adresa_sediu['sdenumire_Strada'] ?? '') . ' ' . ($adresa_sediu['snumar_Strada'] ?? '');
-        $detalii = $adresa_sediu['sdetalii_Adresa'] ?? '';
-        
-        $adresa_completa = trim($strada);
-        if($detalii) $adresa_completa .= ', ' . $detalii;
-        
-        wp_send_json_success(array(
-            'denumire' => $firma['denumire'] ?? '',
-            'cui' => $cui,
-            'nrRegCom' => $firma['nrRegCom'] ?? '',
-            'adresa' => $adresa_completa,
-            'judet' => $judet,
-            'localitate' => str_replace(array('Mun. ', 'Or. ', 'Com. '), '', $localitate),
-            'tva' => ($tva_info['scpTVA'] ?? 0) == 1
-        ));
-    }
-    
-    wp_send_json_error('Procesare ANAF in curs sau CUI negăsit. Reîncearcă in cateva minute.');
 }

@@ -23,6 +23,8 @@ $ref_grids = [
     'sameday_box',
     'fan_hd',
     'fan_box',
+    'nl_dutch_post',
+    'nl_dhl_hd',
 ];
 $all_grids = WebGSM_Packeta_Ro_Pricelist::grids();
 $synced_at = get_option('webgsm_packeta_pricelist_synced_at', '');

@@ -24,20 +24,40 @@ class WebGSM_B2B_File_Upload {
     public function __construct() {
         $this->init_upload_directory();
     }
+
+    /**
+     * Director privat pentru certificate — în afara web root când e posibil.
+     */
+    public function get_cert_base_dir() {
+        $private = dirname(ABSPATH) . '/webgsm-private/certificates';
+        return $private;
+    }
     
     /**
-     * Initialize upload directory and .htaccess protection
+     * Initialize upload directory and protection files
      */
     private function init_upload_directory() {
-        $upload_dir = wp_upload_dir();
-        $cert_dir = $upload_dir['basedir'] . '/webgsm-b2b/certificates';
+        $cert_dir = $this->get_cert_base_dir();
         
         if (!file_exists($cert_dir)) {
             wp_mkdir_p($cert_dir);
-            
-            // Create .htaccess to deny direct access
-            $htaccess_content = "Order Deny,Allow\nDeny from all\n";
-            file_put_contents($cert_dir . '/.htaccess', $htaccess_content);
+        }
+
+        // Protecție Apache (ignorată pe nginx, dar inofensivă)
+        $htaccess = $cert_dir . '/.htaccess';
+        if (!file_exists($htaccess)) {
+            file_put_contents($htaccess, "Order Deny,Allow\nDeny from all\n");
+        }
+        $index = $cert_dir . '/index.php';
+        if (!file_exists($index)) {
+            file_put_contents($index, "<?php\n// Silence is golden.\n");
+        }
+
+        // Migrează fișierele vechi din uploads/ dacă există
+        $upload_dir = wp_upload_dir();
+        $legacy_dir = $upload_dir['basedir'] . '/webgsm-b2b/certificates';
+        if (is_dir($legacy_dir) && !file_exists($legacy_dir . '/.htaccess')) {
+            file_put_contents($legacy_dir . '/.htaccess', "Order Deny,Allow\nDeny from all\n");
         }
     }
     
@@ -84,20 +104,13 @@ class WebGSM_B2B_File_Upload {
             return new WP_Error('file_too_large', 'Fișierul depășește 5MB.');
         }
         
-        // Get upload directory
-        $upload_dir = wp_upload_dir();
-        if ($upload_dir['error']) {
-            error_log('[WebGSM B2B] Upload certificat: Eroare director upload: ' . $upload_dir['error']);
-            return new WP_Error('upload_dir_error', 'Eroare la accesarea directorului de upload.');
-        }
-        
-        $cert_dir = $upload_dir['basedir'] . '/webgsm-b2b/certificates';
+        // Get private certificate directory (outside web root)
+        $cert_dir = $this->get_cert_base_dir();
         $user_dir = $cert_dir . '/' . $user_id;
         
         // Create directories if they don't exist
         if (!file_exists($cert_dir)) {
             wp_mkdir_p($cert_dir);
-            // Create .htaccess for security
             $htaccess_path = $cert_dir . '/.htaccess';
             if (!file_exists($htaccess_path)) {
                 file_put_contents($htaccess_path, "Order Deny,Allow\nDeny from all\n");
@@ -149,7 +162,7 @@ class WebGSM_B2B_File_Upload {
             return new WP_Error('source_not_found', 'Fișierul sursă nu a fost găsit.');
         }
         
-        // Move file to user-specific directory
+        // Move file to private user-specific directory (outside web root)
         $final_path = $user_dir . '/' . basename($uploaded_file['file']);
         
         if (!rename($uploaded_file['file'], $final_path)) {
@@ -158,8 +171,8 @@ class WebGSM_B2B_File_Upload {
             return new WP_Error('move_failed', 'Eroare la mutarea fișierului.');
         }
         
-        // Set proper permissions
-        chmod($final_path, 0644);
+        // Restrictive permissions (owner read/write only)
+        chmod($final_path, 0600);
         
         // Save file path in user meta
         update_user_meta($user_id, '_b2b_certificate_path', $final_path);
@@ -202,11 +215,18 @@ class WebGSM_B2B_File_Upload {
             @unlink($file_path);
         }
         
-        // Delete user directory if empty
+        // Delete user directory if empty (private + legacy)
+        $dirs = array(
+            $this->get_cert_base_dir() . '/' . $user_id,
+        );
         $upload_dir = wp_upload_dir();
-        $user_dir = $upload_dir['basedir'] . '/webgsm-b2b/certificates/' . $user_id;
-        if (is_dir($user_dir)) {
-            @rmdir($user_dir);
+        if (empty($upload_dir['error'])) {
+            $dirs[] = $upload_dir['basedir'] . '/webgsm-b2b/certificates/' . $user_id;
+        }
+        foreach ($dirs as $user_dir) {
+            if (is_dir($user_dir)) {
+                @rmdir($user_dir);
+            }
         }
         
         // Delete user meta

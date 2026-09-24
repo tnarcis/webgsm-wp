@@ -397,16 +397,18 @@ add_action('woocommerce_register_form_start', function() {
                 success: function(response) {
                     if(response.success && response.data) {
                         var d = response.data;
-                        $('#reg_firma_nume').val(d.denumire || '');
-                        $('#reg_firma_reg_com').val(d.nrRegCom || '');
-                        $('#reg_firma_adresa').val(d.adresa || '');
-                        $('#reg_firma_judet').val(d.judet || '');
-                        $('#reg_firma_oras').val(d.localitate || '');
-                        $('#reg_firma_cui').val(d.tva ? 'RO' + cui : cui);
+                        $('#reg_firma_nume').val(d.denumire || d.name || '');
+                        $('#reg_firma_reg_com').val(d.nrRegCom || d.j || '');
+                        $('#reg_firma_adresa').val(d.adresa || d.address || '');
+                        $('#reg_firma_judet').val(d.judet || d.county || '');
+                        $('#reg_firma_oras').val(d.localitate || d.oras || d.city || '');
+                        var isTva = !!(d.tva || d.is_tva);
+                        $('#reg_firma_cui').val(isTva ? ('RO' + cui) : cui);
                         
-                        var tva = d.tva ? 'Plătitor TVA' : 'Neplătitor TVA';
+                        var tva = isTva ? 'Plătitor TVA' : 'Neplătitor TVA';
+                        var safeName = $('<div>').text(d.denumire || d.name || '').html();
                         $result.removeClass('loading error').addClass('success')
-                            .html('<svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg><span><strong>' + d.denumire + '</strong> · ' + tva + '</span>')
+                            .html('<svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg><span><strong>' + safeName + '</strong> · ' + tva + '</span>')
                             .show();
                     } else {
                         $result.removeClass('loading success').addClass('error')
@@ -515,6 +517,20 @@ add_filter('woocommerce_registration_errors', function($errors, $username, $emai
         }
     }
     
+    $password         = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
+    $password_confirm = isset($_POST['password_confirm']) ? (string) wp_unslash($_POST['password_confirm']) : '';
+    if ($password === '') {
+        $errors->add('password_error', 'Alege o parolă (minim 8 caractere).');
+    } elseif (strlen($password) < 8) {
+        $errors->add('password_error', 'Parola trebuie să aibă minim 8 caractere.');
+    } elseif ($password_confirm === '' || $password !== $password_confirm) {
+        $errors->add('password_confirm_error', 'Parolele nu coincid. Rescrie parola în ambele câmpuri.');
+    }
+
+    if (empty($_POST['webgsm_accept_terms'])) {
+        $errors->add('terms_error', 'Trebuie să accepți Termenii și condițiile ca să poți crea un cont.');
+    }
+
     // Validare câmpuri firmă dacă e PJ
     if(isset($_POST['tip_facturare']) && $_POST['tip_facturare'] === 'pj') {
         // ✅ SECURITATE: Validare CUI format corect
@@ -565,13 +581,27 @@ add_action('woocommerce_created_customer', function($customer_id) {
         update_user_meta($customer_id, '_firma_judet', sanitize_text_field($_POST['firma_judet'] ?? ''));
         update_user_meta($customer_id, '_firma_oras', sanitize_text_field($_POST['firma_oras'] ?? ''));
     }
-    
-    // Marchează contul ca neconfirmat
+
+    if (!empty($_POST['webgsm_accept_terms'])) {
+        update_user_meta($customer_id, '_terms_accepted', 1);
+        update_user_meta($customer_id, '_terms_accepted_date', current_time('mysql'));
+    }
+
+    // Cont inactiv până confirmă emailul — blochează botii care ar comanda imediat
     update_user_meta($customer_id, '_email_confirmed', 0);
     update_user_meta($customer_id, '_confirmation_token', wp_generate_password(32, false));
-    
-    // Trimite email de confirmare
+
     envoi_email_confirmare($customer_id);
+
+    $email = '';
+    $user  = get_userdata($customer_id);
+    if ($user && !empty($user->user_email)) {
+        $email = $user->user_email;
+    }
+    wc_add_notice(
+        'Contul a fost creat. Ți-am trimis un email la <strong>' . esc_html($email) . '</strong>. Deschide-l și apasă „Confirmă adresa” ca să te poți autentifica și comanda.',
+        'success'
+    );
 });
 
 // =============================================
@@ -581,37 +611,43 @@ add_action('woocommerce_created_customer', function($customer_id) {
 function envoi_email_confirmare($customer_id) {
     $user = get_user_by('ID', $customer_id);
     if(!$user) return;
-    
+
     $token = get_user_meta($customer_id, '_confirmation_token', true);
+    if (!$token) {
+        $token = wp_generate_password(32, false);
+        update_user_meta($customer_id, '_confirmation_token', $token);
+    }
+
     $confirm_url = add_query_arg(array(
         'confirm_email' => '1',
         'user_id' => $customer_id,
         'token' => $token
     ), wc_get_page_permalink('myaccount'));
-    
+
     $subject = 'Confirmă adresa de email - ' . get_bloginfo('name');
-    
+
     $message = '
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Bine ai venit!</h2>
-        <p>Mulțumim pentru înregistrare. Te rugăm să confirmi adresa de email făcând click pe butonul de mai jos:</p>
+        <h2 style="color: #1565C0;">Confirmă adresa de email</h2>
+        <p>Contul a fost creat, dar trebuie să confirmi adresa ca să te poți autentifica și plasa comenzi.</p>
+        <p>Apasă butonul de mai jos. Linkul este valabil doar pentru acest cont.</p>
         <p style="text-align: center; margin: 30px 0;">
-            <a href="' . esc_url($confirm_url) . '" style="background: #4CAF50; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
-                ✓ Confirmă Email
+            <a href="' . esc_url($confirm_url) . '" style="background: #1976D2; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+                Confirmă adresa
             </a>
         </p>
         <p style="color: #666; font-size: 13px;">Sau copiază acest link în browser:<br>' . esc_url($confirm_url) . '</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">Acest email a fost trimis de ' . get_bloginfo('name') . '</p>
+        <p style="color: #999; font-size: 12px;">Acest email a fost trimis de ' . esc_html(get_bloginfo('name')) . '</p>
     </div>';
-    
+
     $headers = array('Content-Type: text/html; charset=UTF-8');
-    
+
     wp_mail($user->user_email, $subject, $message, $headers);
 }
 
 // Procesează confirmarea email
-add_action('init', function() {
+add_action('template_redirect', function() {
     if(isset($_GET['confirm_email']) && isset($_GET['user_id']) && isset($_GET['token'])) {
         $user_id = intval($_GET['user_id']);
         $token = sanitize_text_field($_GET['token']);
@@ -621,11 +657,22 @@ add_action('init', function() {
         if($saved_token && $saved_token === $token) {
             update_user_meta($user_id, '_email_confirmed', 1);
             delete_user_meta($user_id, '_confirmation_token');
-            
-            // Setează mesaj de succes
-            wc_add_notice('Email confirmat cu succes! Acum te poți autentifica.', 'success');
-            
-            wp_redirect(wc_get_page_permalink('myaccount'));
+
+            if (function_exists('wc_set_customer_auth_cookie')) {
+                wc_set_customer_auth_cookie($user_id);
+            } else {
+                wp_set_current_user($user_id);
+                wp_set_auth_cookie($user_id, true);
+            }
+
+            wc_add_notice('Email confirmat. Ești autentificat și poți comanda.', 'success');
+
+            $redirect = wc_get_page_permalink('myaccount');
+            if (function_exists('WC') && WC()->cart && !WC()->cart->is_empty()) {
+                $redirect = wc_get_checkout_url();
+            }
+
+            wp_safe_redirect($redirect);
             exit;
         } else {
             wc_add_notice('Link de confirmare invalid sau expirat.', 'error');
@@ -654,28 +701,53 @@ add_filter('wp_authenticate_user', function($user, $password) {
     }
     
     if($email_confirmed != 1) {
+        $resend_nonce = wp_create_nonce('webgsm_resend_' . $user->ID);
         return new WP_Error(
             'email_not_confirmed',
-            '<strong>Email neconfirmat!</strong> Te rugăm să verifici inbox-ul și să confirmi adresa de email. <a href="#" class="resend-confirmation" data-user="' . $user->ID . '">Retrimite email de confirmare</a>'
+            '<strong>Email neconfirmat!</strong> Te rugăm să verifici inbox-ul și să confirmi adresa de email. <a href="#" class="resend-confirmation" data-user="' . esc_attr($user->ID) . '" data-nonce="' . esc_attr($resend_nonce) . '">Retrimite email de confirmare</a>'
         );
     }
     
     return $user;
 }, 10, 2);
 
-// AJAX pentru retrimitere email confirmare
-add_action('wp_ajax_nopriv_resend_confirmation', function() {
-    $user_id = intval($_POST['user_id']);
-    
-    if($user_id) {
-        // Generează token nou
-        update_user_meta($user_id, '_confirmation_token', wp_generate_password(32, false));
-        envoi_email_confirmare($user_id);
-        wp_send_json_success('Email retrimis!');
+// AJAX pentru retrimitere email confirmare (nonce + proprietate + rate limit)
+add_action('wp_ajax_nopriv_resend_confirmation', 'webgsm_ajax_resend_confirmation');
+add_action('wp_ajax_resend_confirmation', 'webgsm_ajax_resend_confirmation');
+
+function webgsm_ajax_resend_confirmation() {
+    $user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
+    $nonce   = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+
+    if (!$user_id || !wp_verify_nonce($nonce, 'webgsm_resend_' . $user_id)) {
+        wp_send_json_error('Cerere invalidă sau sesiune expirată.');
     }
-    
-    wp_send_json_error('Eroare');
-});
+
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+    $rate_key = 'webgsm_resend_' . md5($ip . '|' . $user_id);
+    $count = (int) get_transient($rate_key);
+    if ($count >= 3) {
+        wp_send_json_error('Prea multe cereri. Încearcă din nou peste câteva minute.');
+    }
+    set_transient($rate_key, $count + 1, 10 * MINUTE_IN_SECONDS);
+
+    $user = get_userdata($user_id);
+    if (!$user) {
+        wp_send_json_error('Utilizator negăsit.');
+    }
+
+    $email_confirmed = get_user_meta($user_id, '_email_confirmed', true);
+    if ($email_confirmed === '' || (int) $email_confirmed === 1) {
+        wp_send_json_error('Email-ul este deja confirmat.');
+    }
+
+    update_user_meta($user_id, '_confirmation_token', wp_generate_password(32, false));
+    if (function_exists('envoi_email_confirmare')) {
+        envoi_email_confirmare($user_id);
+    }
+
+    wp_send_json_success('Email retrimis!');
+}
 
 // Script pentru retrimitere
 add_action('wp_footer', function() {
@@ -685,15 +757,23 @@ add_action('wp_footer', function() {
     jQuery(document).ready(function($) {
         $(document).on('click', '.resend-confirmation', function(e) {
             e.preventDefault();
-            var userId = $(this).data('user');
+            var $link = $(this);
+            var userId = $link.data('user');
+            var nonce = $link.data('nonce');
+            if (!userId || !nonce) {
+                alert('Cerere invalidă. Reîncarcă pagina și încearcă din nou.');
+                return;
+            }
             
             $.ajax({
-                url: '<?php echo admin_url("admin-ajax.php"); ?>',
+                url: '<?php echo esc_url(admin_url("admin-ajax.php")); ?>',
                 type: 'POST',
-                data: { action: 'resend_confirmation', user_id: userId },
+                data: { action: 'resend_confirmation', user_id: userId, nonce: nonce },
                 success: function(response) {
                     if(response.success) {
                         alert('Email de confirmare retrimis! Verifică inbox-ul.');
+                    } else {
+                        alert(response.data || 'Eroare la retrimitere.');
                     }
                 }
             });
@@ -720,7 +800,8 @@ add_action('manage_users_custom_column', function($value, $column_name, $user_id
         if($confirmed === '' || $confirmed == 1) {
             return '<span style="color:green;">✓ Da</span>';
         } else {
-            return '<span style="color:red;">✗ Nu</span> <a href="#" class="confirm-user-email" data-user="' . $user_id . '" style="font-size:11px;">Confirmă manual</a>';
+            $nonce = wp_create_nonce('webgsm_admin_confirm_email_' . $user_id);
+            return '<span style="color:red;">✗ Nu</span> <a href="#" class="confirm-user-email" data-user="' . esc_attr($user_id) . '" data-nonce="' . esc_attr($nonce) . '" style="font-size:11px;">Confirmă manual</a>';
         }
     }
     return $value;
@@ -731,8 +812,13 @@ add_action('wp_ajax_admin_confirm_email', function() {
     if(!current_user_can('edit_users')) {
         wp_send_json_error('Neautorizat');
     }
+
+    $user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
+    $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+    if (!$user_id || !wp_verify_nonce($nonce, 'webgsm_admin_confirm_email_' . $user_id)) {
+        wp_send_json_error('Cerere invalidă');
+    }
     
-    $user_id = intval($_POST['user_id']);
     update_user_meta($user_id, '_email_confirmed', 1);
     delete_user_meta($user_id, '_confirmation_token');
     
@@ -747,11 +833,12 @@ add_action('admin_footer', function() {
             e.preventDefault();
             var btn = $(this);
             var userId = btn.data('user');
+            var nonce = btn.data('nonce');
             
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: { action: 'admin_confirm_email', user_id: userId },
+                data: { action: 'admin_confirm_email', user_id: userId, nonce: nonce },
                 success: function(response) {
                     if(response.success) {
                         btn.closest('td').html('<span style="color:green;">✓ Da</span>');

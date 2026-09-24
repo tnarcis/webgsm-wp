@@ -340,6 +340,7 @@ class WebGSM_Checkout_Save {
             'billing_iban',
             'billing_bank',
             'billing_cnp',
+            'billing_vat_payer',
         ];
         
         foreach ($custom_fields as $field) {
@@ -347,6 +348,29 @@ class WebGSM_Checkout_Save {
                 $value = sanitize_text_field($_POST[$field]);
                 $order->update_meta_data('_' . $field, $value);
             }
+        }
+
+        // Dual-write chei legacy pentru Oblio / webhook / storno
+        if ($customer_type === 'pj') {
+            $cui = sanitize_text_field($_POST['billing_cui'] ?? '');
+            $reg = sanitize_text_field($_POST['billing_j'] ?? '');
+            $company = sanitize_text_field($_POST['billing_company'] ?? '');
+
+            $order->update_meta_data('_tip_facturare', 'pj');
+            $order->update_meta_data('_billing_cif', $cui);
+            $order->update_meta_data('_billing_reg_com', $reg);
+            $order->update_meta_data('_billing_company_name', $company);
+
+            // vat_payer: POST explicit > prefix RO pe CUI
+            $vat_raw = isset($_POST['billing_vat_payer']) ? sanitize_text_field($_POST['billing_vat_payer']) : '';
+            if ($vat_raw === '1' || $vat_raw === '0') {
+                $order->update_meta_data('_billing_vat_payer', $vat_raw);
+            } else {
+                $order->update_meta_data('_billing_vat_payer', preg_match('/^RO/i', $cui) ? '1' : '0');
+            }
+        } else {
+            $order->update_meta_data('_tip_facturare', 'pf');
+            $order->update_meta_data('_billing_vat_payer', '0');
         }
         
         // Salvează obiect agregat _company_data (pentru PJ)
@@ -362,6 +386,8 @@ class WebGSM_Checkout_Save {
                 'state'   => sanitize_text_field($_POST['billing_state'] ?? ''),
                 'phone'   => $this->webgsm_normalize_phone($_POST['billing_phone'] ?? ''),
                 'email'   => sanitize_email($_POST['billing_email'] ?? ''),
+                'vat_payer' => (isset($_POST['billing_vat_payer']) && $_POST['billing_vat_payer'] === '1')
+                    || preg_match('/^RO/i', sanitize_text_field($_POST['billing_cui'] ?? '')),
             ];
             $order->update_meta_data('_company_data', $company_data);
         }

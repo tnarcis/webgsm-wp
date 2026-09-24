@@ -28,6 +28,9 @@ $notices = [
     'missing_home_zip' => ['class' => 'notice-error', 'text' => 'Completează codul poștal — obligatoriu la livrare la adresă.'],
     'missing_home_house' => ['class' => 'notice-error', 'text' => 'Completează numărul străzii — obligatoriu la livrare la adresă.'],
     'missing_parcel_value' => ['class' => 'notice-error', 'text' => 'Valoarea declarată a coletului trebuie să fie mai mare ca 0 (asigurare Packeta). Nu e același lucru cu rambursul: la acte fără COD poți folosi o valoare simbolică (ex. 1) dacă e cazul.'],
+    'nl_cod_unsupported' => ['class' => 'notice-error', 'text' => 'Olanda HD (PostNL/DHL) nu suportă ramburs (COD). Lasă COD = 0.'],
+    'invalid_nl_phone' => ['class' => 'notice-error', 'text' => 'Telefon NL invalid. Format Packeta: 31 + 9 cifre (ex. 31612345678).'],
+    'invalid_nl_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal NL invalid. Format: 1234AB (4 cifre + 2 litere).'],
 ];
 
 ?>

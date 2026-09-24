@@ -12,8 +12,17 @@ class WebGSM_Checkout_ANAF {
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'webgsm_nonce')) {
             wp_send_json_error('Sesiune expirată');
         }
+
+        // Rate limit (shared with theme handler)
+        $user_ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+        $transient_key = 'anaf_rate_limit_' . md5($user_ip);
+        $request_count = (int) get_transient($transient_key);
+        if ($request_count >= 10) {
+            wp_send_json_error('Prea multe cereri. Te rugăm să aștepți 1 minut.');
+        }
+        set_transient($transient_key, $request_count + 1, 60);
         
-        $cui = isset($_POST['cui']) ? sanitize_text_field($_POST['cui']) : '';
+        $cui = isset($_POST['cui']) ? sanitize_text_field(wp_unslash($_POST['cui'])) : '';
         $cui = preg_replace('/[^0-9]/', '', $cui);
         
         if (empty($cui) || strlen($cui) < 2 || strlen($cui) > 10) {
@@ -30,76 +39,16 @@ class WebGSM_Checkout_ANAF {
     }
     
     private function query_anaf($cui) {
-        $url = 'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva';
-        
-        $body = json_encode([
-            ['cui' => intval($cui), 'data' => date('Y-m-d')]
-        ]);
-        
-        $response = wp_remote_post($url, [
-            'timeout' => 30,
-            'headers' => ['Content-Type' => 'application/json'],
-            'body' => $body,
-        ]);
-        
-        if (is_wp_error($response)) {
-            return new WP_Error('anaf_error', 'Eroare la conectarea cu ANAF');
+        if (function_exists('webgsm_query_anaf')) {
+            $result = webgsm_query_anaf($cui);
+            if (is_wp_error($result)) {
+                return $result;
+            }
+            $result['state_code'] = $this->get_state_code($result['county'] ?? '');
+            return $result;
         }
-        
-        $data = json_decode(wp_remote_retrieve_body($response), true);
-        
-        if (!isset($data['correlationId'])) {
-            return new WP_Error('anaf_error', 'ANAF nu a returnat un ID valid');
-        }
-        
-        sleep(2);
-        
-        $result_url = 'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva?id=' . $data['correlationId'];
-        $result_response = wp_remote_get($result_url, ['timeout' => 30]);
-        
-        if (is_wp_error($result_response)) {
-            return new WP_Error('anaf_error', 'Eroare la preluarea rezultatului');
-        }
-        
-        $result = json_decode(wp_remote_retrieve_body($result_response), true);
-        
-        if (isset($result['found'][0]['date_generale'])) {
-            return $this->parse_anaf_result($result['found'][0], $cui);
-        }
-        
-        return new WP_Error('anaf_not_found', 'CUI negăsit în baza ANAF');
-    }
-    
-    private function parse_anaf_result($data, $cui) {
-        $general = $data['date_generale'] ?? [];
-        $address = $data['adresa_sediu_social'] ?? [];
-        $tva = $data['inregistrare_scop_Tva'] ?? [];
-        
-        $street = trim(($address['sdenumire_Strada'] ?? '') . ' ' . ($address['snumar_Strada'] ?? ''));
-        $details = $address['sdetalii_Adresa'] ?? '';
-        $city = $address['sdenumire_Localitate'] ?? '';
-        $county = $address['sdenumire_Judet'] ?? '';
-        
-        $city = preg_replace('/^(Mun\.|Municipiul|Or\.|Oraș|Com\.|Comuna)\s*/i', '', $city);
-        
-        $full_address = $street;
-        if (!empty($details)) {
-            $full_address .= ', ' . $details;
-        }
-        
-        $is_tva = isset($tva['scpTVA']) && $tva['scpTVA'] == 1;
-        
-        return [
-            'name' => $general['denumire'] ?? '',
-            'cui' => $is_tva ? 'RO' . $cui : $cui,
-            'cui_raw' => $cui,
-            'j' => $general['nrRegCom'] ?? '',
-            'address' => $full_address,
-            'city' => $city,
-            'county' => $county,
-            'state_code' => $this->get_state_code($county),
-            'is_tva' => $is_tva,
-        ];
+
+        return new WP_Error('anaf_error', 'Serviciul ANAF nu este disponibil');
     }
     
     private function get_state_code($county) {

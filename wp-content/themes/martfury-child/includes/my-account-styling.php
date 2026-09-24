@@ -261,7 +261,7 @@ add_action('wp_head', function() {
 
     .woocommerce-MyAccount-navigation ul li a:hover::before,
     .woocommerce-MyAccount-navigation ul li.is-active a::before {
-        background-color: #2563eb;
+        background-color: #00A4EB;
     }
 
     /* Dashboard - Home */
@@ -654,7 +654,7 @@ add_action('wp_head', function() {
         border-radius: 8px;
         padding: 12px 16px 12px 45px;
         margin-bottom: 15px;
-        color: #1e40af;
+        color: #0078AD;
         font-size: 13px;
         position: relative;
     }
@@ -921,7 +921,7 @@ add_action('wp_head', function() {
 .woocommerce-orders-table .button.factura,
 .woocommerce-orders-table a[href*="download_factura"],
 .woocommerce-orders-table a[href*="download_storno"] {
-    background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%) !important;
+    background: linear-gradient(135deg, #22c55e 0%, #0078AD 100%) !important;
     background-color: #22c55e !important;
     border: 1px solid #22c55e !important;
     color: #ffffff !important;
@@ -936,7 +936,7 @@ add_action('wp_head', function() {
 
 .woocommerce-orders-table a[href*="download_factura"]:hover,
 .woocommerce-orders-table a[href*="download_storno"]:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #2563eb 100%) !important;
+    background: linear-gradient(135deg, #16a34a 0%, #0078AD 100%) !important;
     background-color: #16a34a !important;
     border-color: #16a34a !important;
 }
@@ -1021,12 +1021,12 @@ add_action('wp_head', function() {
 /* PJ - Persoana Juridica */
 .order-type-badge.order-type-pj {
     background: #eff6ff !important;
-    color: #1d4ed8 !important;
+    color: #009ADA !important;
     border: 1px solid #bfdbfe !important;
 }
 
 .order-type-badge.order-type-pj .type-icon {
-    stroke: #1d4ed8 !important;
+    stroke: #009ADA !important;
 }
 
 .order-type-badge.order-type-pj:hover {
@@ -1304,19 +1304,20 @@ add_filter('woocommerce_order_date_format', function() {
     justify-content: center;
     gap: 8px;
     padding: 10px 20px;
-    background: #3b82f6;
+    background: #0078AD;
     color: #fff;
     border: none;
     border-radius: 8px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 120, 173, 0.25);
+    text-shadow: 0 1px 2px rgba(0, 30, 50, 0.5);
 }
 
 .btn-add-item:hover {
-    background: #2563eb;
+    background: #006994;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
@@ -1558,7 +1559,7 @@ add_filter('woocommerce_order_date_format', function() {
         /* Buton Vezi detalii */
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions .view {
             background: #eff6ff !important;
-            color: #2563eb !important;
+            color: #00A4EB !important;
             border: 1px solid #bfdbfe !important;
         }
         
@@ -1566,7 +1567,7 @@ add_filter('woocommerce_order_date_format', function() {
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions a[href*="download_factura"],
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions a[href*="factura"],
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions .factura {
-            background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%) !important;
+            background: linear-gradient(135deg, #22c55e 0%, #0078AD 100%) !important;
             background-color: #22c55e !important;
             color: #ffffff !important;
             border: 1px solid #22c55e !important;
@@ -1575,7 +1576,7 @@ add_filter('woocommerce_order_date_format', function() {
         
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions a[href*="download_factura"]:hover,
         .woocommerce-orders-table td.woocommerce-orders-table__cell-order-actions a[href*="factura"]:hover {
-            background: linear-gradient(135deg, #16a34a 0%, #2563eb 100%) !important;
+            background: linear-gradient(135deg, #16a34a 0%, #0078AD 100%) !important;
             background-color: #16a34a !important;
             border-color: #16a34a !important;
         }
@@ -2020,9 +2021,9 @@ add_filter('woocommerce_order_date_format', function() {
     table.shop_table tfoot .button[href*="download"],
     .woocommerce-order-details tfoot a.button[href*="factura"],
     table.shop_table tfoot a.button[href*="factura"] {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-        background-color: #3b82f6 !important;
-        border: 1px solid #3b82f6 !important;
+        background: linear-gradient(135deg, #0088B8 0%, #0078AD 100%) !important;
+        background-color: #0078AD !important;
+        border: 1px solid #0078AD !important;
         color: #ffffff !important;
         padding: 6px 14px !important;
         font-size: 12px !important;
@@ -2030,9 +2031,10 @@ add_filter('woocommerce_order_date_format', function() {
         display: inline-block !important;
         text-decoration: none !important;
         border-radius: 20px !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 2px 6px rgba(0, 120, 173, 0.35) !important;
+        text-shadow: 0 1px 2px rgba(0, 30, 50, 0.5) !important;
         text-transform: none !important;
     }
     
@@ -2042,9 +2044,9 @@ add_filter('woocommerce_order_date_format', function() {
     table.shop_table tfoot .button[href*="download"]:hover,
     .woocommerce-order-details tfoot a.button[href*="factura"]:hover,
     table.shop_table tfoot a.button[href*="factura"]:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-        background-color: #1d4ed8 !important;
-        border-color: #1d4ed8 !important;
+        background: linear-gradient(135deg, #009ADA 0%, #0078AD 100%) !important;
+        background-color: #009ADA !important;
+        border-color: #009ADA !important;
         color: #ffffff !important;
         box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important;
         transform: translateY(-2px) !important;
@@ -2134,7 +2136,7 @@ add_filter('woocommerce_order_date_format', function() {
     .woocommerce-order-details > p a.button-download-invoice,
     p a.button[href*="download_factura_pdf"],
     a.button-download-invoice {
-        background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%) !important;
+        background: linear-gradient(135deg, #22c55e 0%, #0078AD 100%) !important;
         background-color: #22c55e !important;
         border: 1px solid #22c55e !important;
         color: #ffffff !important;
@@ -2171,7 +2173,7 @@ add_filter('woocommerce_order_date_format', function() {
     .woocommerce-order-details > p a.button-download-invoice:hover,
     p a.button[href*="download_factura_pdf"]:hover,
     a.button-download-invoice:hover {
-        background: linear-gradient(135deg, #16a34a 0%, #2563eb 100%) !important;
+        background: linear-gradient(135deg, #16a34a 0%, #0078AD 100%) !important;
         background-color: #16a34a !important;
         border-color: #16a34a !important;
         color: #ffffff !important;
@@ -2496,7 +2498,7 @@ add_action('wp_footer', function() {
         font-size: 13px !important;
         font-weight: 600 !important;
         border-radius: 25px !important;
-        background: linear-gradient(135deg, #10b981 0%, #2563eb 100%) !important;
+        background: linear-gradient(135deg, #10b981 0%, #0078AD 100%) !important;
         color: #fff !important;
         border: none !important;
         cursor: pointer !important;
@@ -2510,7 +2512,7 @@ add_action('wp_footer', function() {
     .garantie-form button[type="submit"]:hover,
     .retur-form .button[type="submit"]:hover,
     .garantie-form .button[type="submit"]:hover {
-        background: linear-gradient(135deg, #059669 0%, #1d4ed8 100%) !important;
+        background: linear-gradient(135deg, #059669 0%, #009ADA 100%) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 5px 18px rgba(16, 185, 129, 0.4) !important;
     }
@@ -2637,7 +2639,7 @@ add_action('wp_footer', function() {
     
     .btn-add-new:hover {
         background: #e0f2fe;
-        border-color: #3b82f6;
+        border-color: #33C4F5;
         transform: scale(1.05);
     }
     
@@ -2667,7 +2669,7 @@ add_action('wp_footer', function() {
     
     .btn-add-new:hover::before,
     .btn-add-new:hover::after {
-        background: #3b82f6;
+        background: #33C4F5;
     }
     
     .btn-add-new .plus-icon {
@@ -2696,7 +2698,7 @@ add_action('wp_footer', function() {
     }
     
     .data-card:hover {
-        border-color: #2563eb;
+        border-color: #00A4EB;
         box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
     }
     
@@ -2776,13 +2778,13 @@ add_action('wp_footer', function() {
     }
     
     .data-card .btn-edit-item {
-        color: #2563eb;
+        color: #00A4EB;
         border-right: 1px solid #e5e7eb;
     }
     
     .data-card .btn-edit-item:hover {
         background: #eff6ff;
-        color: #1d4ed8;
+        color: #009ADA;
     }
     
     .data-card .btn-delete-item {
@@ -2834,8 +2836,8 @@ add_action('wp_footer', function() {
     
     .btn-add-first:hover {
         background: #e0e7ff;
-        border-color: #2563eb;
-        color: #2563eb;
+        border-color: #00A4EB;
+        color: #00A4EB;
     }
     
     .btn-add-first svg {
@@ -2994,7 +2996,7 @@ add_action('wp_footer', function() {
     .webgsm-popup input[type="email"]:focus,
     .webgsm-popup select:focus {
         outline: none;
-        border-color: #3b82f6;
+        border-color: #33C4F5;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     
@@ -3076,18 +3078,20 @@ add_action('wp_footer', function() {
         border: none !important;
         min-height: 20px !important;
         line-height: 1 !important;
-        background: #3b82f6 !important;
+        background: #0078AD !important;
         color: #fff !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer !important;
+        text-shadow: 0 1px 2px rgba(0, 30, 50, 0.5) !important;
+        font-weight: 700 !important;
     }
     
     .webgsm-popup .btn-primary:hover {
-        background: #2563eb !important;
+        background: #006994 !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 120, 173, 0.35);
     }
     
     /* Reset și override pentru btn-secondary în modal */
@@ -3140,7 +3144,7 @@ add_action('wp_footer', function() {
         font-size: 13px !important;
         border-radius: 20px !important;
         font-weight: 500 !important;
-        background: linear-gradient(135deg, #2563eb 0%, #10b981 100%) !important;
+        background: linear-gradient(135deg, #0078AD 0%, #10b981 100%) !important;
         color: #fff !important;
         border: none !important;
         display: inline-flex !important;
@@ -3154,7 +3158,7 @@ add_action('wp_footer', function() {
     #save_address_modal_btn:hover,
     #save_company_modal_btn:hover,
     #save_person_modal_btn:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #059669 100%) !important;
+        background: linear-gradient(135deg, #009ADA 0%, #059669 100%) !important;
         transform: translateY(-1px) !important;
         box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35) !important;
     }
@@ -3229,9 +3233,11 @@ add_action('wp_footer', function() {
         }
         
         .webgsm-popup .popup-footer .btn-primary {
-            background: #2563eb !important;
+            background: #0078AD !important;
             color: #fff !important;
             border: none !important;
+            text-shadow: 0 1px 2px rgba(0, 30, 50, 0.5) !important;
+            font-weight: 700 !important;
         }
         
         .webgsm-popup .popup-footer .btn-secondary {

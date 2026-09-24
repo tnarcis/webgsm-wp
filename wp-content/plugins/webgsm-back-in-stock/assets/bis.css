@@ -42,7 +42,7 @@
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background-color: #3b82f6 !important;
+    background-color: #0078AD !important;
     color: #fff !important;
     border: none !important;
     cursor: pointer !important;
@@ -50,7 +50,7 @@
 }
 
 .webgsm-bis-btn:hover {
-    background-color: #2563eb !important;
+    background-color: #006994 !important;
     color: #fff !important;
 }
 

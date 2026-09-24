@@ -1327,6 +1327,8 @@
                 $('#company_cui').val(d.cui || '');
                 $('#company_reg').val(d.j || '');
                 $('#company_address').val(d.address || '');
+                $('#billing_vat_payer').val(d.is_tva ? '1' : '0');
+                $('input[name="billing_vat_payer"]').val(d.is_tva ? '1' : '0');
                 
                 // Setează select-ul cu codul județului
                 var countyCode = getStateCode(d.county);
@@ -1344,7 +1346,7 @@
                 }
                 
                 $status.css({background: '#e8f5e9', color: '#2e7d32'})
-                       .html('✓ ' + d.name + (d.is_tva ? ' (Plătitor TVA)' : ''))
+                       .text('✓ ' + (d.name || '') + (d.is_tva ? ' (Plătitor TVA)' : ''))
                        .show();
                        
                 if (WebGSM.debug && window.console) console.log('Câmpuri completate cu succes');
@@ -1368,6 +1370,7 @@
     function updateCartQuantity($select) {
         $.post(webgsm_checkout.ajax_url, {
             action: 'webgsm_update_cart_item',
+            nonce: webgsm_checkout.nonce,
             key: $select.data('key'),
             qty: $select.val()
         }, function(response) {
@@ -1378,6 +1381,7 @@
     function removeCartItem(key) {
         $.post(webgsm_checkout.ajax_url, {
             action: 'webgsm_remove_cart_item',
+            nonce: webgsm_checkout.nonce,
             key: key
         }, function(response) {
             if (response.success) {
@@ -1405,6 +1409,7 @@
             type: 'POST',
             data: {
                 action: 'webgsm_apply_coupon',
+                nonce: webgsm_checkout.nonce,
                 coupon_code: coupon
             },
             success: function(response) {

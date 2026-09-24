@@ -26,6 +26,9 @@ class WebGSM_Packeta_Ro_Pricelist {
             '32428' => 'fan_box',
             '590' => 'cargus_hd',
             '4161' => 'packeta_hd',
+            '4329' => 'nl_dutch_post',
+            '8000' => 'nl_dhl_hd',
+            '8001' => 'nl_dhl_pp',
         ];
     }
 
@@ -130,6 +133,36 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 15, 'net' => 16.87, 'label' => '10–15 kg'],
                 ],
                 'cod_note' => 'Ramburs ≤ 3.500 RON: 1,00 RON · ≤ 8.000 RON: 10,54 RON (fără TVA).',
+            ],
+            'nl_dutch_post' => [
+                'label' => 'Olanda — NL Dutch Post HD (PostNL)',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 56.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 66.00, 'label' => '5–10 kg'],
+                ],
+                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată. Tarife listă Packeta RO 01.02.2026 (injectare depozit).',
+            ],
+            'nl_dhl_hd' => [
+                'label' => 'Olanda — NL DHL HD',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 53.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 60.00, 'label' => '5–10 kg'],
+                ],
+                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată.',
+            ],
+            'nl_dhl_pp' => [
+                'label' => 'Olanda — NL DHL PP',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 53.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 60.00, 'label' => '5–10 kg'],
+                ],
+                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată.',
             ],
         ];
     }

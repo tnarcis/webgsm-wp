@@ -1104,10 +1104,12 @@ class WebGSM_B2B_Pricing {
         add_action('edited_product_cat', array($this, 'save_category_fields'));
         
         // Price filters - NUCLEUL SISTEMULUI
+        // NU filtrăm regular_price: altfel regular == price și is_on_sale() se strică.
         add_filter('woocommerce_product_get_price', array($this, 'apply_b2b_price'), 99, 2);
-        add_filter('woocommerce_product_get_regular_price', array($this, 'apply_b2b_price'), 99, 2);
         add_filter('woocommerce_product_variation_get_price', array($this, 'apply_b2b_price'), 99, 2);
-        add_filter('woocommerce_product_variation_get_regular_price', array($this, 'apply_b2b_price'), 99, 2);
+
+        // Hash cache prețuri variabile per tier — evită scurgerea prețurilor între B2C/PJ/tier-uri
+        add_filter('woocommerce_get_variation_prices_hash', array($this, 'variation_prices_hash'), 10, 3);
         
         // Price HTML display
         add_filter('woocommerce_get_price_html', array($this, 'modify_price_html'), 9999, 2);
@@ -1170,7 +1172,8 @@ class WebGSM_B2B_Pricing {
         if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
             return;
         }
-        if (!is_user_logged_in()) {
+        // Doar clienți PJ au prețuri per-user; B2C poate folosi FPC.
+        if (!$this->is_user_pj()) {
             return;
         }
         if (headers_sent()) {
@@ -1954,6 +1957,26 @@ class WebGSM_B2B_Pricing {
     }
 
     /**
+     * Include tier-ul B2B în hash-ul cache-ului de prețuri pentru variabile.
+     *
+     * @param array      $price_hash
+     * @param WC_Product $product
+     * @param bool       $for_display
+     * @return array
+     */
+    public function variation_prices_hash($price_hash, $product = null, $for_display = false) {
+        if (!is_array($price_hash)) {
+            $price_hash = array();
+        }
+        if ($this->is_user_pj()) {
+            $price_hash['webgsm_b2b'] = 'pj_' . (string) $this->get_user_tier();
+        } else {
+            $price_hash['webgsm_b2b'] = 'b2c';
+        }
+        return $price_hash;
+    }
+
+    /**
      * Valoare numerică pozitivă pentru prețuri Woo (string gol / null = invalid).
      */
     private function b2b_is_positive_price_amount($val) {
@@ -2440,24 +2463,29 @@ class WebGSM_B2B_Pricing {
         
         foreach ($cart->get_cart() as $cart_item) {
             $product = $cart_item['data'];
-            $product_id = $product->get_id();
-            $quantity = $cart_item['quantity'];
-            
-            $original_price = get_post_meta($product_id, '_regular_price', true);
-            
-            $discount_pj = $this->get_discount_pj($product);
-            $tier = $this->get_user_tier();
-            $tiers = get_option('webgsm_b2b_tiers', $this->get_default_tiers());
-            if (empty($tier) || !isset($tiers[$tier])) {
-                $tier = 'bronze';
+            $quantity = (float) $cart_item['quantity'];
+            if ($quantity <= 0) {
+                continue;
             }
-            $discount_tier = isset($tiers[$tier]['discount_extra']) ? (float) $tiers[$tier]['discount_extra'] : 0;
-            $total_discount_percent = $discount_pj + $discount_tier;
-            
-            if ($original_price > 0 && $total_discount_percent > 0) {
-                $discount_amount = ((float)$original_price * $total_discount_percent / 100) * $quantity;
-                $total_discount += $discount_amount;
-                $total_original += (float)$original_price * $quantity;
+
+            $original_price = $this->resolve_b2b_base_price_from_product($product);
+            if ($original_price === null || $original_price <= 0) {
+                continue;
+            }
+
+            // Prețul din cart e deja cel B2B final (după sale + plafon minim)
+            $final_price = (float) $product->get_price();
+            if ($final_price < 0) {
+                continue;
+            }
+
+            $line_original = $original_price * $quantity;
+            $line_final = $final_price * $quantity;
+            $line_savings = $line_original - $line_final;
+
+            if ($line_savings > 0) {
+                $total_discount += $line_savings;
+                $total_original += $line_original;
             }
         }
         
@@ -2529,7 +2557,10 @@ class WebGSM_B2B_Pricing {
     // =========================================
     
     public function ajax_update_cart_quantity() {
-        check_ajax_referer('woocommerce-cart', 'security', false);
+        if (!check_ajax_referer('woocommerce-cart', 'security', false)) {
+            wp_send_json_error('Sesiune expirată');
+            return;
+        }
         
         if (!isset($_POST['cart_item_key']) || !isset($_POST['quantity'])) {
             wp_send_json_error('Invalid data');

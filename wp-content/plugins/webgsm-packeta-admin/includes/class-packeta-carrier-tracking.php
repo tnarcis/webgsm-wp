@@ -30,6 +30,9 @@ class WebGSM_Packeta_Carrier_Tracking {
             '762' => 'fan',
             '590' => 'cargus',
             '4161' => 'unknown',
+            '4329' => 'postnl',
+            '8000' => 'dhl',
+            '8001' => 'dhl',
         ];
 
         return $map[$carrier_id] ?? 'unknown';
@@ -40,6 +43,8 @@ class WebGSM_Packeta_Carrier_Tracking {
             'sameday' => 'Sameday',
             'fan' => 'FAN Courier',
             'cargus' => 'Cargus',
+            'postnl' => 'PostNL',
+            'dhl' => 'DHL',
             'unknown' => 'Curier',
         ];
 
@@ -59,8 +64,12 @@ class WebGSM_Packeta_Carrier_Tracking {
                 return 'https://www.fancourier.ro/awb-tracking/?AWB=' . rawurlencode($awb);
             case 'cargus':
                 return 'https://www.cargus.ro/personal/urmarire-awb/?awb=' . rawurlencode($awb);
+            case 'postnl':
+                return 'https://tracking.packeta.com/en/tracking/search?id=' . rawurlencode($awb);
+            case 'dhl':
+                return 'https://www.dhl.com/nl-en/home/tracking.html?tracking-id=' . rawurlencode($awb);
             default:
-                return '';
+                return 'https://tracking.packeta.com/en/tracking/search?id=' . rawurlencode($awb);
         }
     }
 }
