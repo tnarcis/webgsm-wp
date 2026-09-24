@@ -110,7 +110,7 @@ $packeta_url = WebGSM_Packeta_Config::packeta_plugin_settings_url();
         Actualizează grila de greutate/preț din contractul Packeta valabil din
         <strong><?php echo esc_html(WebGSM_Packeta_Ro_Pricelist::EFFECTIVE_FROM); ?></strong>
         pentru <strong>curierii Packeta activi</strong> în WooCommerce (ex. Sameday HD, Sameday Easybox).
-        Prețurile se salvează cu <strong>TVA 21%</strong> (ce vede clientul la checkout, dacă magazinul afișează prețuri cu TVA).
+        Prețurile se salvează <strong>fără TVA</strong> (ca în contractul Packeta). WooCommerce / Packeta pot afișa TVA separat, după setările magazinului.
     </p>
     <?php
     $enabled_ids = WebGSM_Packeta_Carriers::get_enabled_carrier_ids_from_checkout();

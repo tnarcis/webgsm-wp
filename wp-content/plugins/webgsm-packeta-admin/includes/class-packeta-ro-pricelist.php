@@ -174,7 +174,7 @@ class WebGSM_Packeta_Ro_Pricelist {
     /**
      * @return array<int, array{weight: float, price: float}>
      */
-    public static function weight_limits_for_checkout(string $grid_key, bool $with_vat = true): array {
+    public static function weight_limits_for_checkout(string $grid_key, bool $with_vat = false): array {
         $grids = self::grids();
         if (!isset($grids[$grid_key])) {
             return [];

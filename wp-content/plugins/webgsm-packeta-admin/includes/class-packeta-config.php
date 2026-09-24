@@ -271,4 +271,39 @@ class WebGSM_Packeta_Config {
 
         return (bool) preg_match('/^[1-9][0-9]{3}[A-Z]{2}$/', $zip);
     }
+
+    /**
+     * Packeta name/surname/company: /^[\p{L}\p{N} ,.'\-&()]+$/ui , max 32.
+     * Înlocuiește caractere interzise (ex. ":") cu spațiu.
+     */
+    public static function sanitize_person_name(string $value, int $max_len = 32): string {
+        $value = trim(wp_strip_all_tags($value));
+        if ($value === '') {
+            return '';
+        }
+        // Două puncte / slash / # etc. → spațiu (ex. "ATTENTION: RETURNS" → "ATTENTION RETURNS").
+        $value = preg_replace('/[^\p{L}\p{N} ,.\'\-&()]+/u', ' ', $value) ?? '';
+        $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+        $value = trim($value, " \t\n\r\0\x0B,.-'");
+        if (function_exists('mb_substr')) {
+            $value = mb_substr($value, 0, $max_len);
+        } else {
+            $value = substr($value, 0, $max_len);
+        }
+
+        return trim($value);
+    }
+
+    /**
+     * Packeta order number: 1–36 alfanumeric (păstrăm și - _).
+     */
+    public static function sanitize_order_number(string $value, int $max_len = 36): string {
+        $value = trim($value);
+        $value = preg_replace('/[^A-Za-z0-9\-_]/', '', $value) ?? '';
+        if (strlen($value) > $max_len) {
+            $value = substr($value, 0, $max_len);
+        }
+
+        return $value;
+    }
 }

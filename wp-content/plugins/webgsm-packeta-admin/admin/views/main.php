@@ -7,7 +7,7 @@ $notice = isset($_GET['packeta_notice']) ? sanitize_key((string) $_GET['packeta_
 
 $notices = [
     'settings_saved' => ['class' => 'notice-success', 'text' => 'Setările au fost salvate.'],
-    'prices_synced' => ['class' => 'notice-success', 'text' => 'Prețurile curierilor activi au fost actualizate din lista Packeta 2026-07-02 (cu TVA 21%).'],
+    'prices_synced' => ['class' => 'notice-success', 'text' => 'Prețurile curierilor activi au fost actualizate din lista Packeta 2026-07-02 (fără TVA).'],
     'prices_sync_partial' => ['class' => 'notice-warning', 'text' => 'Sincronizare prețuri parțială — vezi detaliile de mai jos.'],
     'no_password' => ['class' => 'notice-error', 'text' => 'Completează parola API în WooCommerce → Packeta (sau vezi Setări aici).'],
     'packet_ok' => ['class' => 'notice-success', 'text' => 'Pachet creat în Packeta.'],
@@ -28,6 +28,7 @@ $notices = [
     'missing_home_zip' => ['class' => 'notice-error', 'text' => 'Completează codul poștal — obligatoriu la livrare la adresă.'],
     'missing_home_house' => ['class' => 'notice-error', 'text' => 'Completează numărul străzii — obligatoriu la livrare la adresă.'],
     'missing_parcel_value' => ['class' => 'notice-error', 'text' => 'Valoarea declarată a coletului trebuie să fie mai mare ca 0 (asigurare Packeta). Nu e același lucru cu rambursul: la acte fără COD poți folosi o valoare simbolică (ex. 1) dacă e cazul.'],
+    'invalid_recipient_name' => ['class' => 'notice-error', 'text' => 'Prenume/nume invalide pentru Packeta. Folosește doar litere, cifre, spațiu, , . \' - & ( ). Fără „:” — ex. scrie „ATTENTION RETURNS DEPARTMENT” sau pune textul în Observații / Firmă.'],
     'nl_cod_unsupported' => ['class' => 'notice-error', 'text' => 'Olanda HD (PostNL/DHL) nu suportă ramburs (COD). Lasă COD = 0.'],
     'invalid_nl_phone' => ['class' => 'notice-error', 'text' => 'Telefon NL invalid. Format Packeta: 31 + 9 cifre (ex. 31612345678).'],
     'invalid_nl_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal NL invalid. Format: 1234AB (4 cifre + 2 litere).'],

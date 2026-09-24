@@ -160,7 +160,7 @@ class WebGSM_Packeta_Admin {
                 break;
 
             case 'sync_carrier_prices':
-                $sync = WebGSM_Packeta_Carrier_Pricing_Sync::sync_active_carriers(true);
+                $sync = WebGSM_Packeta_Carrier_Pricing_Sync::sync_active_carriers(false);
                 set_transient(
                     'webgsm_packeta_pricing_sync_' . get_current_user_id(),
                     $sync,
@@ -630,6 +630,16 @@ class WebGSM_Packeta_Admin {
             return 'missing_parcel_value';
         }
 
+        $name = WebGSM_Packeta_Config::sanitize_person_name(
+            isset($_POST['recipient_name']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_name'])) : ''
+        );
+        $surname = WebGSM_Packeta_Config::sanitize_person_name(
+            isset($_POST['recipient_surname']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_surname'])) : ''
+        );
+        if ($name === '' || $surname === '') {
+            return 'invalid_recipient_name';
+        }
+
         $flow = isset($_POST['awb_flow']) ? sanitize_key((string) $_POST['awb_flow']) : '';
         if ($flow === 'home') {
             $aid = isset($_POST['address_id']) ? (int) $_POST['address_id'] : 0;
@@ -727,6 +737,7 @@ class WebGSM_Packeta_Admin {
         }
 
         $number = isset($_POST['order_number']) ? sanitize_text_field(wp_unslash((string) $_POST['order_number'])) : '';
+        $number = WebGSM_Packeta_Config::sanitize_order_number($number);
         if ($number === '') {
             $number = 'WG-' . gmdate('Ymd-His');
         }
@@ -735,8 +746,12 @@ class WebGSM_Packeta_Admin {
 
         $attrs = [
             'number' => $number,
-            'name' => isset($_POST['recipient_name']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_name'])) : '',
-            'surname' => isset($_POST['recipient_surname']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_surname'])) : '',
+            'name' => WebGSM_Packeta_Config::sanitize_person_name(
+                isset($_POST['recipient_name']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_name'])) : ''
+            ),
+            'surname' => WebGSM_Packeta_Config::sanitize_person_name(
+                isset($_POST['recipient_surname']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_surname'])) : ''
+            ),
             'email' => isset($_POST['recipient_email']) ? sanitize_email(wp_unslash((string) $_POST['recipient_email'])) : '',
             'phone' => isset($_POST['recipient_phone']) ? sanitize_text_field(wp_unslash((string) $_POST['recipient_phone'])) : '',
             'addressId' => isset($_POST['address_id']) ? (int) $_POST['address_id'] : 0,
@@ -760,7 +775,9 @@ class WebGSM_Packeta_Admin {
             $attrs['cod'] = $cod;
         }
 
-        $company = isset($_POST['company']) ? sanitize_text_field(wp_unslash((string) $_POST['company'])) : '';
+        $company = WebGSM_Packeta_Config::sanitize_person_name(
+            isset($_POST['company']) ? sanitize_text_field(wp_unslash((string) $_POST['company'])) : ''
+        );
         if ($company !== '') {
             $attrs['company'] = $company;
         }

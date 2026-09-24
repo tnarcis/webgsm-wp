@@ -10,7 +10,7 @@ class WebGSM_Packeta_Carrier_Pricing_Sync {
      *
      * @return array{updated: string[], skipped: string[], errors: string[]}
      */
-    public static function sync_active_carriers(bool $with_vat = true): array {
+    public static function sync_active_carriers(bool $with_vat = false): array {
         $result = [
             'updated' => [],
             'skipped' => [],

@@ -32,7 +32,9 @@ $synced_at = get_option('webgsm_packeta_pricelist_synced_at', '');
 <div class="webgsm-packeta-card webgsm-packeta-pricing-ref" style="margin-top:16px;">
     <h2>Referință tarife contract (RO) — valabil din <?php echo esc_html(WebGSM_Packeta_Ro_Pricelist::EFFECTIVE_FROM); ?></h2>
     <p class="webgsm-packeta-help">
-        Sursă: lista de prețuri Packeta pentru <strong>webgsm</strong> (expediere din România).
+        Sursă: lista de prețuri Packeta pentru <strong>webgsm</strong> (expediere din România) — valori <strong>fără TVA</strong>.
+        La sincronizare în magazin se salvează tot <strong>fără TVA</strong>.
+        Coloana „cu TVA 21%” e doar informativă.
         <strong>Prețurile la checkout</strong> se iau din setările carrier Packeta — le poți actualiza din
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=settings')); ?>">Packeta → Setări → Actualizează prețuri curieri</a>.
         <?php if (is_string($synced_at) && $synced_at !== '') : ?>

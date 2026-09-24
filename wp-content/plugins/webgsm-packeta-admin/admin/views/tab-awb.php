@@ -202,7 +202,8 @@ $awb_is_home = $awb_flow_current === 'home';
             </div>
             <div class="webgsm-packeta-field">
                 <label for="order_number">Referință comandă</label>
-                <input type="text" name="order_number" id="order_number" value="<?php echo esc_attr($awb_v('order_number')); ?>" placeholder="auto dacă gol" />
+                <input type="text" name="order_number" id="order_number" value="<?php echo esc_attr($awb_v('order_number')); ?>" placeholder="ex. RMA1" maxlength="36" />
+                <p class="webgsm-packeta-help">Doar litere/cifre/-/_ (max 36). Nu pune „ATTENTION: …” aici — folosește Observații.</p>
             </div>
         </div>
 
@@ -238,11 +239,12 @@ $awb_is_home = $awb_flow_current === 'home';
         <div class="webgsm-packeta-grid webgsm-packeta-grid-4">
             <div class="webgsm-packeta-field">
                 <label for="recipient_name">Prenume *</label>
-                <input type="text" name="recipient_name" id="recipient_name" value="<?php echo esc_attr($awb_v('recipient_name')); ?>" required />
+                <input type="text" name="recipient_name" id="recipient_name" value="<?php echo esc_attr($awb_v('recipient_name')); ?>" required maxlength="32" />
             </div>
             <div class="webgsm-packeta-field">
                 <label for="recipient_surname">Nume *</label>
-                <input type="text" name="recipient_surname" id="recipient_surname" value="<?php echo esc_attr($awb_v('recipient_surname')); ?>" required />
+                <input type="text" name="recipient_surname" id="recipient_surname" value="<?php echo esc_attr($awb_v('recipient_surname')); ?>" required maxlength="32" />
+                <p class="webgsm-packeta-help">Fără „:” sau simboluri. Max 32 caractere. Text tip „RETURNS DEPARTMENT” → Firmă sau Observații.</p>
             </div>
             <div class="webgsm-packeta-field">
                 <label for="recipient_email">Email *</label>
