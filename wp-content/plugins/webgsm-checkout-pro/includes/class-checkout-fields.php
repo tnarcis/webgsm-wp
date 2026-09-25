@@ -293,9 +293,6 @@ class WebGSM_Checkout_Fields {
     }
 }
 
-// Inițializare
-new WebGSM_Checkout_Fields();
-
 // =============================================
 // FUNCȚII HELPER GLOBALE
 // =============================================

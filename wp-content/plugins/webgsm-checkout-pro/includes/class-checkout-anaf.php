@@ -84,5 +84,3 @@ class WebGSM_Checkout_ANAF {
         return str_replace($search, $replace, $string);
     }
 }
-
-new WebGSM_Checkout_ANAF();

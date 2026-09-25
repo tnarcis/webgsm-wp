@@ -15,6 +15,9 @@ define('WEBGSM_CHECKOUT_URL', plugin_dir_url(__FILE__));
 class WebGSM_Checkout_Pro {
     
     private static $instance = null;
+
+    /** @var bool */
+    private $bootstrapped = false;
     
     private $counties = [
         '' => '-- Selectează județul --',
@@ -48,8 +51,64 @@ class WebGSM_Checkout_Pro {
             });
             return;
         }
+        add_action('init', [$this, 'maybe_bootstrap'], 1);
+    }
+
+    /**
+     * Încarcă hook-urile doar unde e nevoie (checkout/cart/cont/admin comenzi/AJAX WebGSM).
+     * Evită memorie și timp pe homepage, plugins.php și restul adminului.
+     */
+    public function maybe_bootstrap() {
+        if ($this->bootstrapped) {
+            return;
+        }
+        if (!self::should_load()) {
+            return;
+        }
+        $this->bootstrapped = true;
         $this->load_classes();
         $this->init_hooks();
+    }
+
+    /**
+     * @return bool
+     */
+    public static function should_load() {
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+            if (strpos($action, 'webgsm_') === 0) {
+                return true;
+            }
+            if (in_array($action, ['woocommerce_update_order_review', 'woocommerce_checkout', 'woocommerce_apply_coupon'], true)) {
+                return true;
+            }
+        }
+
+        if (is_admin()) {
+            if (function_exists('get_current_screen')) {
+                $screen = get_current_screen();
+                if ($screen && ($screen->post_type === 'shop_order' || $screen->id === 'woocommerce_page_wc-orders')) {
+                    return true;
+                }
+            }
+            $page = isset($_GET['page']) ? (string) $_GET['page'] : '';
+            if (strpos($page, 'wc-') === 0) {
+                return true;
+            }
+            return false;
+        }
+
+        if (function_exists('is_checkout') && (is_checkout() || is_cart())) {
+            return true;
+        }
+        if (function_exists('is_account_page') && is_account_page()) {
+            return true;
+        }
+        if (function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-received')) {
+            return true;
+        }
+
+        return (bool) apply_filters('webgsm_checkout_pro_should_load', false);
     }
     
     private function load_classes() {
@@ -58,6 +117,12 @@ class WebGSM_Checkout_Pro {
         require_once WEBGSM_CHECKOUT_PATH . 'includes/class-checkout-save.php';
         require_once WEBGSM_CHECKOUT_PATH . 'includes/class-checkout-anaf.php';
         require_once WEBGSM_CHECKOUT_PATH . 'includes/class-checkout-display.php';
+
+        new WebGSM_Checkout_Fields();
+        new WebGSM_Checkout_Validate();
+        new WebGSM_Checkout_Save();
+        new WebGSM_Checkout_ANAF();
+        new WebGSM_Checkout_Display();
     }
     
     private function init_hooks() {
@@ -1592,6 +1657,11 @@ class WebGSM_Checkout_Pro {
         static $cache = null;
         if ( $cache !== null ) return $cache;
 
+        if ( ! class_exists( 'WC_Shipping_Zones' ) || ! self::packeta_carrier_table_exists() ) {
+            $cache = [];
+            return $cache;
+        }
+
         $transient_key = 'webgsm_packeta_pickup_ids';
         $cached = get_transient( $transient_key );
         if ( is_array( $cached ) ) {
@@ -1624,6 +1694,16 @@ class WebGSM_Checkout_Pro {
         set_transient( $transient_key, $result, 6 * HOUR_IN_SECONDS );
         $cache = $result;
         return $result;
+    }
+
+    /**
+     * Tabel Packeta prezent (plugin Packeta activ / DB migrat).
+     */
+    private static function packeta_carrier_table_exists(): bool {
+        global $wpdb;
+        $table = $wpdb->prefix . 'packetery_carrier';
+        $found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+        return $found === $table;
     }
 
     /**

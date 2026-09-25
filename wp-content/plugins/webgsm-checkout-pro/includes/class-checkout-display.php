@@ -229,5 +229,3 @@ class WebGSM_Checkout_Display {
         return $address;
     }
 }
-
-new WebGSM_Checkout_Display();

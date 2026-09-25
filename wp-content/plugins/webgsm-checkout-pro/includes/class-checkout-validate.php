@@ -489,6 +489,3 @@ class WebGSM_Checkout_Validate {
         return preg_replace('/[\s\-\.\(\)]/', '', $phone);
     }
 }
-
-// Inițializare
-new WebGSM_Checkout_Validate();

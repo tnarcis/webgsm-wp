@@ -627,6 +627,3 @@ class WebGSM_Checkout_Save {
         update_user_meta($user_id, 'webgsm_companies', $companies);
     }
 }
-
-// Inițializare
-new WebGSM_Checkout_Save();
