@@ -386,6 +386,9 @@ class WebGSM_Checkout_Pro {
      * Date firmă salvate pentru guest (sesiune PHP + sesiune WooCommerce).
      */
     public static function get_guest_company_from_storage() {
+        if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
+            return null;
+        }
         if ( ! session_id() && ! headers_sent() ) {
             @session_start(); // phpcs:ignore
         }
@@ -405,6 +408,9 @@ class WebGSM_Checkout_Pro {
      * Date persoană salvate pentru guest.
      */
     public static function get_guest_person_from_storage() {
+        if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
+            return null;
+        }
         if ( ! session_id() && ! headers_sent() ) {
             @session_start(); // phpcs:ignore
         }

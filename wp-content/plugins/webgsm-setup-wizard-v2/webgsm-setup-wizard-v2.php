@@ -2,12 +2,53 @@
 /**
  * Plugin Name: WebGSM Setup Wizard v2
  * Description: Creează structura magazin: Piese (iPhone/Samsung), Unelte, Accesorii, Servicii
- * Version: 2.0.0
+ * Version: 2.0.3
  * Author: WebGSM
  * Requires PHP: 7.4
  */
 
 if (!defined('ABSPATH')) exit;
+
+/** Admin-ajax wizard (înainte de încărcarea completă WooCommerce). */
+function webgsm_v2_is_wizard_ajax_request() {
+    if (!defined('DOING_AJAX') || !DOING_AJAX) {
+        return false;
+    }
+    $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+
+    return strpos($action, 'webgsm_v2_') === 0;
+}
+
+add_action('plugins_loaded', static function () {
+    if (!webgsm_v2_is_wizard_ajax_request()) {
+        return;
+    }
+    add_action('before_woocommerce_init', static function () {
+        add_filter('woocommerce_session_handler', static function () {
+            return 'WebGSM_WC_Wizard_Noop_Session';
+        }, 999);
+    }, 0);
+}, 9);
+
+add_action('plugins_loaded', static function () {
+    if (!class_exists('WC_Session_Handler', false)) {
+        return;
+    }
+    if (!class_exists('WebGSM_WC_Wizard_Noop_Session', false)) {
+        /**
+         * Sesiune WC fără DB la admin-ajax wizard (evită INSERT sesiune la shutdown).
+         */
+        class WebGSM_WC_Wizard_Noop_Session extends WC_Session_Handler {
+            public function init() {
+                // Intenționat gol.
+            }
+
+            public function save_data($old_session_key = '') {
+                // Intenționat gol.
+            }
+        }
+    }
+}, 11);
 
 /**
  * Widget: două filtre cu bifă – Subcategorie Piese (iPhone, Samsung…) + Tip piesă (Ecrane, Baterii…).
@@ -1340,6 +1381,8 @@ class WebGSM_Setup_Wizard_V2 {
         }
         
         // AJAX handlers
+        add_action('init', [$this, 'maybe_prepare_webgsm_v2_ajax'], 0);
+
         add_action('wp_ajax_webgsm_v2_create_categories', [$this, 'ajax_create_categories']);
         add_action('wp_ajax_webgsm_v2_save_brand_piesa_extra', [$this, 'ajax_save_brand_piesa_extra']);
         add_action('wp_ajax_webgsm_v2_create_attributes', [$this, 'ajax_create_attributes']);
@@ -1355,6 +1398,21 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('wp_ajax_webgsm_v2_cleanup', [$this, 'ajax_cleanup']);
     }
     
+    /** Toate acțiunile wizard pe admin-ajax — izolare WC la shutdown. */
+    public function maybe_prepare_webgsm_v2_ajax() {
+        if (!webgsm_v2_is_wizard_ajax_request() || !is_admin()) {
+            return;
+        }
+        add_action('woocommerce_init', function () {
+            $this->ajax_quiet_woocommerce_shutdown();
+        }, 9999);
+        add_action('shutdown', function () {
+            if (function_exists('wp_suspend_cache_addition')) {
+                wp_suspend_cache_addition(false);
+            }
+        }, 0);
+    }
+
     public function add_admin_menu() {
         add_menu_page(
             'Upload Tools',
@@ -2049,8 +2107,11 @@ class WebGSM_Setup_Wizard_V2 {
     }
     
     public function admin_styles($hook) {
-        if ($hook !== 'toplevel_page_webgsm-setup-v2') return;
-        
+        // WP 6.x: hook poate fi toplevel_page_* sau {parent}_page_* — altfel CSS rămâne off și .webgsm-animate = opacity 0 (butoane invizibile).
+        if (strpos((string) $hook, 'webgsm-setup-v2') === false) {
+            return;
+        }
+
         wp_enqueue_script('jquery');
         ?>
         <style>
@@ -2096,6 +2157,12 @@ class WebGSM_Setup_Wizard_V2 {
             .webgsm-setup-shell .webgsm-animate.webgsm-d8 { animation-delay: 0.4s; }
             @media (prefers-reduced-motion: reduce) {
                 .webgsm-setup-shell .webgsm-animate { animation: none; opacity: 1; transform: none; }
+            }
+            /* Fallback dacă hook-ul admin_styles nu s-a încărcat (compat WP vechi/nou) */
+            .webgsm-setup-shell .webgsm-card,
+            .webgsm-setup-shell .webgsm-step-rail,
+            .webgsm-setup-shell .webgsm-setup-hero {
+                opacity: 1;
             }
 
             .webgsm-setup-hero {
@@ -2595,7 +2662,7 @@ Servicii → Dropdown simplu</div>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $menu_done ? 'done' : 'pending'; ?>"><?php echo $menu_done ? '✓' : '○'; ?></span>
-                            <span>Meniu navigare principal (6 tab-uri)</span>
+                            <span>Meniu navigare principal (Piese · Unelte · Accesorii · Servicii)</span>
                         </li>
                         <li>
                             <span class="check-icon <?php echo $filters_done ? 'done' : 'pending'; ?>"><?php echo $filters_done ? '✓' : '○'; ?></span>
@@ -2642,6 +2709,7 @@ Servicii → Dropdown simplu</div>
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
+                    timeout: 180000,
                     data: { action: action, nonce: '<?php echo wp_create_nonce('webgsm_v2'); ?>' },
                     success: function(response) {
                         if (response.success) {
@@ -2661,8 +2729,9 @@ Servicii → Dropdown simplu</div>
                             $btn.prop('disabled', false).html(originalText);
                         }
                     },
-                    error: function() {
-                        $status.removeClass('loading').addClass('error').text('❌ Eroare de conexiune');
+                    error: function(xhr, status) {
+                        var msg = status === 'timeout' ? 'Timeout — operația durează prea mult. Reîncearcă sau crește max_execution_time în PHP.' : 'Eroare de conexiune';
+                        $status.removeClass('loading').addClass('error').text('❌ ' + msg);
                         $btn.prop('disabled', false).html(originalText);
                     }
                 });
@@ -2688,7 +2757,75 @@ Servicii → Dropdown simplu</div>
                 });
             });
             $('#btn-attrs').on('click', function() { doAjax('webgsm_v2_create_attributes', 'btn-attrs', 'status-attrs'); });
-            $('#btn-menu').on('click', function() { doAjax('webgsm_v2_create_menu', 'btn-menu', 'status-menu'); });
+            function doMenuBuildAjax() {
+                var $btn = $('#btn-menu');
+                var $status = $('#status-menu');
+                var originalText = $btn.html();
+                var nonce = '<?php echo wp_create_nonce('webgsm_v2'); ?>';
+                var stepTimeout = 120000;
+
+                function menuFail(msg) {
+                    $status.removeClass('loading').addClass('error').text('❌ ' + msg);
+                    $btn.prop('disabled', false).html(originalText);
+                }
+
+                function menuAjax(data, onOk) {
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        timeout: stepTimeout,
+                        data: $.extend({ action: 'webgsm_v2_create_menu', nonce: nonce }, data),
+                        success: function(response) {
+                            if (response && response.success) {
+                                onOk(response);
+                            } else {
+                                menuFail(response && response.data && response.data.message ? response.data.message : 'Eroare la creare meniu');
+                            }
+                        },
+                        error: function(xhr, status) {
+                            var extra = xhr && xhr.status ? ' (HTTP ' + xhr.status + ')' : '';
+                            if (status === 'timeout') {
+                                menuFail('Timeout la un pas al meniului. Reîncearcă — fiecare categorie rulează separat.' + extra);
+                            } else {
+                                menuFail('Eroare de conexiune/server' + extra + '. Verifică debug.log și conexiunile MySQL (Too many connections).');
+                            }
+                        }
+                    });
+                }
+
+                $btn.prop('disabled', true).html('<span class="spinner">⏳</span> Se procesează...');
+                $status.removeClass('success error').addClass('loading show').text('Pregătire meniu…');
+
+                menuAjax({ phase: 'start' }, function(startResp) {
+                    var parents = (startResp.data && startResp.data.parents) ? startResp.data.parents : [];
+                    var total = parents.length;
+                    var idx = 0;
+
+                    function nextParent() {
+                        if (idx >= total) {
+                            $status.text('Finalizare meniu…');
+                            menuAjax({ phase: 'finish' }, function(finishResp) {
+                                $status.removeClass('loading').addClass('success').html('✅ ' + finishResp.data.message);
+                                $btn.html('🔄 Refă meniul complet').addClass('webgsm-btn-success').prop('disabled', false);
+                                if (typeof window.webgsmReloadMenuEditor === 'function') {
+                                    window.webgsmReloadMenuEditor();
+                                }
+                            });
+                            return;
+                        }
+                        var key = parents[idx];
+                        $status.text('Se adaugă în meniu: ' + key + ' (' + (idx + 1) + '/' + total + ')…');
+                        menuAjax({ phase: 'parent', parent_key: key }, function() {
+                            idx++;
+                            nextParent();
+                        });
+                    }
+
+                    nextParent();
+                });
+            }
+
+            $('#btn-menu').on('click', function() { doMenuBuildAjax(); });
             $('#btn-sync-menu').on('click', function() { doAjax('webgsm_v2_sync_menu_categories', 'btn-sync-menu', 'status-menu'); });
 
             var webgsmMenuNonce = '<?php echo wp_create_nonce('webgsm_v2'); ?>';
@@ -3476,149 +3613,257 @@ Servicii → Dropdown simplu</div>
     // ===========================================
     public function ajax_create_menu() {
         check_ajax_referer('webgsm_v2', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
-        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+        $this->ajax_prepare_long_operation();
+
+        $phase = isset($_POST['phase']) ? sanitize_key((string) $_POST['phase']) : 'start';
+        if ($phase === 'start') {
+            $this->ajax_create_menu_phase_start();
+        } elseif ($phase === 'parent') {
+            $this->ajax_create_menu_phase_parent();
+        } elseif ($phase === 'finish') {
+            $this->ajax_create_menu_phase_finish();
+        } else {
+            wp_send_json_error(['message' => 'Fază meniu invalidă. Reîncarcă pagina wizard și încearcă din nou.']);
+        }
+    }
+
+    private function webgsm_menu_build_transient_key() {
+        return 'webgsm_v2_menu_build_' . get_current_user_id();
+    }
+
+    private function ajax_create_menu_phase_start() {
         $menu_name = 'WebGSM Main Menu';
-        
-        // Șterge meniul existent
+        delete_transient($this->webgsm_menu_build_transient_key());
+
         $existing = wp_get_nav_menu_object($menu_name);
         if ($existing) {
-            wp_delete_nav_menu($existing->term_id);
+            $this->clear_webgsm_menu_theme_locations();
+            $deleted = wp_delete_nav_menu($existing->term_id);
+            if (is_wp_error($deleted)) {
+                $this->ajax_send_json_error(['message' => 'Nu s-a putut șterge meniul vechi: ' . $deleted->get_error_message()]);
+            }
         }
-        
-        // Creează meniu nou
+
         $menu_id = wp_create_nav_menu($menu_name);
         if (is_wp_error($menu_id)) {
-            wp_send_json_error(['message' => 'Eroare la crearea meniului']);
+            $this->ajax_send_json_error(['message' => 'Eroare la crearea meniului: ' . $menu_id->get_error_message()]);
         }
-        
-        $items_count = 0;
-        $order = 1;
-        
-        foreach ($this->categories as $parent_name => $parent_data) {
-            $parent_term = get_term_by('slug', $parent_data['slug'], 'product_cat');
-            if (!$parent_term) continue;
-            
-            $is_mega = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii'], true);
-            
-            $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
-                'menu-item-title' => $this->get_category_menu_label($parent_name),
-                'menu-item-object' => 'product_cat',
-                'menu-item-object-id' => $parent_term->term_id,
-                'menu-item-type' => 'taxonomy',
-                'menu-item-status' => 'publish',
-                'menu-item-classes' => $is_mega ? 'mf-mega-menu' : '',
-                'menu-item-position' => $order++
-            ]);
-            $items_count++;
-            
-            if (empty($parent_data['children'])) continue;
-            
-            foreach ($parent_data['children'] as $child_name => $child_value) {
-                if (is_array($child_value) && isset($child_value['slug'])) {
-                    $child_term = get_term_by('slug', $child_value['slug'], 'product_cat');
-                    if (!$child_term) continue;
-                    $level2_menu_id = wp_update_nav_menu_item($menu_id, 0, [
-                        'menu-item-title' => $child_name,
-                        'menu-item-object' => 'product_cat',
-                        'menu-item-object-id' => $child_term->term_id,
-                        'menu-item-type' => 'taxonomy',
-                        'menu-item-status' => 'publish',
-                        'menu-item-parent-id' => $parent_menu_id,
-                        'menu-item-position' => $order++
-                    ]);
-                    $items_count++;
-                    if (!empty($child_value['children'])) {
-                        $level2_slug = $child_value['slug'];
-                        foreach ($child_value['children'] as $sub_name => $sub_slug) {
-                            $sub_slug_unique = $this->resolve_level3_category_slug($parent_data, $level2_slug, $sub_slug);
-                            $sub_term = get_term_by('slug', $sub_slug_unique, 'product_cat');
-                            if (!$sub_term) continue;
-                            wp_update_nav_menu_item($menu_id, 0, [
-                                'menu-item-title' => $sub_name,
-                                'menu-item-object' => 'product_cat',
-                                'menu-item-object-id' => $sub_term->term_id,
-                                'menu-item-type' => 'taxonomy',
-                                'menu-item-status' => 'publish',
-                                'menu-item-parent-id' => $level2_menu_id,
-                                'menu-item-position' => $order++
-                            ]);
-                            $items_count++;
-                        }
-                    }
-                } else {
-                    $child_slug = is_string($child_value) ? $child_value : sanitize_title($child_name);
-                    $child_term = get_term_by('slug', $child_slug, 'product_cat');
-                    if (!$child_term) continue;
-                    wp_update_nav_menu_item($menu_id, 0, [
-                        'menu-item-title' => $child_name,
-                        'menu-item-object' => 'product_cat',
-                        'menu-item-object-id' => $child_term->term_id,
-                        'menu-item-type' => 'taxonomy',
-                        'menu-item-status' => 'publish',
-                        'menu-item-parent-id' => $parent_menu_id,
-                        'menu-item-position' => $order++
-                    ]);
-                    $items_count++;
-                }
-            }
 
-            // Subcategorii în WooCommerce care nu sunt în $this->categories (ex. adăugate manual sau meniu generat cu versiune veche PHP).
-            if (!is_wp_error($parent_menu_id) && !empty($parent_data['children'])) {
-                $wizard_flat_slugs = [];
-                foreach ($parent_data['children'] as $child_name => $child_value) {
-                    if (is_array($child_value) && isset($child_value['slug'])) {
-                        $wizard_flat_slugs = null;
-                        break;
-                    }
-                    $wizard_flat_slugs[] = is_string($child_value) ? $child_value : sanitize_title($child_name);
-                }
-                if (is_array($wizard_flat_slugs)) {
-                    $wc_children = get_terms([
-                        'taxonomy'   => 'product_cat',
-                        'parent'     => (int) $parent_term->term_id,
-                        'hide_empty' => false,
-                        'orderby'    => 'name',
-                        'order'      => 'ASC',
-                    ]);
-                    if (!is_wp_error($wc_children)) {
-                        foreach ($wc_children as $wc_term) {
-                            if (in_array($wc_term->slug, $wizard_flat_slugs, true)) {
-                                continue;
-                            }
-                            wp_update_nav_menu_item($menu_id, 0, [
-                                'menu-item-title'     => $wc_term->name,
-                                'menu-item-object'    => 'product_cat',
-                                'menu-item-object-id' => $wc_term->term_id,
-                                'menu-item-type'      => 'taxonomy',
-                                'menu-item-status'    => 'publish',
-                                'menu-item-parent-id' => (int) $parent_menu_id,
-                                'menu-item-position'  => $order++,
-                            ]);
-                            $items_count++;
-                        }
-                    }
-                }
-            }
+        $state = [
+            'menu_id'     => (int) $menu_id,
+            'order'       => 1,
+            'items_count' => 0,
+            'errors'      => [],
+        ];
+        set_transient($this->webgsm_menu_build_transient_key(), $state, HOUR_IN_SECONDS);
+
+        $parents = array_keys($this->categories);
+        $this->ajax_send_json_success([
+            'message' => 'Meniu pregătit. Se adaugă categoriile…',
+            'parents' => $parents,
+            'total'   => count($parents),
+        ]);
+    }
+
+    private function ajax_create_menu_phase_parent() {
+        $parent_key = isset($_POST['parent_key']) ? sanitize_text_field(wp_unslash($_POST['parent_key'])) : '';
+        if ($parent_key === '' || !isset($this->categories[$parent_key])) {
+            $this->ajax_send_json_error(['message' => 'Categorie meniu invalidă: ' . $parent_key]);
         }
-        
-        // Asociază la locații
-        $locations = get_theme_mod('nav_menu_locations', []);
-        $locations['primary'] = $menu_id;
-        $locations['primary-menu'] = $menu_id;
-        $locations['shop-department'] = $menu_id;
-        $locations['shop_department'] = $menu_id;
-        $locations['mobile'] = $menu_id;
-        set_theme_mod('nav_menu_locations', $locations);
-        
+
+        $state = get_transient($this->webgsm_menu_build_transient_key());
+        if (!is_array($state) || empty($state['menu_id'])) {
+            $this->ajax_send_json_error(['message' => 'Sesiunea de creare meniu a expirat. Apasă din nou «Refă meniul complet».']);
+        }
+
+        $menu_id = (int) $state['menu_id'];
+        $order = (int) $state['order'];
+        $items_count = (int) $state['items_count'];
+        $errors = is_array($state['errors']) ? $state['errors'] : [];
+
+        $this->append_menu_items_for_parent($menu_id, $parent_key, $order, $items_count, $errors);
+
+        $state['order'] = $order;
+        $state['items_count'] = $items_count;
+        $state['errors'] = $errors;
+        set_transient($this->webgsm_menu_build_transient_key(), $state, HOUR_IN_SECONDS);
+
+        $this->ajax_send_json_success([
+            'message'     => sprintf('Adăugat: %s (%d itemi până acum)', $parent_key, $items_count),
+            'parent_key'  => $parent_key,
+            'items_count' => $items_count,
+        ]);
+    }
+
+    private function ajax_create_menu_phase_finish() {
+        $state = get_transient($this->webgsm_menu_build_transient_key());
+        if (!is_array($state) || empty($state['menu_id'])) {
+            $this->ajax_send_json_error(['message' => 'Sesiunea de creare meniu a expirat. Apasă din nou «Refă meniul complet».']);
+        }
+
+        $menu_id = (int) $state['menu_id'];
+        $items_count = (int) ($state['items_count'] ?? 0);
+        $errors = is_array($state['errors'] ?? null) ? $state['errors'] : [];
+
+        if (function_exists('wp_defer_term_counting')) {
+            wp_defer_term_counting(false);
+        }
+
+        $this->assign_webgsm_menu_theme_locations($menu_id);
         $this->reorder_main_menu_by_category_structure($menu_id);
         $removed_obsolete = $this->prune_deprecated_menu_category_items($menu_id);
+        delete_transient($this->webgsm_menu_build_transient_key());
         update_option('webgsm_v2_menu', true);
+
         $menu_msg = "Meniu creat cu {$items_count} itemi!";
         if ($removed_obsolete > 0) {
             $menu_msg .= " Eliminate {$removed_obsolete} linkuri către categorii vechi.";
         }
-        wp_send_json_success(['message' => $menu_msg]);
+        if (!empty($errors)) {
+            $menu_msg .= ' Avertismente: ' . implode('; ', array_slice($errors, 0, 3));
+        }
+        $this->ajax_send_json_success(['message' => $menu_msg]);
+    }
+
+    /**
+     * @param int   $menu_id
+     * @param string $parent_name
+     * @param int   $order
+     * @param int   $items_count
+     * @param array $errors
+     */
+    private function append_menu_items_for_parent($menu_id, $parent_name, &$order, &$items_count, array &$errors) {
+        $parent_data = $this->categories[$parent_name];
+        $parent_term = get_term_by('slug', $parent_data['slug'], 'product_cat');
+        if (!$parent_term) {
+            $errors[] = $parent_name . ': categorie WooCommerce lipsă';
+
+            return;
+        }
+
+        $is_mega = in_array($parent_name, ['Piese', 'Unelte', 'Accesorii'], true);
+
+        $parent_menu_id = wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title'     => $this->get_category_menu_label($parent_name),
+            'menu-item-object'    => 'product_cat',
+            'menu-item-object-id' => $parent_term->term_id,
+            'menu-item-type'      => 'taxonomy',
+            'menu-item-status'    => 'publish',
+            'menu-item-classes'   => $is_mega ? 'mf-mega-menu' : '',
+            'menu-item-position'  => $order++,
+        ]);
+        if (is_wp_error($parent_menu_id) || !$parent_menu_id) {
+            $errors[] = $parent_name . ': ' . (is_wp_error($parent_menu_id) ? $parent_menu_id->get_error_message() : 'item părinte invalid');
+
+            return;
+        }
+        $parent_menu_id = (int) $parent_menu_id;
+        $items_count++;
+
+        if (empty($parent_data['children'])) {
+            return;
+        }
+
+        foreach ($parent_data['children'] as $child_name => $child_value) {
+            if (is_array($child_value) && isset($child_value['slug'])) {
+                $child_term = get_term_by('slug', $child_value['slug'], 'product_cat');
+                if (!$child_term) {
+                    continue;
+                }
+                $level2_menu_id = wp_update_nav_menu_item($menu_id, 0, [
+                    'menu-item-title'     => $child_name,
+                    'menu-item-object'    => 'product_cat',
+                    'menu-item-object-id' => $child_term->term_id,
+                    'menu-item-type'      => 'taxonomy',
+                    'menu-item-status'    => 'publish',
+                    'menu-item-parent-id' => $parent_menu_id,
+                    'menu-item-position'  => $order++,
+                ]);
+                if (is_wp_error($level2_menu_id) || !$level2_menu_id) {
+                    continue;
+                }
+                $level2_menu_id = (int) $level2_menu_id;
+                $items_count++;
+                if (!empty($child_value['children'])) {
+                    $level2_slug = $child_value['slug'];
+                    foreach ($child_value['children'] as $sub_name => $sub_slug) {
+                        $sub_slug_unique = $this->resolve_level3_category_slug($parent_data, $level2_slug, $sub_slug);
+                        $sub_term = get_term_by('slug', $sub_slug_unique, 'product_cat');
+                        if (!$sub_term) {
+                            continue;
+                        }
+                        $sub_item = wp_update_nav_menu_item($menu_id, 0, [
+                            'menu-item-title'     => $sub_name,
+                            'menu-item-object'    => 'product_cat',
+                            'menu-item-object-id' => $sub_term->term_id,
+                            'menu-item-type'      => 'taxonomy',
+                            'menu-item-status'    => 'publish',
+                            'menu-item-parent-id' => $level2_menu_id,
+                            'menu-item-position'  => $order++,
+                        ]);
+                        if (!is_wp_error($sub_item) && $sub_item) {
+                            $items_count++;
+                        }
+                    }
+                }
+            } else {
+                $child_slug = is_string($child_value) ? $child_value : sanitize_title($child_name);
+                $child_term = get_term_by('slug', $child_slug, 'product_cat');
+                if (!$child_term) {
+                    continue;
+                }
+                wp_update_nav_menu_item($menu_id, 0, [
+                    'menu-item-title'     => $child_name,
+                    'menu-item-object'    => 'product_cat',
+                    'menu-item-object-id' => $child_term->term_id,
+                    'menu-item-type'      => 'taxonomy',
+                    'menu-item-status'    => 'publish',
+                    'menu-item-parent-id' => $parent_menu_id,
+                    'menu-item-position'  => $order++,
+                ]);
+                $items_count++;
+            }
+        }
+
+        if (!empty($parent_data['children'])) {
+            $wizard_flat_slugs = [];
+            foreach ($parent_data['children'] as $child_name => $child_value) {
+                if (is_array($child_value) && isset($child_value['slug'])) {
+                    $wizard_flat_slugs = null;
+                    break;
+                }
+                $wizard_flat_slugs[] = is_string($child_value) ? $child_value : sanitize_title($child_name);
+            }
+            if (is_array($wizard_flat_slugs)) {
+                $wc_children = get_terms([
+                    'taxonomy'   => 'product_cat',
+                    'parent'     => (int) $parent_term->term_id,
+                    'hide_empty' => false,
+                    'orderby'    => 'name',
+                    'order'      => 'ASC',
+                ]);
+                if (!is_wp_error($wc_children)) {
+                    foreach ($wc_children as $wc_term) {
+                        if (in_array($wc_term->slug, $wizard_flat_slugs, true)) {
+                            continue;
+                        }
+                        wp_update_nav_menu_item($menu_id, 0, [
+                            'menu-item-title'     => $wc_term->name,
+                            'menu-item-object'    => 'product_cat',
+                            'menu-item-object-id' => $wc_term->term_id,
+                            'menu-item-type'      => 'taxonomy',
+                            'menu-item-status'    => 'publish',
+                            'menu-item-parent-id' => (int) $parent_menu_id,
+                            'menu-item-position'  => $order++,
+                        ]);
+                        $items_count++;
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -3836,6 +4081,110 @@ Servicii → Dropdown simplu</div>
                 $removed
             ),
         ]);
+    }
+
+    /** Timp/memorie pentru AJAX grele (meniu cu zeci/sute de itemi). */
+    private function ajax_prepare_long_operation() {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(300);
+        }
+        if (function_exists('wp_raise_memory_limit')) {
+            wp_raise_memory_limit('admin');
+        }
+        global $wpdb;
+        if (isset($wpdb) && method_exists($wpdb, 'check_connection')) {
+            $wpdb->check_connection(false);
+        }
+        $this->ajax_quiet_woocommerce_shutdown();
+        if (function_exists('wp_defer_term_counting')) {
+            wp_defer_term_counting(true);
+        }
+        if (function_exists('wp_suspend_cache_addition')) {
+            wp_suspend_cache_addition(true);
+        }
+    }
+
+    private function ajax_send_json_success($data) {
+        $this->ajax_quiet_woocommerce_shutdown();
+        wp_send_json_success($data);
+    }
+
+    private function ajax_send_json_error($data) {
+        $this->ajax_quiet_woocommerce_shutdown();
+        wp_send_json_error($data);
+    }
+
+    /**
+     * Admin-ajax wizard: WC încarcă coș/sesiune (is_request frontend) și la shutdown scrie în DB
+     * alături de Action Scheduler → „Commands out of sync” și răspuns AJAX gol (eroare conexiune).
+     */
+    private function ajax_quiet_woocommerce_shutdown() {
+        if (!function_exists('WC')) {
+            return;
+        }
+        $wc = WC();
+        if ($wc && isset($wc->session) && is_object($wc->session)) {
+            remove_action('shutdown', [$wc->session, 'save_data'], 20);
+        }
+        if ($wc && isset($wc->customer) && is_object($wc->customer)) {
+            remove_action('shutdown', [$wc->customer, 'save'], 10);
+        }
+        global $wp_filter;
+        if (!isset($wp_filter['shutdown']) || !($wp_filter['shutdown'] instanceof WP_Hook)) {
+            return;
+        }
+        $hook = $wp_filter['shutdown'];
+        if (empty($hook->callbacks[10])) {
+            return;
+        }
+        foreach ($hook->callbacks[10] as $id => $cb) {
+            if (($cb['function'] ?? null) instanceof Closure) {
+                unset($hook->callbacks[10][$id]);
+            }
+        }
+    }
+
+    /** Locații Martfury pentru meniul principal + mobil + departament. */
+    private function assign_webgsm_menu_theme_locations($menu_id) {
+        $menu_id = (int) $menu_id;
+        if ($menu_id < 1) {
+            return;
+        }
+        $locations = get_theme_mod('nav_menu_locations', []);
+        if (!is_array($locations)) {
+            $locations = [];
+        }
+        foreach (['primary', 'shop_department', 'mobile', 'category_mobile'] as $loc) {
+            $locations[$loc] = $menu_id;
+        }
+        // Aliasuri vechi (teme / versiuni anterioare wizard)
+        $locations['primary-menu'] = $menu_id;
+        $locations['shop-department'] = $menu_id;
+        set_theme_mod('nav_menu_locations', $locations);
+    }
+
+    /** Eliberează locațiile temei înainte de wp_delete_nav_menu (evită blocaje după update WP). */
+    private function clear_webgsm_menu_theme_locations() {
+        $menu = wp_get_nav_menu_object('WebGSM Main Menu');
+        $menu_id = ($menu && !is_wp_error($menu)) ? (int) $menu->term_id : 0;
+        $locations = get_theme_mod('nav_menu_locations', []);
+        if (!is_array($locations) || empty($locations)) {
+            return;
+        }
+        $keys = ['primary', 'primary-menu', 'shop_department', 'shop-department', 'mobile', 'category_mobile'];
+        $changed = false;
+        foreach ($keys as $key) {
+            if (!isset($locations[$key])) {
+                continue;
+            }
+            if ($menu_id === 0 || (int) $locations[$key] === $menu_id) {
+                unset($locations[$key]);
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            set_theme_mod('nav_menu_locations', $locations);
+        }
     }
 
     private function get_webgsm_main_menu_id() {
@@ -4131,8 +4480,15 @@ Servicii → Dropdown simplu</div>
     public function ajax_clear_menu() {
         check_ajax_referer('webgsm_v2', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        $this->ajax_prepare_long_operation();
         $menu = wp_get_nav_menu_object('WebGSM Main Menu');
-        if ($menu) wp_delete_nav_menu($menu->term_id);
+        if ($menu) {
+            $this->clear_webgsm_menu_theme_locations();
+            $deleted = wp_delete_nav_menu($menu->term_id);
+            if (is_wp_error($deleted)) {
+                wp_send_json_error(['message' => 'Nu s-a putut șterge meniul: ' . $deleted->get_error_message()]);
+            }
+        }
         delete_option('webgsm_v2_menu');
         wp_send_json_success(['message' => 'Meniu WebGSM șters. Categorii, atribute și filtre sunt neschimbate. Poți rula «Creează Meniu» din nou.']);
     }
