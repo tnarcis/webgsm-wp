@@ -185,7 +185,8 @@ $awb_is_home = $awb_flow_current === 'home';
             <p class="notice notice-info inline" style="margin:10px 0 0;">
                 <strong>După crearea AWB:</strong> mergi la tabul
                 <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=shipment')); ?>">Expediție / ridicare</a>
-                și grupează <code>packetId</code>-ul (createShipment). Fără acest pas, curierul poate să nu vină la ridicare.
+                și creează borderoul (<code>createShipment</code>). Nu alegi o zi aici — Packeta nu are calendar de ridicare în API.
+                Curierul la sediu vine doar dacă ai acest serviciu în contract (adresa din Expeditori).
             </p>
         </div>
 

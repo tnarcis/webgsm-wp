@@ -4,15 +4,21 @@ if (!defined('ABSPATH')) {
 }
 ?>
 <div class="webgsm-packeta-card">
-    <h2>Expediție (createShipment)</h2>
+    <h2>Expediție / borderou (createShipment)</h2>
     <p class="webgsm-packeta-help">
-        <strong>Pas obligatoriu pentru ridicare curier.</strong> După ce ai creat AWB-ul (tab „AWB nou”), Packeta returnează un <code>packetId</code>.
-        Aici grupezi unul sau mai multe ID-uri într-o expediție — fără acest pas, coletul poate rămâne neprogramat pentru ridicare.
+        <strong>Nu alegi tu o dată de ridicare aici.</strong> Packeta nu are în API un calendar „vino marți”.
+        AWB-ul doar înregistrează coletul; <code>createShipment</code> creează un <strong>borderou</strong> (grupare)
+        ca să marchezi coletele gata de predare — curierul le scanează la ridicare sau la depozit.
     </p>
     <p class="webgsm-packeta-help">
-        Introdu câte un <code>packetId</code> pe linie. API-ul apelează <code>createShipment</code> conform contului Packeta.
-        Dacă ridicarea nu apare în cont, verifică și în
-        <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a>.
+        <strong>Când vine curierul la sediu?</strong> Doar dacă în contractul Packeta ai <em>ridicare de la sediu</em>
+        (adresa din Expeditori / sender). Frecvența (zilnic / la cerere) o stabilește Packeta, nu magazinul.
+        Alternativ: du coletul la un punct Packeta / depozit cu eticheta lipită.
+    </p>
+    <p class="webgsm-packeta-help">
+        Introdu câte un <code>packetId</code> pe linie. Verifică statusul în
+        <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a>
+        → colete postate / expediții. Dacă AWB există dar nimeni nu vine: sună Packeta și confirmă că ai serviciu de ridicare la adresa sender.
     </p>
     <?php
     $prefill_packet = isset($_GET['prefill_packet']) ? preg_replace('/\D/', '', (string) $_GET['prefill_packet']) : '';

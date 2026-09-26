@@ -196,6 +196,21 @@ class WebGSM_Packeta_Admin {
                     if (!$is_validate_only) {
                         self::clear_awb_form_draft();
                         $this->save_awb_from_packet_response($res, $attrs);
+                        $packet_id = WebGSM_Packeta_Awb_Sync::api_field($res['data'] ?? null, 'id');
+                        $shipment_meta = null;
+                        if ($packet_id !== '') {
+                            $ship = $client->create_shipment([$packet_id], '');
+                            if (!empty($ship['ok'])) {
+                                $this->attach_shipment_to_awb_records([$packet_id], $ship);
+                                $shipment_meta = self::packeta_api_response_for_transient($ship);
+                            } else {
+                                $shipment_meta = [
+                                    'ok' => false,
+                                    'error' => $ship['error'] ?? 'createShipment eșuat',
+                                    'raw' => $ship['raw'] ?? '',
+                                ];
+                            }
+                        }
                     }
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),
@@ -203,10 +218,21 @@ class WebGSM_Packeta_Admin {
                             'type' => 'packet',
                             'data' => self::packeta_api_response_for_transient($res),
                             'attrs' => $attrs,
+                            'shipment' => $shipment_meta ?? null,
                         ],
                         120
                     );
-                    $this->redirect_with_notice($tab, isset($_POST['validate_only']) ? 'validated' : 'packet_ok');
+                    $notice = 'packet_ok';
+                    if (!$is_validate_only) {
+                        if (!empty($shipment_meta['ok'])) {
+                            $notice = 'packet_and_shipment_ok';
+                        } elseif (is_array($shipment_meta) && empty($shipment_meta['ok'])) {
+                            $notice = 'packet_ok_shipment_failed';
+                        }
+                    } else {
+                        $notice = 'validated';
+                    }
+                    $this->redirect_with_notice($tab, $notice);
                 } else {
                     set_transient(
                         'webgsm_packeta_last_' . get_current_user_id(),

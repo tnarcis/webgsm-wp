@@ -11,8 +11,10 @@ $notices = [
     'prices_sync_partial' => ['class' => 'notice-warning', 'text' => 'Sincronizare prețuri parțială — vezi detaliile de mai jos.'],
     'no_password' => ['class' => 'notice-error', 'text' => 'Completează parola API în WooCommerce → Packeta (sau vezi Setări aici).'],
     'packet_ok' => ['class' => 'notice-success', 'text' => 'Pachet creat în Packeta.'],
+    'packet_and_shipment_ok' => ['class' => 'notice-success', 'text' => 'AWB + borderou (createShipment) create. Nu e o dată aleasă de tine: curierul vine doar dacă ai ridicare la sediu în contractul Packeta (adresa sender).'],
+    'packet_ok_shipment_failed' => ['class' => 'notice-warning', 'text' => 'AWB creat, dar borderoul (createShipment) a eșuat — încearcă tab „Expediție / ridicare”. Fără borderou, predarea e mai greu de procesat.'],
     'validated' => ['class' => 'notice-success', 'text' => 'Atribute validate cu succes.'],
-    'shipment_ok' => ['class' => 'notice-success', 'text' => 'Expediție creată (grupare AWB).'],
+    'shipment_ok' => ['class' => 'notice-success', 'text' => 'Borderou (expediție) creat — coletele sunt grupate pentru predare. Nu programează o zi calendaristică; verifică contractul Packeta pentru ridicare de la sediu.'],
     'status_ok' => ['class' => 'notice-success', 'text' => 'Status citit.'],
     'courier_number_ok' => ['class' => 'notice-success', 'text' => 'Număr AWB curier (Sameday/Fan) obținut — vezi mai jos. Acesta se caută pe site-ul curierului, nu barcode-ul Z…'],
     'awb_registered' => ['class' => 'notice-success', 'text' => 'AWB adăugat în listă și status actualizat.'],
@@ -134,12 +136,24 @@ $notices = [
                 }
                 echo '<p><a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=awb_list')) . '">Vezi în lista AWB-uri</a> ';
                 echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=webgsm-packeta&tab=label')) . '">Deschide Etichetă &amp; status</a></p>';
-                if ($id !== '') {
+                $ship = $last['shipment'] ?? null;
+                if (is_array($ship) && !empty($ship['ok'])) {
+                    $sid = '';
+                    if (isset($ship['data'])) {
+                        $sid = WebGSM_Packeta_Awb_Sync::api_field($ship['data'], 'id');
+                    }
+                    echo '<p class="notice notice-success inline" style="margin-top:12px;"><strong>Borderou creat.</strong> Coletul e grupat pentru predare'
+                        . ($sid !== '' ? ' (expediție ID: <code>' . esc_html($sid) . '</code>)' : '')
+                        . '. <em>Nu e o dată de ridicare aleasă de tine</em> — curierul la sediu vine doar dacă ai acest serviciu în contract. Verifică în <a href="https://client.packeta.com/" target="_blank" rel="noopener noreferrer">client.packeta.com</a>.</p>';
+                } elseif ($id !== '') {
                     $shipment_url = add_query_arg(
                         ['page' => 'webgsm-packeta', 'tab' => 'shipment', 'prefill_packet' => $id],
                         admin_url('admin.php')
                     );
-                    echo '<p class="notice notice-warning inline" style="margin-top:12px;"><strong>Ridicare curier:</strong> AWB-ul există în Packeta, dar pentru ridicare trebuie să creezi expediția (grupare). '
+                    $ship_err = is_array($ship) && !empty($ship['error']) ? (string) $ship['error'] : '';
+                    echo '<p class="notice notice-warning inline" style="margin-top:12px;"><strong>Borderou lipsă:</strong> AWB-ul există, dar '
+                        . ($ship_err !== '' ? 'createShipment a eșuat (' . esc_html($ship_err) . '). ' : 'expediția (grupare) nu e creată. ')
+                        . 'Fără borderou, predarea/ridicarea e mai greu de procesat. '
                         . '<a class="button button-secondary" href="' . esc_url($shipment_url) . '">Expediție / ridicare</a></p>';
                 }
                 echo '</div>';
