@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Setup Wizard v2
  * Description: Creează structura magazin: Piese (iPhone/Samsung), Unelte, Accesorii, Servicii
- * Version: 2.0.3
+ * Version: 2.0.5
  * Author: WebGSM
  * Requires PHP: 7.4
  */
@@ -1394,6 +1394,7 @@ class WebGSM_Setup_Wizard_V2 {
         add_action('wp_ajax_webgsm_v2_setup_filters', [$this, 'ajax_setup_filters']);
         add_action('wp_ajax_webgsm_v2_clear_filters', [$this, 'ajax_clear_filters']);
         add_action('wp_ajax_webgsm_v2_clear_menu', [$this, 'ajax_clear_menu']);
+        add_action('wp_ajax_webgsm_v2_reattach_menu', [$this, 'ajax_reattach_menu']);
         add_action('wp_ajax_webgsm_v2_reset', [$this, 'ajax_reset']);
         add_action('wp_ajax_webgsm_v2_cleanup', [$this, 'ajax_cleanup']);
     }
@@ -2412,6 +2413,7 @@ class WebGSM_Setup_Wizard_V2 {
         $attrs_done = get_option('webgsm_v2_attributes', false);
         $menu_done = get_option('webgsm_v2_menu', false);
         $filters_done = get_option('webgsm_v2_filters', false);
+        $menu_location = $this->get_webgsm_menu_location_status();
         ?>
         <div class="wrap webgsm-wrap webgsm-setup-shell">
             
@@ -2559,7 +2561,20 @@ Servicii → Dropdown simplu</div>
                         <button type="button" class="webgsm-btn webgsm-btn-muted" id="btn-clear-menu" title="Șterge doar meniul WebGSM (categorii și atribute rămân)">
                             🧹 Șterge doar meniu
                         </button>
+                        <button type="button" class="webgsm-btn webgsm-btn-teal" id="btn-reattach-menu" title="Meniul există în WP dar headerul nu îl arată — reatașează la Primary / Mobile fără rebuild">
+                            📌 Reatașează în header
+                        </button>
                     </div>
+                    <?php if (!$menu_location['attached'] && $menu_location['menu_id'] > 0) : ?>
+                        <p class="webgsm-hint" style="color:#b45309;margin:8px 0 0;">
+                            ⚠️ <strong>WebGSM Main Menu</strong> există (#<?php echo (int) $menu_location['menu_id']; ?>), dar nu e legat de meniul principal al temei.
+                            Apasă <strong>Reatașează în header</strong> (sau rulează din nou crearea până la final).
+                        </p>
+                    <?php elseif ($menu_location['menu_id'] > 0 && $menu_location['attached']) : ?>
+                        <p class="webgsm-hint" style="color:#059669;margin:8px 0 0;">
+                            ✓ Meniul #<?php echo (int) $menu_location['menu_id']; ?> este atașat la header (Primary, Shop department, Mobile).
+                        </p>
+                    <?php endif; ?>
                     <div class="webgsm-status" id="status-menu"></div>
                     <div class="webgsm-menu-editor">
                         <strong>Editor meniu</strong>
@@ -2827,6 +2842,7 @@ Servicii → Dropdown simplu</div>
 
             $('#btn-menu').on('click', function() { doMenuBuildAjax(); });
             $('#btn-sync-menu').on('click', function() { doAjax('webgsm_v2_sync_menu_categories', 'btn-sync-menu', 'status-menu'); });
+            $('#btn-reattach-menu').on('click', function() { doAjax('webgsm_v2_reattach_menu', 'btn-reattach-menu', 'status-menu'); });
 
             var webgsmMenuNonce = '<?php echo wp_create_nonce('webgsm_v2'); ?>';
             function webgsmReloadMenuEditor() {
@@ -2844,7 +2860,11 @@ Servicii → Dropdown simplu</div>
                     }
                     var items = response.data.items || [];
                     if (items.length === 0) {
-                        $ph.text('Nu există meniu WebGSM sau e gol. Rulează «Creează Meniu» mai sus.').show();
+                        var hint = 'Nu există meniu WebGSM sau e gol. Rulează «Creează Meniu» mai sus.';
+                        if (response.data.menu_id > 0) {
+                            hint = 'Meniul #' + response.data.menu_id + ' există dar lista e goală în interfață — apasă «Reîmprospătează lista» sau «Reatașează în header». Dacă persistă, urcă wizard 2.0.5+.';
+                        }
+                        $ph.text(hint).show();
                         $parent.html('<option value="0">— Nivel principal —</option>');
                         return;
                     }
@@ -3640,7 +3660,6 @@ Servicii → Dropdown simplu</div>
 
         $existing = wp_get_nav_menu_object($menu_name);
         if ($existing) {
-            $this->clear_webgsm_menu_theme_locations();
             $deleted = wp_delete_nav_menu($existing->term_id);
             if (is_wp_error($deleted)) {
                 $this->ajax_send_json_error(['message' => 'Nu s-a putut șterge meniul vechi: ' . $deleted->get_error_message()]);
@@ -3651,6 +3670,10 @@ Servicii → Dropdown simplu</div>
         if (is_wp_error($menu_id)) {
             $this->ajax_send_json_error(['message' => 'Eroare la crearea meniului: ' . $menu_id->get_error_message()]);
         }
+
+        // Headerul trebuie legat imediat — altfel, între pași sau la refresh, site-ul pare fără meniu.
+        $this->assign_webgsm_menu_theme_locations((int) $menu_id);
+        update_option('webgsm_v2_main_menu_term_id', (int) $menu_id, false);
 
         $state = [
             'menu_id'     => (int) $menu_id,
@@ -3713,9 +3736,11 @@ Servicii → Dropdown simplu</div>
         }
 
         $this->assign_webgsm_menu_theme_locations($menu_id);
+        $this->sync_nav_menu_term_count($menu_id);
         $this->reorder_main_menu_by_category_structure($menu_id);
         $removed_obsolete = $this->prune_deprecated_menu_category_items($menu_id);
         delete_transient($this->webgsm_menu_build_transient_key());
+        update_option('webgsm_v2_main_menu_term_id', $menu_id, false);
         update_option('webgsm_v2_menu', true);
 
         $menu_msg = "Meniu creat cu {$items_count} itemi!";
@@ -4064,13 +4089,7 @@ Servicii → Dropdown simplu</div>
             }
         }
 
-        $locations                      = get_theme_mod('nav_menu_locations', []);
-        $locations['primary']           = $menu_id;
-        $locations['primary-menu']      = $menu_id;
-        $locations['shop-department']   = $menu_id;
-        $locations['shop_department']   = $menu_id;
-        $locations['mobile']            = $menu_id;
-        set_theme_mod('nav_menu_locations', $locations);
+        $this->assign_webgsm_menu_theme_locations($menu_id);
 
         $this->reorder_main_menu_by_category_structure($menu_id);
         update_option('webgsm_v2_menu', true);
@@ -4188,9 +4207,120 @@ Servicii → Dropdown simplu</div>
     }
 
     private function get_webgsm_main_menu_id() {
+        $stored = (int) get_option('webgsm_v2_main_menu_term_id', 0);
+        if ($stored > 0) {
+            $by_id = wp_get_nav_menu_object($stored);
+            if ($by_id && !is_wp_error($by_id)) {
+                return (int) $by_id->term_id;
+            }
+        }
         $menu = wp_get_nav_menu_object('WebGSM Main Menu');
 
         return $menu ? (int) $menu->term_id : 0;
+    }
+
+    /**
+     * După rebuild cu wp_defer_term_counting(true), nav_menu->count poate rămâne 0.
+     * wp_get_nav_menu_items() returnează atunci [] — header și editor par goale.
+     */
+    private function sync_nav_menu_term_count($menu_id) {
+        $menu_id = (int) $menu_id;
+        if ($menu_id < 1) {
+            return;
+        }
+        if (function_exists('wp_defer_term_counting')) {
+            wp_defer_term_counting(false);
+        }
+        $menu = wp_get_nav_menu_object($menu_id);
+        if (!$menu || is_wp_error($menu)) {
+            return;
+        }
+        $tt_id = (int) $menu->term_taxonomy_id;
+        if ($tt_id > 0 && function_exists('wp_update_term_count_now')) {
+            wp_update_term_count_now([$tt_id], 'nav_menu');
+        }
+        clean_term_cache($menu_id, 'nav_menu');
+    }
+
+    /** Itemi meniu WebGSM — nu se bazează doar pe term->count (poate fi stale). */
+    private function get_webgsm_nav_menu_items($menu_id) {
+        $menu_id = (int) $menu_id;
+        if ($menu_id < 1) {
+            return [];
+        }
+        $menu = wp_get_nav_menu_object($menu_id);
+        if (!$menu || is_wp_error($menu)) {
+            return [];
+        }
+        if ((int) $menu->count < 1) {
+            $this->sync_nav_menu_term_count($menu_id);
+            $menu = wp_get_nav_menu_object($menu_id);
+        }
+        $items = wp_get_nav_menu_items($menu_id);
+        if (is_array($items) && !empty($items)) {
+            return $items;
+        }
+        $posts = get_posts([
+            'post_type'              => 'nav_menu_item',
+            'posts_per_page'         => -1,
+            'post_status'            => 'publish,draft',
+            'orderby'                => 'menu_order',
+            'order'                  => 'ASC',
+            'update_menu_item_cache' => true,
+            'tax_query'              => [
+                [
+                    'taxonomy' => 'nav_menu',
+                    'field'    => 'term_taxonomy_id',
+                    'terms'    => (int) $menu->term_taxonomy_id,
+                ],
+            ],
+        ]);
+        if (empty($posts)) {
+            return [];
+        }
+
+        return array_map('wp_setup_nav_menu_item', $posts);
+    }
+
+    /** Verifică dacă meniul WebGSM e legat de locațiile Martfury (Primary etc.). */
+    private function get_webgsm_menu_location_status() {
+        $menu_id = $this->get_webgsm_main_menu_id();
+        if ($menu_id < 1) {
+            return [
+                'menu_id'   => 0,
+                'attached'  => false,
+                'primary'   => 0,
+            ];
+        }
+        $locations = get_theme_mod('nav_menu_locations', []);
+        if (!is_array($locations)) {
+            $locations = [];
+        }
+        $primary = (int) ($locations['primary'] ?? $locations['primary-menu'] ?? 0);
+
+        return [
+            'menu_id'  => $menu_id,
+            'attached' => ($primary === $menu_id),
+            'primary'  => $primary,
+        ];
+    }
+
+    public function ajax_reattach_menu() {
+        check_ajax_referer('webgsm_v2', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni']);
+        }
+        $menu_id = $this->get_webgsm_main_menu_id();
+        if ($menu_id < 1) {
+            wp_send_json_error(['message' => 'Nu există «WebGSM Main Menu». Rulează «Creează meniu» mai întâi.']);
+        }
+        $this->assign_webgsm_menu_theme_locations($menu_id);
+        $this->sync_nav_menu_term_count($menu_id);
+        update_option('webgsm_v2_main_menu_term_id', $menu_id, false);
+        update_option('webgsm_v2_menu', true);
+        $this->ajax_send_json_success([
+            'message' => 'Meniul #' . $menu_id . ' a fost reatașat la Primary, Shop department, Mobile și Category mobile.',
+        ]);
     }
 
     private function nav_menu_item_belongs_to_menu($menu_item_db_id, $menu_id) {
@@ -4217,11 +4347,11 @@ Servicii → Dropdown simplu</div>
         }
         $menu_id = $this->get_webgsm_main_menu_id();
         if (!$menu_id) {
-            wp_send_json_success(['items' => [], 'menu_id' => 0]);
+            wp_send_json_success(['items' => [], 'menu_id' => 0, 'item_count' => 0]);
         }
-        $items = wp_get_nav_menu_items($menu_id);
-        if (!$items) {
-            wp_send_json_success(['items' => [], 'menu_id' => $menu_id]);
+        $items = $this->get_webgsm_nav_menu_items($menu_id);
+        if (empty($items)) {
+            wp_send_json_success(['items' => [], 'menu_id' => $menu_id, 'item_count' => 0]);
         }
         $by_id = [];
         foreach ($items as $item) {
@@ -4242,7 +4372,7 @@ Servicii → Dropdown simplu</div>
                 'parent_db_id' => (int) $item->menu_item_parent,
             ];
         }
-        wp_send_json_success(['items' => $out, 'menu_id' => $menu_id]);
+        wp_send_json_success(['items' => $out, 'menu_id' => $menu_id, 'item_count' => count($out)]);
     }
 
     public function ajax_delete_menu_item() {
@@ -4490,6 +4620,7 @@ Servicii → Dropdown simplu</div>
             }
         }
         delete_option('webgsm_v2_menu');
+        delete_option('webgsm_v2_main_menu_term_id');
         wp_send_json_success(['message' => 'Meniu WebGSM șters. Categorii, atribute și filtre sunt neschimbate. Poți rula «Creează Meniu» din nou.']);
     }
     
