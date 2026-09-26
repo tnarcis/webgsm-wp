@@ -2,7 +2,7 @@
 /**
  * WebGSM - Setup Categories
  * Creează categoriile de produse WooCommerce aliniate cu logica scriptului Python (scraping).
- * 3 categorii părinte: Piese, Unelte, Accesorii.
+ * 4 categorii părinte: Piese (iPhone + Samsung), Unelte, Accesorii, Servicii.
  *
  * @package WebGSM
  * @subpackage Martfury-Child
@@ -54,8 +54,8 @@ function webgsm_get_category_structure() {
         $cats[] = array('name' => $name, 'slug' => $slug, 'parent' => 'accesorii');
     }
 
-    // ═══ Servicii ═══
-    foreach (array('Reparații' => 'reparatii', 'Training' => 'training', 'Buy-back' => 'buy-back') as $name => $slug) {
+    // ═══ Servicii (Reparații, Buy-back) ═══
+    foreach (array('Reparații' => 'reparatii', 'Buy-back' => 'buy-back') as $name => $slug) {
         $cats[] = array('name' => $name, 'slug' => $slug, 'parent' => 'servicii');
     }
 

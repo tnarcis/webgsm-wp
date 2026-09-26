@@ -1124,7 +1124,6 @@ class WebGSM_Setup_Wizard_V2 {
             'description' => 'Servicii și suport',
             'children' => [
                 'Reparații' => 'reparatii',
-                'Training' => 'training',
                 'Buy-back' => 'buy-back',
             ]
         ],
@@ -2421,7 +2420,7 @@ Unelte/
 Accesorii/
 ├── Huse & Carcase, Folii Protecție...
 Servicii/
-├── Reparații, Training, Buy-back...</div>
+├── Reparații, Buy-back</div>
                     <div class="webgsm-btn-row">
                         <button type="button" class="webgsm-btn webgsm-btn-primary" id="btn-cats">
                             <?php echo $cats_done ? '🔄 Actualizează categorii' : '📁 Creează categorii'; ?>
@@ -3206,6 +3205,7 @@ Servicii → Dropdown simplu</div>
         $slugs[] = 'telefoane-refurbished';
         $slugs[] = 'tablete';
         $slugs[] = 'smartwatch';
+        $slugs[] = 'training';
 
         return array_values(array_unique($slugs));
     }

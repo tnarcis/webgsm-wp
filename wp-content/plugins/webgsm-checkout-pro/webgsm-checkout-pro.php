@@ -2,13 +2,13 @@
 /**
  * Plugin Name: WebGSM Checkout Pro
  * Description: Checkout personalizat pentru România - PF/PJ, ANAF, adrese salvate
- * Version: 5.1.1
+ * Version: 5.1.2
  * Author: WebGSM
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('WEBGSM_CHECKOUT_VERSION', '5.1.1');
+define('WEBGSM_CHECKOUT_VERSION', '5.1.2');
 define('WEBGSM_CHECKOUT_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_CHECKOUT_URL', plugin_dir_url(__FILE__));
 
@@ -51,7 +51,10 @@ class WebGSM_Checkout_Pro {
             });
             return;
         }
+        // AJAX: init e suficient. Front: is_checkout() etc. funcționează după `wp`. Admin: după admin_init + screen.
         add_action('init', [$this, 'maybe_bootstrap'], 1);
+        add_action('wp', [$this, 'maybe_bootstrap'], 1);
+        add_action('admin_init', [$this, 'maybe_bootstrap'], 1);
     }
 
     /**
@@ -85,6 +88,9 @@ class WebGSM_Checkout_Pro {
         }
 
         if (is_admin()) {
+            if (!did_action('admin_init')) {
+                return false;
+            }
             if (function_exists('get_current_screen')) {
                 $screen = get_current_screen();
                 if ($screen && ($screen->post_type === 'shop_order' || $screen->id === 'woocommerce_page_wc-orders')) {
@@ -98,6 +104,10 @@ class WebGSM_Checkout_Pro {
             return false;
         }
 
+        if (!did_action('wp')) {
+            return self::request_is_wc_storefront_page();
+        }
+
         if (function_exists('is_checkout') && (is_checkout() || is_cart())) {
             return true;
         }
@@ -109,6 +119,38 @@ class WebGSM_Checkout_Pro {
         }
 
         return (bool) apply_filters('webgsm_checkout_pro_should_load', false);
+    }
+
+    /**
+     * Fallback înainte de main query (evită bootstrap ratat → fără CSS/JS checkout).
+     *
+     * @return bool
+     */
+    private static function request_is_wc_storefront_page() {
+        if (!function_exists('wc_get_page_id')) {
+            return false;
+        }
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_parse_url(wp_unslash($_SERVER['REQUEST_URI']), PHP_URL_PATH) : '';
+        if ($uri === '') {
+            return false;
+        }
+        $uri = trim(strtolower($uri), '/');
+        foreach (['cart', 'checkout', 'myaccount'] as $wc_page) {
+            $page_id = wc_get_page_id($wc_page);
+            if ($page_id <= 0) {
+                continue;
+            }
+            $slug = get_post_field('post_name', $page_id);
+            if (!$slug) {
+                continue;
+            }
+            $slug = strtolower($slug);
+            $suffix = '/' . $slug;
+            if ($uri === $slug || substr($uri, -strlen($suffix)) === $suffix || strpos($uri, $suffix . '/') !== false) {
+                return true;
+            }
+        }
+        return false;
     }
     
     private function load_classes() {
@@ -227,7 +269,9 @@ class WebGSM_Checkout_Pro {
     }
     
     public function enqueue_assets() {
-        if (!is_checkout()) return;
+        if (!function_exists('is_checkout') || (!is_checkout() && !is_cart())) {
+            return;
+        }
         $css_file = WEBGSM_CHECKOUT_PATH . 'assets/css/checkout.css';
         $js_file  = WEBGSM_CHECKOUT_PATH . 'assets/js/checkout.js';
         $css_ver = WEBGSM_CHECKOUT_VERSION . '-' . (file_exists($css_file) ? filemtime($css_file) : time());
