@@ -5,6 +5,9 @@ class WebGSM_Site_Audit_Link_Checker {
 
     const RESULTS_KEY = 'webgsm_site_audit_scan_results';
     const LAST_SCAN_KEY = 'webgsm_site_audit_last_scan';
+    const QUEUE_TRANSIENT = 'webgsm_site_audit_link_queue';
+    const PARTIAL_TRANSIENT = 'webgsm_site_audit_link_partial';
+    const BATCH_SIZE = 35;
 
     public function __construct() {
         add_action('wp_ajax_webgsm_audit_scan_links', [$this, 'ajax_scan']);
@@ -16,20 +19,67 @@ class WebGSM_Site_Audit_Link_Checker {
         check_ajax_referer('webgsm_site_audit', 'nonce');
         if (!current_user_can('manage_options')) wp_send_json_error('Forbidden');
 
-        @set_time_limit(300);
+        @set_time_limit(120);
 
         $settings = WebGSM_Site_Audit_Settings::get();
-        $links = $this->collect_links($settings);
-        $results = $this->check_links($links, $settings);
+        $step = isset($_POST['step']) ? sanitize_key((string) $_POST['step']) : 'start';
 
-        update_option(self::RESULTS_KEY, $results, false);
-        update_option(self::LAST_SCAN_KEY, time());
+        if ($step === 'start') {
+            $links = $this->collect_links($settings);
+            set_transient(self::QUEUE_TRANSIENT, $links, HOUR_IN_SECONDS);
+            set_transient(self::PARTIAL_TRANSIENT, [], HOUR_IN_SECONDS);
+            wp_send_json_success([
+                'step' => 'batch',
+                'offset' => 0,
+                'total' => count($links),
+                'checked' => 0,
+            ]);
+        }
 
-        wp_send_json_success([
-            'total' => count($links),
-            'broken' => count(array_filter($results, function($r) { return isset($r['status']) && $r['status'] !== 'ok'; })),
-            'results' => $results,
-        ]);
+        if ($step === 'batch') {
+            $offset = isset($_POST['offset']) ? max(0, (int) $_POST['offset']) : 0;
+            $links = get_transient(self::QUEUE_TRANSIENT);
+            if (!is_array($links)) {
+                wp_send_json_error('Sesiunea de scan a expirat. Pornește din nou scanarea.');
+            }
+
+            $slice = array_slice($links, $offset, self::BATCH_SIZE);
+            $batch_results = $this->check_links($slice, $settings);
+            $partial = get_transient(self::PARTIAL_TRANSIENT);
+            if (!is_array($partial)) {
+                $partial = [];
+            }
+            $partial = array_merge($partial, $batch_results);
+            set_transient(self::PARTIAL_TRANSIENT, $partial, HOUR_IN_SECONDS);
+
+            $next = $offset + count($slice);
+            $total = count($links);
+
+            if ($next < $total) {
+                wp_send_json_success([
+                    'step' => 'batch',
+                    'offset' => $next,
+                    'total' => $total,
+                    'checked' => $next,
+                ]);
+            }
+
+            update_option(self::RESULTS_KEY, $partial, false);
+            update_option(self::LAST_SCAN_KEY, time());
+            delete_transient(self::QUEUE_TRANSIENT);
+            delete_transient(self::PARTIAL_TRANSIENT);
+
+            wp_send_json_success([
+                'step' => 'done',
+                'total' => $total,
+                'broken' => count(array_filter($partial, function ($r) {
+                    return isset($r['status']) && $r['status'] !== 'ok';
+                })),
+                'results' => $partial,
+            ]);
+        }
+
+        wp_send_json_error('Pas scan invalid.');
     }
 
     public function ajax_get_results() {

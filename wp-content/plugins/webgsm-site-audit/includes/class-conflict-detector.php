@@ -57,6 +57,34 @@ class WebGSM_Site_Audit_Conflict_Detector {
         return $src;
     }
 
+    /**
+     * Google Fonts / handle-uri WP editor: același path /css cu query diferit — nu e conflict real.
+     *
+     * @param string $path
+     * @param array  $handles
+     */
+    private function is_benign_duplicate_asset_path($path, $handles) {
+        $path = (string) $path;
+        if ($path === '/css' || $path === '/css2') {
+            return true;
+        }
+        foreach ($handles as $h) {
+            $src = isset($h['src']) ? (string) $h['src'] : '';
+            if (strpos($src, 'fonts.googleapis.com') !== false || strpos($src, 'fonts.gstatic.com') !== false) {
+                return true;
+            }
+        }
+        $handle_names = array_map(static function ($h) {
+            return isset($h['handle']) ? (string) $h['handle'] : '';
+        }, $handles);
+        foreach ($handle_names as $name) {
+            if (strpos($name, 'open-sans') !== false || strpos($name, 'wp-editor-font') !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function guess_owner_from_src($src) {
         $path = $this->normalize_src($src);
         if (!$path) return 'unknown';
@@ -256,6 +284,9 @@ class WebGSM_Site_Audit_Conflict_Detector {
             }
             foreach ($by_src as $file => $handles) {
                 if (count($handles) > 1) {
+                    if ($this->is_benign_duplicate_asset_path($file, $handles)) {
+                        continue;
+                    }
                     $list = [];
                     $owners = [];
                     foreach ($handles as $h) {

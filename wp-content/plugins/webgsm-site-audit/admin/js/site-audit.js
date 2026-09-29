@@ -58,33 +58,51 @@
         $('#wsa-overview-ok').text(ok);
     }
 
-    // --- LINK SCAN ---
-    $('#wsa-scan-btn').on('click', function() {
-        var $btn = $(this).prop('disabled', true);
-        var $tbody = $('#wsa-results-table tbody').empty();
-        $tbody.append('<tr><td colspan="4">' + spinner() + ' Se scanează linkurile... poate dura 1-2 minute.</td></tr>');
-        setStatus(spinner() + ' Se scanează...');
-
-        post('webgsm_audit_scan_links', {}, 300000)
+    function runLinkScanBatches(step, offset, $btn, $tbody) {
+        var payload = { step: step || 'start' };
+        if (typeof offset === 'number') {
+            payload.offset = offset;
+        }
+        post('webgsm_audit_scan_links', payload, 120000)
             .done(function(res) {
-                if (res.success) {
-                    setStatus('Scan finalizat: ' + res.data.total + ' linkuri, ' + res.data.broken + ' rupte.');
-                    updateOverview(res.data.broken, res.data.total - res.data.broken);
-                    renderLinkTable(res.data.results);
-                } else {
+                if (!res.success) {
                     setStatus('Eroare: ' + (res.data || 'necunoscută'), true);
                     $tbody.empty().append('<tr><td colspan="4">Eroare la scanare.</td></tr>');
+                    $btn.prop('disabled', false);
+                    return;
+                }
+                var d = res.data || {};
+                if (d.step === 'batch') {
+                    var pct = d.total ? Math.round((d.checked / d.total) * 100) : 0;
+                    setStatus(spinner() + ' Se verifică linkuri… ' + d.checked + ' / ' + d.total + ' (' + pct + '%)');
+                    runLinkScanBatches('batch', d.offset, $btn, $tbody);
+                    return;
+                }
+                if (d.step === 'done') {
+                    setStatus('Scan finalizat: ' + d.total + ' linkuri, ' + d.broken + ' rupte.');
+                    updateOverview(d.broken, d.total - d.broken);
+                    renderLinkTable(d.results);
+                    $btn.prop('disabled', false);
                 }
             })
             .fail(function(xhr, status) {
                 if (status === 'timeout') {
-                    setStatus('Timeout – prea multe linkuri. Reduce scope-ul din Setări.', true);
+                    setStatus('Timeout – reîncearcă; scanarea rulează acum în loturi mici.', true);
                 } else {
                     setStatus('Eroare de rețea.', true);
                 }
                 $tbody.empty().append('<tr><td colspan="4">Scanarea nu s-a finalizat.</td></tr>');
-            })
-            .always(function() { $btn.prop('disabled', false); });
+                $btn.prop('disabled', false);
+            });
+    }
+
+    // --- LINK SCAN ---
+    $('#wsa-scan-btn').on('click', function() {
+        var $btn = $(this).prop('disabled', true);
+        var $tbody = $('#wsa-results-table tbody').empty();
+        $tbody.append('<tr><td colspan="4">' + spinner() + ' Se colectează linkurile…</td></tr>');
+        setStatus(spinner() + ' Se scanează...');
+        runLinkScanBatches('start', 0, $btn, $tbody);
     });
 
     function renderLinkTable(results) {
@@ -370,9 +388,31 @@
 
         $status.html(spinner() + ' Se rulează ' + total + ' module...').css('color', '#646970');
 
-        post('webgsm_audit_scan_links', {}, 300000).done(function(r) {
-            if (r.success) { results.links = r.data; updateOverview(r.data.broken, r.data.total - r.data.broken); renderLinkTable(r.data.results); }
-        }).always(tick);
+        (function fullScanLinks() {
+            var linkDone = false;
+            function finishLinks(d) {
+                if (linkDone) return;
+                linkDone = true;
+                results.links = d;
+                updateOverview(d.broken, d.total - d.broken);
+                renderLinkTable(d.results);
+                tick();
+            }
+            function batch(step, offset) {
+                var payload = { step: step };
+                if (typeof offset === 'number') payload.offset = offset;
+                post('webgsm_audit_scan_links', payload, 120000).done(function(r) {
+                    if (!r.success) { tick(); return; }
+                    var d = r.data || {};
+                    if (d.step === 'batch') {
+                        batch('batch', d.offset);
+                        return;
+                    }
+                    if (d.step === 'done') finishLinks(d);
+                }).fail(function() { tick(); });
+            }
+            batch('start', 0);
+        })();
 
         post('webgsm_audit_security_scan').done(function(r) {
             if (r.success) { results.security = r.data; renderIssues('#wsa-security-results', r.data.issues); }

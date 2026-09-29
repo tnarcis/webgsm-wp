@@ -216,7 +216,9 @@ add_action('woocommerce_account_date-facturare_endpoint', function() {
 
 // Adaugă CSS pentru checkout
 add_action('wp_head', function() {
-    if(!is_checkout()) return;
+    if (!function_exists('is_checkout') || !is_checkout()) {
+        return;
+    }
     ?>
     <style>
         .tip-factura-checkout {
