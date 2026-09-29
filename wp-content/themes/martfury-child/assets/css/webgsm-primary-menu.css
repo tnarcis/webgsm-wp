@@ -43,87 +43,103 @@
         transition: color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, font-weight 0.25s ease !important;
     }
 
-    /* ========== LED Glow – Stare inițială: lineart gri, subțire ========== */
-    .vertical-menu .led-icon i,
-    .main-navigation .led-icon i,
-    .site-header .primary-nav.nav .led-icon i {
-        color: #444 !important;
-        font-weight: 300 !important;
-        margin-right: 10px !important;
+    /* ========== LED Glow – line-art SVG / FA (currentColor pe .led-icon) ========== */
+    .led-icon {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        line-height: 1 !important;
         transition: color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
         filter: drop-shadow(0 0 0 transparent) !important;
     }
+    .led-icon svg {
+        display: block !important;
+        width: 18px !important;
+        height: 18px !important;
+    }
+    .vertical-menu .led-icon,
+    .main-navigation .led-icon,
+    .site-header .primary-nav.nav .led-icon {
+        color: #444 !important;
+        margin-right: 10px !important;
+    }
+    .vertical-menu .led-icon i,
+    .main-navigation .led-icon i,
+    .site-header .primary-nav.nav .led-icon i {
+        font-weight: 300 !important;
+        margin-right: 0 !important;
+    }
     .site-header .primary-nav.nav > ul.menu > li > a .led-icon { margin-right: 0; }
-    .site-header .primary-nav.nav > ul.menu > li > a .led-icon i { margin-right: 0 !important; }
     /* Bandă albastră: iconițe albe + umbră pentru contrast pe gradient închis */
-    .site-header .col-header-menu .primary-nav.nav .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .led-icon i {
+    .site-header .col-header-menu .primary-nav.nav .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .led-icon {
         color: #ffffff !important;
         filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)) !important;
     }
 
     /* ========== LED Glow – Hover: iconița rămâne vizibilă, glow foarte subtil ========== */
-    .vertical-menu li:hover .led-icon i,
-    .main-navigation li:hover .led-icon i,
-    .site-header .primary-nav.nav > ul.menu > li:hover .led-icon i,
-    .site-header .primary-nav.nav > ul.menu > li.active .led-icon i {
+    .vertical-menu li:hover .led-icon,
+    .main-navigation li:hover .led-icon,
+    .site-header .primary-nav.nav > ul.menu > li:hover .led-icon,
+    .site-header .primary-nav.nav > ul.menu > li.active .led-icon {
         filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)) !important;
         transform: scale(1.1) !important;
     }
     /* Culori LED per categorie – doar culoare icon + glow minim (lineart vizibil); include .col-header-menu pentru banda albastră */
-    .vertical-menu li:hover .led-cyan i,
-    .main-navigation li:hover .led-cyan i,
-    .site-header .primary-nav.nav .webgsm-nav-piese:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-piese.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
-    .vertical-menu li:hover .led-orange i,
-    .main-navigation li:hover .led-orange i,
-    .site-header .primary-nav.nav .webgsm-nav-unelte:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-unelte.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon i { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
-    .vertical-menu li:hover .led-magenta i,
-    .main-navigation li:hover .led-magenta i,
-    .site-header .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-accesorii.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon i { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
-    .vertical-menu li:hover .led-blue i,
-    .main-navigation li:hover .led-blue i,
-    .site-header .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon i { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
-    .vertical-menu li:hover .led-gold i,
-    .main-navigation li:hover .led-gold i,
-    .site-header .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon i { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
-    .vertical-menu li:hover .led-green i,
-    .main-navigation li:hover .led-green i,
-    .site-header .primary-nav.nav .webgsm-nav-servicii:hover .led-icon i,
-    .site-header .primary-nav.nav .webgsm-nav-servicii.active .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon i,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon i,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon i { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon.led-cyan,
+    .main-navigation li:hover .led-icon.led-cyan,
+    .site-header .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-piese.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon.led-orange,
+    .main-navigation li:hover .led-icon.led-orange,
+    .site-header .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon.led-magenta,
+    .main-navigation li:hover .led-icon.led-magenta,
+    .site-header .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
+    .vertical-menu li:hover .led-icon.led-blue,
+    .main-navigation li:hover .led-icon.led-blue,
+    .site-header .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon.led-gold,
+    .main-navigation li:hover .led-icon.led-gold,
+    .site-header .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
+    .vertical-menu li:hover .led-icon.led-green,
+    .main-navigation li:hover .led-icon.led-green,
+    .site-header .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
     /* Fallback când .led-icon nu are clasă de culoare */
-    .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
-    .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
-    .site-header .col-header-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i,
-    .site-header.header-department-top .main-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
+    .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
+    .site-header .col-header-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
+    .site-header.header-department-top .main-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
 
     /* Text meniu – font-weight mai mare la hover (aspect premium) */
     .vertical-menu li:hover > a,
@@ -176,39 +192,39 @@
     .primary-mobile-nav ul.menu ul li.menu-item-has-children .toggle-menu-children {
         right: 10px !important;
     }
-    .primary-mobile-nav .led-icon i {
+    .primary-mobile-nav .led-icon {
         color: #444 !important;
-        font-weight: 300 !important;
         margin-right: 10px !important;
-        transition: color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        filter: drop-shadow(0 0 0 transparent) !important;
+    }
+    .primary-mobile-nav .led-icon i {
+        font-weight: 300 !important;
+        margin-right: 0 !important;
     }
     .primary-mobile-nav ul.menu > li > a .led-icon { margin-right: 0; }
-    .primary-mobile-nav ul.menu > li > a .led-icon i { margin-right: 0 !important; }
-    .primary-mobile-nav li:hover .led-icon i,
-    .primary-mobile-nav li.active .led-icon i {
+    .primary-mobile-nav li:hover .led-icon,
+    .primary-mobile-nav li.active .led-icon {
         filter: drop-shadow(0 0 2px currentColor) !important;
         transform: scale(1.1) !important;
     }
-    .primary-mobile-nav li:hover .led-cyan i,
-    .primary-mobile-nav .webgsm-nav-piese:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-piese.active .led-icon i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-orange i,
-    .primary-mobile-nav .webgsm-nav-unelte:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon i { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-magenta i,
-    .primary-mobile-nav .webgsm-nav-accesorii:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon i { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
-    .primary-mobile-nav li:hover .led-blue i,
-    .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon i { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-gold i,
-    .primary-mobile-nav .webgsm-nav-supraveghere:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon i { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
-    .primary-mobile-nav li:hover .led-green i,
-    .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon i,
-    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon i { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) i { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-cyan,
+    .primary-mobile-nav .webgsm-nav-piese:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-piese.active .led-icon { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-orange,
+    .primary-mobile-nav .webgsm-nav-unelte:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-magenta,
+    .primary-mobile-nav .webgsm-nav-accesorii:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-blue,
+    .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-gold,
+    .primary-mobile-nav .webgsm-nav-supraveghere:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
+    .primary-mobile-nav li:hover .led-icon.led-green,
+    .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon,
+    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
+    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
     .primary-mobile-nav li:hover > a,
     .primary-mobile-nav li.active > a {
         font-weight: 700 !important;
@@ -235,7 +251,7 @@
         box-shadow: 0 0 0 1px rgba(0, 164, 235, 0.2) !important;
     }
     /* Submeniu mobil – fără LED pe icon (doar pe itemii de nivel 0) */
-    .primary-mobile-nav ul.menu ul .led-icon i { color: inherit !important; filter: none !important; }
+    .primary-mobile-nav ul.menu ul .led-icon { color: inherit !important; filter: none !important; transform: none !important; }
 
     @media (max-width: 991px) {
         .site-header.header-department-top .main-menu .primary-nav.nav > ul.menu > li > a,

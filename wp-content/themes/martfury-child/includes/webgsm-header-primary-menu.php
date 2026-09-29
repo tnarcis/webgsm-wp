@@ -1,76 +1,165 @@
 <?php
 /**
- * WebGSM - Stilizare meniu primary + LED Glow (iconițe în span.led-icon, FontAwesome).
- * Meniul vertical și principal: lineart gri, hover = LED glow (#00f2ff sau culoare per categorie).
+ * WebGSM - Meniu primary: iconițe SVG line-art + LED glow la hover.
  *
  * @package WebGSM
  * @subpackage Martfury-Child
  */
 
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) {
+    exit;
+}
 
-// Adaugă clase pe itemi (doar meniul primary, nivel 0)
+/**
+ * @param object $args wp_nav_menu args
+ * @param int    $depth
+ */
+function webgsm_primary_menu_is_top_level_context($args, $depth) {
+    if ($depth !== 0) {
+        return false;
+    }
+    $loc = isset($args->theme_location) ? (string) $args->theme_location : '';
+    $allowed = array(
+        'primary',
+        'primary-menu',
+        'shop-department',
+        'shop_department',
+        'mobile',
+        'category_mobile',
+    );
+    if ($loc !== '' && !in_array($loc, $allowed, true)) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Cheie categorie rădăcină (piese, unelte, …) din product_cat sau titlu.
+ *
+ * @param WP_Post $item
+ */
+function webgsm_primary_menu_resolve_root_key($item) {
+    static $cache = array();
+    $id = isset($item->ID) ? (int) $item->ID : 0;
+    if ($id && isset($cache[$id])) {
+        return $cache[$id];
+    }
+
+    $key = '';
+    if (isset($item->type, $item->object, $item->object_id)
+        && $item->type === 'taxonomy'
+        && $item->object === 'product_cat'
+        && (int) $item->object_id > 0
+    ) {
+        $term = get_term((int) $item->object_id, 'product_cat');
+        if ($term && !is_wp_error($term)) {
+            $root = $term;
+            if ((int) $term->parent > 0) {
+                $ancestors = get_ancestors($term->term_id, 'product_cat', 'taxonomy');
+                if (!empty($ancestors)) {
+                    $root_id = (int) end($ancestors);
+                    $root_term = get_term($root_id, 'product_cat');
+                    if ($root_term && !is_wp_error($root_term)) {
+                        $root = $root_term;
+                    }
+                }
+            }
+            $key = (string) $root->slug;
+        }
+    }
+
+    if ($key === '') {
+        $title_lower = mb_strtolower(trim((string) $item->title));
+        $title_map = array(
+            'piese'        => 'piese',
+            'unelte'       => 'unelte',
+            'accesorii'    => 'accesorii',
+            'dispozitive'  => 'dispozitive',
+            'supraveghere' => 'supraveghere',
+            'smart home'   => 'supraveghere',
+            'smart tech'   => 'supraveghere',
+            'security'     => 'supraveghere',
+            'securitate'   => 'supraveghere',
+            'servicii'     => 'servicii',
+        );
+        foreach ($title_map as $needle => $slug) {
+            if (strpos($title_lower, $needle) !== false) {
+                $key = $slug;
+                break;
+            }
+        }
+    }
+
+    if ($id) {
+        $cache[$id] = $key;
+    }
+    return $key;
+}
+
+/**
+ * @return array<string, array{css: string, color: string}>
+ */
+function webgsm_primary_menu_category_map() {
+    return array(
+        'piese'        => array('css' => 'webgsm-nav-piese', 'color' => 'led-cyan'),
+        'unelte'       => array('css' => 'webgsm-nav-unelte', 'color' => 'led-orange'),
+        'accesorii'    => array('css' => 'webgsm-nav-accesorii', 'color' => 'led-magenta'),
+        'dispozitive'  => array('css' => 'webgsm-nav-dispozitive', 'color' => 'led-blue'),
+        'supraveghere' => array('css' => 'webgsm-nav-supraveghere', 'color' => 'led-gold'),
+        'servicii'     => array('css' => 'webgsm-nav-servicii', 'color' => 'led-green'),
+    );
+}
+
 add_filter('nav_menu_css_class', 'webgsm_primary_menu_item_classes', 10, 4);
 function webgsm_primary_menu_item_classes($classes, $item, $args, $depth) {
-    if ($depth !== 0) return $classes;
-    $loc = isset($args->theme_location) ? $args->theme_location : '';
-    $allowed = ['primary', 'primary-menu', 'shop-department', 'shop_department', 'mobile'];
-    if ($loc && !in_array($loc, $allowed, true)) return $classes;
-    $map = [
-        'piese'       => 'webgsm-nav-piese',
-        'unelte'     => 'webgsm-nav-unelte',
-        'accesorii'  => 'webgsm-nav-accesorii',
-        'dispozitive' => 'webgsm-nav-dispozitive',
-        'supraveghere' => 'webgsm-nav-supraveghere',
-        'smart home' => 'webgsm-nav-supraveghere',
-        'smart tech' => 'webgsm-nav-supraveghere',
-        'security' => 'webgsm-nav-supraveghere',
-        'securitate' => 'webgsm-nav-supraveghere',
-        'servicii'   => 'webgsm-nav-servicii',
-    ];
-    $title_lower = mb_strtolower(trim($item->title));
-    foreach ($map as $key => $css_class) {
-        if (strpos($title_lower, $key) !== false) {
-            $classes[] = $css_class;
-            break;
-        }
+    if (!webgsm_primary_menu_is_top_level_context($args, $depth)) {
+        return $classes;
+    }
+    $key = webgsm_primary_menu_resolve_root_key($item);
+    $map = webgsm_primary_menu_category_map();
+    if ($key !== '' && isset($map[$key])) {
+        $classes[] = $map[$key]['css'];
     }
     return $classes;
 }
 
-// Iconițe FontAwesome încapsulate în <span class="led-icon"> doar la nivel 0 (categorii principale)
-// + clasă culoare LED per categorie: led-cyan, led-orange, led-magenta, led-blue, led-gold, led-green
-add_filter('nav_menu_item_title', 'webgsm_primary_menu_led_icon_in_title', 10, 4);
-function webgsm_primary_menu_led_icon_in_title($title, $item, $args, $depth) {
-    if ($depth !== 0) return $title;
-    $loc = isset($args->theme_location) ? $args->theme_location : '';
-    $allowed = ['primary', 'primary-menu', 'shop-department', 'shop_department', 'mobile'];
-    if ($loc && !in_array($loc, $allowed, true)) return $title;
-    // fa = Font Awesome 4 (Martfury); fas = FA5 – folosim fa pentru compatibilitate
-    $map = [
-        'piese'       => ['icon' => 'fa fa-cog',           'color' => 'led-cyan'],
-        'unelte'     => ['icon' => 'fa fa-wrench',         'color' => 'led-orange'],
-        'accesorii'  => ['icon' => 'fa fa-cube',           'color' => 'led-magenta'],
-        'dispozitive' => ['icon' => 'fa fa-mobile',        'color' => 'led-blue'],
-        'supraveghere' => ['icon' => 'fa fa-video-camera', 'color' => 'led-gold'],
-        'smart home' => ['icon' => 'fa fa-video-camera',   'color' => 'led-gold'],
-        'smart tech' => ['icon' => 'fa fa-video-camera',   'color' => 'led-gold'],
-        'security' => ['icon' => 'fa fa-shield',           'color' => 'led-gold'],
-        'securitate' => ['icon' => 'fa fa-shield',         'color' => 'led-gold'],
-        'servicii'   => ['icon' => 'fa fa-cogs',           'color' => 'led-green'],
-    ];
-    $title_lower = mb_strtolower(trim($item->title));
-    foreach ($map as $key => $data) {
-        if (strpos($title_lower, $key) !== false) {
-            $class = esc_attr('led-icon ' . $data['color']);
-            $icon  = esc_attr($data['icon']);
-            return '<span class="' . $class . '"><i class="' . $icon . '" aria-hidden="true"></i></span> ' . $title;
-        }
+/**
+ * Icon line-art via CSS mask (data-wgsm-icon) — funcționează și pentru vizitatori / pagini cache LiteSpeed
+ * (SVG inline din titlul meniului e uneori eliminat din HTML-ul servit oaspeților).
+ */
+add_filter('nav_menu_link_attributes', 'webgsm_primary_menu_link_attributes', 10, 4);
+function webgsm_primary_menu_link_attributes($atts, $item, $args, $depth) {
+    if (!webgsm_primary_menu_is_top_level_context($args, $depth)) {
+        return $atts;
     }
-    return $title;
+    if (!is_array($atts)) {
+        $atts = array();
+    }
+    $key = webgsm_primary_menu_resolve_root_key($item);
+    $map = webgsm_primary_menu_category_map();
+    if ($key === '' || !isset($map[$key])) {
+        return $atts;
+    }
+    $atts['data-wgsm-icon'] = $key;
+    if (empty($atts['class'])) {
+        $atts['class'] = 'webgsm-menu-link-has-icon';
+    } elseif (strpos((string) $atts['class'], 'webgsm-menu-link-has-icon') === false) {
+        $atts['class'] .= ' webgsm-menu-link-has-icon';
+    }
+    return $atts;
 }
 
-// CSS meniu primary — fișier extern (cache browser)
+add_filter('walker_nav_menu_start_el', 'webgsm_primary_menu_strip_legacy_title_icons', 5, 4);
+function webgsm_primary_menu_strip_legacy_title_icons($item_output, $item, $depth, $args) {
+    if (!webgsm_primary_menu_is_top_level_context($args, $depth)) {
+        return $item_output;
+    }
+    if (strpos($item_output, 'data-wgsm-icon') === false) {
+        return $item_output;
+    }
+    return preg_replace('#<span class="led-icon[^"]*">.*?</span>\s*#s', '', $item_output, 1);
+}
+
 add_action('wp_enqueue_scripts', 'webgsm_primary_menu_styles', 50);
 function webgsm_primary_menu_styles() {
     if (is_admin()) {
@@ -87,4 +176,3 @@ function webgsm_primary_menu_styles() {
         (string) filemtime($file)
     );
 }
-
