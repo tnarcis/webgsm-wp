@@ -1,6 +1,6 @@
 ---
 # Repo pe server: /home/webgsm/repositories/webgsm-wp
-# Deploy: copiază în public_html (site live webgsm.ro). La webgsm-tools nu se uploadează data/ și *.md
+# Deploy 2026-10-01: copiază în public_html (site live webgsm.ro). La webgsm-tools nu se uploadează data/ și *.md
 deployment:
   tasks:
     - export DEPLOYPATH=/home/webgsm/public_html/wp-content

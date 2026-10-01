@@ -1,12 +1,9 @@
 # Ignorăm tot WordPress-ul
 /*
 
-# cPanel: .cpanel.yml cu DEPLOYPATH real = doar pe server / local (nu commit)
-/.cpanel.yml
-/cpanel.yml
-**/.cpanel.yml
-**/cpanel.yml
-# Șablon versionat – copiezi pe server: cp .cpanel.yml.example .cpanel.yml
+# .cpanel.yml este în repo: cPanel Git Version Control îl citește la Update/Deploy.
+# Șablonul .cpanel.yml.example rămâne cu DEPLOYPATH de schimbat.
+!/.cpanel.yml
 !/.cpanel.yml.example
 
 !.gitignore
