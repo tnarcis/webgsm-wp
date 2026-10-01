@@ -7,7 +7,7 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
 <div class="wrap webgsm-site-audit">
     <h1>
         <span class="dashicons dashicons-chart-area" style="font-size:28px;margin-right:8px;vertical-align:middle;color:#2271b1;"></span>
-        WebGSM Site Audit – Super Tool
+        WebGSM Site Audit — centru de control
         <span class="wsa-version">v<?php echo esc_html(WEBGSM_SITE_AUDIT_VERSION); ?></span>
     </h1>
     <p class="description"><a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-site-audit-settings')); ?>">⚙ Setări</a></p>
@@ -63,7 +63,10 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
             <span class="wsa-status" id="wsa-full-scan-status"></span>
         </div>
         <div class="wsa-overview-summary" id="wsa-full-scan-summary" style="display:none;"></div>
-        <p class="description" style="margin-top:16px;">Folosește tab-urile de mai sus pentru analize detaliate sau butonul „Scanare completă" pentru toate verificările.</p>
+        <div class="notice notice-info" style="margin-top:16px;padding:12px 14px;">
+            <p style="margin:0 0 8px;"><strong>Magazin (gestiune + B2B + cache)</strong> se repară din tab-ul <a href="#tab-performance" class="wsa-tab" data-tab="tab-performance">Performanță</a>: preset LiteSpeed, purge, transiente.</p>
+            <p style="margin:0;">Nu crea alte ecrane de audit. Un singur loc: acest plugin. Skill-uri GitHub nu înlocuiesc setările de pe server.</p>
+        </div>
     </div>
 
     <!-- LINKURI -->
@@ -169,6 +172,9 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
             <button type="button" class="button button-primary" id="wsa-perf-scan">
                 <span class="dashicons dashicons-performance"></span> Rulează scan performanță
             </button>
+            <button type="button" class="button" id="wsa-repair-litespeed">Repară LiteSpeed (preset WebGSM)</button>
+            <button type="button" class="button" id="wsa-repair-purge">Purge cache</button>
+            <button type="button" class="button" id="wsa-repair-transients">Șterge transiente expirate</button>
             <span class="wsa-status" id="wsa-perf-status"></span>
         </div>
         <div class="wsa-issues-list" id="wsa-perf-results"></div>

@@ -36,6 +36,14 @@ class WebGSM_Tools_Admin_Menu {
             'webgsm-studio',
             [$this, 'render_studio']
         );
+        add_submenu_page(
+            self::PARENT_SLUG,
+            'LiteSpeed WebGSM',
+            '⚡ LiteSpeed',
+            'manage_options',
+            'webgsm-litespeed',
+            [$this, 'render_litespeed']
+        );
     }
 
     public function enqueue_assets($hook) {
@@ -80,4 +88,9 @@ class WebGSM_Tools_Admin_Menu {
     public function render_studio() {
         include WEBGSM_TOOLS_PATH . 'admin/views/studio-page.php';
     }
+
+    public function render_litespeed() {
+        include WEBGSM_TOOLS_PATH . 'admin/views/litespeed-page.php';
+    }
+
 }

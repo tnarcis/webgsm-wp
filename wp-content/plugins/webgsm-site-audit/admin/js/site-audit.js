@@ -245,10 +245,36 @@
             if (i.path) html += ' <code>' + escapeHtml(i.path) + '</code>';
             if (i.value) html += ' <span class="wsa-val">(' + escapeHtml(String(i.value)) + ')</span>';
             if (i.fix) html += '<div class="wsa-fix"><span class="dashicons dashicons-lightbulb"></span> ' + escapeHtml(i.fix) + '</div>';
+            if (i.repair) {
+                html += '<p><button type="button" class="button button-small wsa-repair-btn" data-repair="' + escapeHtml(i.repair) + '">Repară acum</button></p>';
+            }
             html += '</div>';
         });
         $el.html(html);
     }
+
+    function runRepair(repair, $status) {
+        if (!repair) return;
+        if (repair === 'litespeed_preset' && !confirm('Aplici presetul LiteSpeed WebGSM și golești cache-ul?')) return;
+        setStatus(spinner() + ' Se repară…', false, $status);
+        post('webgsm_audit_performance_repair', { repair: repair })
+            .done(function(res) {
+                if (res.success) {
+                    setStatus(res.data.message || 'Gata.', false, $status);
+                    $('#wsa-perf-scan').trigger('click');
+                } else {
+                    setStatus(res.data && res.data.message ? res.data.message : 'Eroare', true, $status);
+                }
+            })
+            .fail(function() { setStatus('Eroare de rețea.', true, $status); });
+    }
+
+    $('#wsa-repair-litespeed').on('click', function() { runRepair('litespeed_preset', '#wsa-perf-status'); });
+    $('#wsa-repair-purge').on('click', function() { runRepair('litespeed_purge', '#wsa-perf-status'); });
+    $('#wsa-repair-transients').on('click', function() { runRepair('expired_transients', '#wsa-perf-status'); });
+    $('#wsa-perf-results').on('click', '.wsa-repair-btn', function() {
+        runRepair($(this).data('repair'), '#wsa-perf-status');
+    });
 
     // --- JURNAL LENT (webgsm-perf-audit.log) ---
     function loadSlowLog() {

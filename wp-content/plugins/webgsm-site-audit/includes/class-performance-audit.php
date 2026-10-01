@@ -8,6 +8,7 @@ class WebGSM_Site_Audit_Performance {
 
     public function __construct() {
         add_action('wp_ajax_webgsm_audit_performance_scan', [$this, 'ajax_scan']);
+        add_action('wp_ajax_webgsm_audit_performance_repair', [$this, 'ajax_repair']);
         add_action('shutdown', [$this, 'maybe_log_slow_request'], 99999);
     }
 
@@ -254,11 +255,124 @@ class WebGSM_Site_Audit_Performance {
                 'severity' => 'low',
                 'title' => 'Lipsă object cache (Redis/Memcached)',
                 'path' => '',
-                'fix' => 'Instalează Redis Object Cache pentru performanță mai bună.',
+                'fix' => 'Pe LiteSpeed: Object Cache ON. Altfel Redis, dacă hostingul îl oferă.',
             ];
         }
 
+        $issues = array_merge($issues, $this->litespeed_and_probe_issues());
+
         wp_send_json_success(['issues' => $issues, 'count' => count($issues)]);
+    }
+
+    /**
+     * Probleme LiteSpeed + probe DB, cu acțiune de reparare unde e sigur.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function litespeed_and_probe_issues(): array {
+        $issues = [];
+        $health = $this->litespeed_health();
+        if ($health) {
+            foreach ($health->run_audit() as $row) {
+                $level = $row['level'] ?? 'info';
+                if ($level === 'ok' || $level === 'info') {
+                    continue;
+                }
+                $repair = '';
+                if (in_array($row['id'] ?? '', ['cache_off', 'cache_priv_on', 'cache_rest_on', 'ttl_pub_high', 'serve_stale', 'esi_on', 'cache_exc', 'vary_administrator', 'vary_b2b_customer', 'vary_customer', 'vary_client_b2b'], true)
+                    || strpos((string) ($row['id'] ?? ''), 'vary_') === 0
+                    || in_array($row['id'] ?? '', ['cache_off', 'cache_exc'], true)) {
+                    $repair = 'litespeed_preset';
+                }
+                $issues[] = [
+                    'type'     => 'litespeed',
+                    'severity' => $level === 'error' ? 'high' : 'medium',
+                    'title'    => $row['message'],
+                    'path'     => 'litespeed',
+                    'fix'      => $row['fix'] ?? 'Aplică presetul WebGSM din butonul de mai sus.',
+                    'repair'   => $repair,
+                ];
+            }
+        } else {
+            $issues[] = [
+                'type'     => 'litespeed',
+                'severity' => 'info',
+                'title'    => 'Modulul LiteSpeed WebGSM nu e încărcat (plugin webgsm-tools).',
+                'fix'      => 'Activează WebGSM Tools ca să poți aplica presetul de cache din acest tab.',
+            ];
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $issues[] = [
+                'type'     => 'wp_debug',
+                'severity' => 'high',
+                'title'    => 'WP_DEBUG este ON',
+                'fix'      => 'În wp-config.php pe live: define(\'WP_DEBUG\', false); — nu se poate opri din admin în siguranță.',
+            ];
+        }
+
+        return $issues;
+    }
+
+    /**
+     * @return WebGSM_Tools_LiteSpeed_Health|null
+     */
+    private function litespeed_health() {
+        if (!class_exists('WebGSM_Tools_LiteSpeed_Health', false)) {
+            $file = WP_PLUGIN_DIR . '/webgsm-tools/includes/class-litespeed-health.php';
+            if (is_readable($file)) {
+                require_once $file;
+            }
+        }
+        if (!class_exists('WebGSM_Tools_LiteSpeed_Health', false)) {
+            return null;
+        }
+
+        return new WebGSM_Tools_LiteSpeed_Health();
+    }
+
+    public function ajax_repair(): void {
+        check_ajax_referer('webgsm_site_audit', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Nu ai permisiuni.']);
+        }
+        $action = isset($_POST['repair']) ? sanitize_key(wp_unslash($_POST['repair'])) : '';
+
+        if ($action === 'litespeed_preset') {
+            $health = $this->litespeed_health();
+            if (!$health) {
+                wp_send_json_error(['message' => 'Lipsește webgsm-tools (clasa LiteSpeed).']);
+            }
+            $result = $health->apply_preset($health->get_webgsm_preset());
+            if (empty($result['ok'])) {
+                wp_send_json_error(['message' => $result['message'] ?? 'Preset eșuat.']);
+            }
+            wp_send_json_success(['message' => $result['message']]);
+        }
+
+        if ($action === 'litespeed_purge') {
+            $health = $this->litespeed_health();
+            if (!$health) {
+                wp_send_json_error(['message' => 'Lipsește webgsm-tools.']);
+            }
+            $ok = $health->purge_all();
+            wp_send_json_success([
+                'message' => $ok ? 'Purge All trimis către LiteSpeed.' : 'Hook purge indisponibil — folosește meniul LiteSpeed → Purge.',
+            ]);
+        }
+
+        if ($action === 'expired_transients') {
+            $deleted = 0;
+            if (function_exists('delete_expired_transients')) {
+                delete_expired_transients(true);
+                $deleted = 1;
+            }
+            wp_send_json_success([
+                'message' => $deleted ? 'Transientele expirate au fost șterse.' : 'Funcția delete_expired_transients nu e disponibilă.',
+            ]);
+        }
+
+        wp_send_json_error(['message' => 'Acțiune de reparare necunoscută.']);
     }
 
     private function find_large_images($path, $max_kb, $limit = 20) {
