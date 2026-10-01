@@ -43,6 +43,48 @@
         transition: color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, font-weight 0.25s ease !important;
     }
 
+    /* Fallback line-art (fără SVG în HTML — ex. cache vizitatori): mask pe ::before */
+    :root {
+        --wgsm-mask-piese: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='7' y='2.5' width='10' height='19' rx='2'/%3E%3Cpath d='M10 6h4M10 18h4'/%3E%3Ccircle cx='12' cy='15' r='1.2' fill='%23000'/%3E%3C/svg%3E");
+        --wgsm-mask-unelte: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.1 2.1-1.4-1.4 2.1-2.1z'/%3E%3C/svg%3E");
+        --wgsm-mask-accesorii: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 4v10l-7 4-7-4V7l7-4z'/%3E%3Cpath d='M12 11v10M5 7l7 4 7-4'/%3E%3C/svg%3E");
+        --wgsm-mask-dispozitive: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5'%3E%3Crect x='5' y='2' width='14' height='20' rx='2.5'/%3E%3Ccircle cx='12' cy='18' r='1' fill='%23000'/%3E%3C/svg%3E");
+        --wgsm-mask-supraveghere: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8V6a2 2 0 012-2h12a2 2 0 012 2v2'/%3E%3Crect x='3' y='8' width='18' height='10' rx='2'/%3E%3Ccircle cx='12' cy='13' r='2.5'/%3E%3Cpath d='M9 18h6'/%3E%3C/svg%3E");
+        --wgsm-mask-servicii: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l1.8 3.6L18 7.5l-3 2.9.7 4.1L12 12.8 8.3 14.5l.7-4.1-3-2.9 4.2-.9L12 3z'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E");
+    }
+    a.webgsm-menu-link-has-icon::before {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        margin-right: 6px;
+        flex-shrink: 0;
+        background-color: currentColor;
+        -webkit-mask: center / contain no-repeat;
+        mask: center / contain no-repeat;
+        transition: background-color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    a.webgsm-menu-link-has-icon:has(.led-icon)::before {
+        display: none !important;
+        content: none !important;
+    }
+    a[data-wgsm-icon="piese"]::before { -webkit-mask-image: var(--wgsm-mask-piese); mask-image: var(--wgsm-mask-piese); }
+    a[data-wgsm-icon="unelte"]::before { -webkit-mask-image: var(--wgsm-mask-unelte); mask-image: var(--wgsm-mask-unelte); }
+    a[data-wgsm-icon="accesorii"]::before { -webkit-mask-image: var(--wgsm-mask-accesorii); mask-image: var(--wgsm-mask-accesorii); }
+    a[data-wgsm-icon="dispozitive"]::before { -webkit-mask-image: var(--wgsm-mask-dispozitive); mask-image: var(--wgsm-mask-dispozitive); }
+    a[data-wgsm-icon="supraveghere"]::before { -webkit-mask-image: var(--wgsm-mask-supraveghere); mask-image: var(--wgsm-mask-supraveghere); }
+    a[data-wgsm-icon="servicii"]::before { -webkit-mask-image: var(--wgsm-mask-servicii); mask-image: var(--wgsm-mask-servicii); }
+    .vertical-menu a.webgsm-menu-link-has-icon::before,
+    .main-navigation a.webgsm-menu-link-has-icon::before {
+        color: #444;
+        background-color: #444;
+    }
+    .site-header .col-header-menu .primary-nav.nav a.webgsm-menu-link-has-icon::before,
+    .site-header.header-department-top .main-menu .primary-nav.nav a.webgsm-menu-link-has-icon::before {
+        background-color: #ffffff;
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+    }
+
     /* ========== LED Glow – line-art SVG / FA (currentColor pe .led-icon) ========== */
     .led-icon {
         display: inline-flex !important;
@@ -94,7 +136,11 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-piese:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .primary-nav.nav .webgsm-nav-piese.active > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active > a.webgsm-menu-link-has-icon::before { color: #00e5ff !important; background-color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; transform: scale(1.1); }
     .vertical-menu li:hover .led-icon.led-orange,
     .main-navigation li:hover .led-icon.led-orange,
     .site-header .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
@@ -102,7 +148,11 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
+    .site-header .primary-nav.nav .webgsm-nav-unelte:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .primary-nav.nav .webgsm-nav-unelte.active > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active > a.webgsm-menu-link-has-icon::before { color: #ff9100 !important; background-color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; transform: scale(1.1); }
     .vertical-menu li:hover .led-icon.led-magenta,
     .main-navigation li:hover .led-icon.led-magenta,
     .site-header .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
@@ -110,7 +160,9 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active > a.webgsm-menu-link-has-icon::before { color: #ff38f0 !important; background-color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; transform: scale(1.1); }
     .vertical-menu li:hover .led-icon.led-blue,
     .main-navigation li:hover .led-icon.led-blue,
     .site-header .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
@@ -118,7 +170,9 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active > a.webgsm-menu-link-has-icon::before { color: #7dd3fc !important; background-color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; transform: scale(1.1); }
     .vertical-menu li:hover .led-icon.led-gold,
     .main-navigation li:hover .led-icon.led-gold,
     .site-header .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
@@ -126,7 +180,9 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active > a.webgsm-menu-link-has-icon::before { color: #ffd600 !important; background-color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; transform: scale(1.1); }
     .vertical-menu li:hover .led-icon.led-green,
     .main-navigation li:hover .led-icon.led-green,
     .site-header .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
@@ -134,7 +190,9 @@
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
     .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
+    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active > a.webgsm-menu-link-has-icon::before { color: #4ade80 !important; background-color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; transform: scale(1.1); }
     /* Fallback când .led-icon nu are clasă de culoare */
     .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
     .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
