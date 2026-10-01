@@ -4,6 +4,7 @@
  * Description: Centru de control WebGSM: linkuri, SEO, securitate, performanță, cache LiteSpeed (preset + purge), jurnale lente, debug, GSC.
  * Version: 3.3.0
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 6.0
  * Requires PHP: 7.2
  */

@@ -4,6 +4,7 @@
  * Description: Formular „Anunță-mă” pe produsele fără stoc; trimite email când produsul revine în stoc (wp_mail). Opțional integrare Mailchimp.
  * Version: 1.0.0
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 5.0
  * Requires PHP: 7.2
  */

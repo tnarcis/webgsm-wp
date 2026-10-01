@@ -4,6 +4,7 @@
  * Description: Sistem de prețuri diferențiate pentru clienți B2B (Persoane Juridice) cu discount pe produs/categorie, tiers și protecție preț minim.
  * Version: 2.0.0
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 5.8
  * Requires PHP: 7.4
  * WC requires at least: 6.0

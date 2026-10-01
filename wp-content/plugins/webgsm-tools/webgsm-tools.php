@@ -4,6 +4,7 @@
  * Description: Product Reviewer & Image Studio pentru verificare și procesare produse
  * Version: 1.2.0
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 6.0
  * Requires PHP: 8.0
  */

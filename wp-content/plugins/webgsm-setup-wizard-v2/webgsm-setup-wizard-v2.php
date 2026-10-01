@@ -4,6 +4,7 @@
  * Description: Creează structura magazin: Piese (iPhone/Samsung), Unelte, Accesorii, Servicii
  * Version: 2.0.5
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires PHP: 7.4
  */
 

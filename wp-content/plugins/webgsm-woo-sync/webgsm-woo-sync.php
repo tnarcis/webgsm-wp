@@ -4,6 +4,7 @@
  * Description: Trimite evenimente (schimbare status comandă) către backend-ul WebGSM. Conform SPEC-plugin-woocommerce-webgsm.
  * Version: 1.0.0
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * WC requires at least: 7.0

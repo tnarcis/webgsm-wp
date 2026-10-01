@@ -4,6 +4,7 @@
  * Description: AWB Packeta, istoric livrări și urmărire curier pentru admin și clienți.
  * Version: 1.8.3
  * Author: WebGSM
+ * Deploy: 2026-10-01
  * Requires at least: 6.0
  * Requires PHP: 8.0
  */

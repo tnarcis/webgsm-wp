@@ -4,6 +4,7 @@
  * Description: Checkout personalizat pentru România - PF/PJ, ANAF, adrese salvate
  * Version: 5.1.2
  * Author: WebGSM
+ * Deploy: 2026-10-01
  */
 
 if (!defined('ABSPATH')) exit;
