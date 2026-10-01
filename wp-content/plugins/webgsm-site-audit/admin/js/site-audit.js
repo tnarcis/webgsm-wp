@@ -477,6 +477,114 @@
         $el.html(html);
     }
 
+    $('#wsa-export-report').on('click', function() {
+        var $btn = $(this).prop('disabled', true);
+        var $status = $('#wsa-full-scan-status');
+        var bag = { security: null, performance: null, seo: null, robots: null, conflicts: null, links: null, slow: '', debug: '' };
+        var pending = 7;
+        $status.html(spinner() + ' Se adună raportul (linkurile pot dura)…').css('color', '#646970');
+
+        function finishOne() {
+            pending--;
+            if (pending > 0) return;
+            $btn.prop('disabled', false);
+            var text = buildExportReport(bag);
+            var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'webgsm-audit-report.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            $status.text('Raport descărcat: webgsm-audit-report.txt — lipește-l în chat.').css('color', '#00a32a');
+        }
+
+        post('webgsm_audit_security_scan').done(function(r) { if (r.success) bag.security = r.data; }).always(finishOne);
+        post('webgsm_audit_performance_scan').done(function(r) { if (r.success) bag.performance = r.data; }).always(finishOne);
+        post('webgsm_audit_seo_scan').done(function(r) { if (r.success) bag.seo = r.data; }).always(finishOne);
+        post('webgsm_audit_robots_sitemap').done(function(r) { if (r.success) bag.robots = r.data; }).always(finishOne);
+        post('webgsm_audit_conflict_scan').done(function(r) { if (r.success) bag.conflicts = r.data; }).always(finishOne);
+        post('webgsm_audit_get_slow_log', { lines: 80, filter: '' }).done(function(r) {
+            if (r.success && r.data && r.data.lines) bag.slow = r.data.lines.join('\n');
+        }).always(finishOne);
+        post('webgsm_audit_get_debug_log', { lines: 80, filter: '', severity: '' }).done(function(r) {
+            if (r.success && r.data && r.data.entries) {
+                bag.debug = r.data.entries.map(function(e) {
+                    return (e.date || '') + ' ' + (e.severity || '') + ' ' + (e.message || e.raw || '');
+                }).join('\n');
+            }
+        }).always(finishOne);
+
+        (function exportLinks() {
+            var done = false;
+            function end(d) {
+                if (done) return;
+                done = true;
+                bag.links = d || null;
+                finishOne();
+            }
+            function batch(step, offset) {
+                var payload = { step: step };
+                if (typeof offset === 'number') payload.offset = offset;
+                post('webgsm_audit_scan_links', payload, 120000).done(function(r) {
+                    if (!r.success) { end(null); return; }
+                    var d = r.data || {};
+                    if (d.step === 'batch') { batch('batch', d.offset); return; }
+                    if (d.step === 'done') end(d);
+                }).fail(function() { end(null); });
+            }
+            batch('start', 0);
+        })();
+    });
+
+    function issueLines(block) {
+        var issues = (block && block.issues) ? block.issues : [];
+        if (!issues.length) return '(niciuna)\n';
+        return issues.map(function(i) {
+            return '- [' + (i.severity || 'info') + '] ' + (i.title || '') + (i.fix ? ' | fix: ' + i.fix : '') + (i.path ? ' | ' + i.path : '');
+        }).join('\n') + '\n';
+    }
+
+    function buildExportReport(bag) {
+        var lines = [];
+        lines.push('WEBGSM SITE AUDIT REPORT');
+        lines.push('generated: ' + new Date().toISOString());
+        lines.push('url: ' + window.location.origin);
+        lines.push('');
+        lines.push('## SECURITATE');
+        lines.push(issueLines(bag.security));
+        lines.push('## PERFORMANTA');
+        lines.push(issueLines(bag.performance));
+        lines.push('## SEO');
+        lines.push(issueLines(bag.seo));
+        lines.push('## CONFLICTE');
+        lines.push(issueLines(bag.conflicts));
+        lines.push('## ROBOTS / SITEMAP');
+        if (bag.robots) {
+            lines.push(issueLines({ issues: (bag.robots.robots && bag.robots.robots.issues) || [] }));
+            lines.push(issueLines({ issues: (bag.robots.sitemap && bag.robots.sitemap.issues) || [] }));
+        } else {
+            lines.push('(lipsește)\n');
+        }
+        lines.push('## LINKURI');
+        if (bag.links && bag.links.results) {
+            var broken = bag.links.results.filter(function(r) { return r.status && r.status !== 'ok'; }).slice(0, 40);
+            lines.push('total=' + (bag.links.total || bag.links.results.length) + ' broken=' + (bag.links.broken || broken.length));
+            broken.forEach(function(r) {
+                lines.push('- ' + (r.status || '') + ' ' + (r.url || r.link || '') + (r.code ? ' HTTP ' + r.code : ''));
+            });
+        } else {
+            lines.push('(scan linkuri eșuat sau gol)');
+        }
+        lines.push('');
+        lines.push('## JURNAL LENT (ultimele linii)');
+        lines.push(String(bag.slow || '(gol)').slice(0, 15000));
+        lines.push('');
+        lines.push('## DEBUG LOG (ultimele linii)');
+        lines.push(String(bag.debug || '(gol)').slice(0, 15000));
+        return lines.join('\n');
+    }
+
     function card(label, value, type) {
         return '<div class="wsa-card wsa-card--' + type + '"><span class="wsa-card-label">' + escapeHtml(label) + '</span><span class="wsa-card-value wsa-card-value--small">' + escapeHtml(String(value)) + '</span></div>';
     }

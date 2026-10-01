@@ -57,6 +57,9 @@ $ok = array_filter($results, function($r) { return (isset($r['status']) ? $r['st
             <button type="button" class="button button-primary button-hero" id="wsa-full-scan-btn">
                 <span class="dashicons dashicons-superhero-alt"></span> Scanare completă
             </button>
+            <button type="button" class="button button-secondary button-hero" id="wsa-export-report" style="margin-left:10px;">
+                <span class="dashicons dashicons-download"></span> Exportă raport (toate palierele)
+            </button>
             <button type="button" class="button button-secondary button-hero" id="wsa-clear-logs-btn" style="margin-left:10px;">
                 <span class="dashicons dashicons-trash"></span> Curăță rezultate audit
             </button>

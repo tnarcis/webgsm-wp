@@ -332,23 +332,24 @@ class WebGSM_Tools_LiteSpeed_Health {
             return ['ok' => false, 'message' => 'Permisiuni insuficiente.'];
         }
 
-        $normalized = [];
+        $for_api = [];
         foreach ($preset as $key => $value) {
-            if (is_array($value)) {
-                $normalized[$key] = wp_json_encode(array_values($value));
-            } elseif ($value === true) {
-                $normalized[$key] = '1';
-            } elseif ($value === false || $value === '') {
-                $normalized[$key] = '';
+            if ($value === true) {
+                $for_api[$key] = '1';
+            } elseif ($value === false) {
+                $for_api[$key] = '';
             } else {
-                $normalized[$key] = (string) $value;
+                $for_api[$key] = $value;
             }
         }
 
         if (has_action('litespeed_update_confs')) {
-            do_action('litespeed_update_confs', $normalized);
+            do_action('litespeed_update_confs', $for_api);
         } else {
-            foreach ($normalized as $key => $value) {
+            foreach ($for_api as $key => $value) {
+                if (is_array($value)) {
+                    $value = wp_json_encode($value);
+                }
                 update_option('litespeed.conf.' . $key, $value, false);
             }
         }

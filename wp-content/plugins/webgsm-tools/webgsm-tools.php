@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Tools
  * Description: Product Reviewer & Image Studio pentru verificare și procesare produse
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: WebGSM
  * Deploy: 2026-10-01
  * Requires at least: 6.0
@@ -11,7 +11,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WEBGSM_TOOLS_VERSION', '1.2.0');
+define('WEBGSM_TOOLS_VERSION', '1.2.1');
 define('WEBGSM_TOOLS_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_TOOLS_URL', plugin_dir_url(__FILE__));
 

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebGSM Site Audit – Super Tool
  * Description: Centru de control WebGSM: linkuri, SEO, securitate, performanță, cache LiteSpeed (preset + purge), jurnale lente, debug, GSC.
- * Version: 3.3.0
+ * Version: 3.4.0
  * Author: WebGSM
  * Deploy: 2026-10-01
  * Requires at least: 6.0
@@ -18,7 +18,7 @@ if (version_compare(PHP_VERSION, '7.2', '<')) {
     return;
 }
 
-define('WEBGSM_SITE_AUDIT_VERSION', '3.3.0');
+define('WEBGSM_SITE_AUDIT_VERSION', '3.4.0');
 define('WEBGSM_SITE_AUDIT_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_SITE_AUDIT_URL', plugin_dir_url(__FILE__));
 
