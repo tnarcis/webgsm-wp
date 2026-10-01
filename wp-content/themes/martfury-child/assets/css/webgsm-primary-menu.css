@@ -28,10 +28,10 @@
     }
     .site-header.header-department-top .main-menu .primary-nav.nav > ul.menu > li > a,
     .site-header .col-header-menu .primary-nav.nav > ul.menu > li > a {
-        gap: 6px !important;
-        padding: 8px 13px !important;
+        gap: 8px !important;
+        padding: 9px 14px !important;
         font-weight: 700 !important;
-        font-size: 15px !important;
+        font-size: var(--wgsm-menu-font-size) !important;
         letter-spacing: 0.01em !important;
         color: #ffffff !important;
         text-shadow:
@@ -45,6 +45,8 @@
 
     /* Fallback line-art (fără SVG în HTML — ex. cache vizitatori): mask pe ::before */
     :root {
+        --wgsm-menu-icon-size: 24px;
+        --wgsm-menu-font-size: 16px;
         --wgsm-mask-piese: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='7' y='2.5' width='10' height='19' rx='2'/%3E%3Cpath d='M10 6h4M10 18h4'/%3E%3Ccircle cx='12' cy='15' r='1.2' fill='%23000'/%3E%3C/svg%3E");
         --wgsm-mask-unelte: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.1 2.1-1.4-1.4 2.1-2.1z'/%3E%3C/svg%3E");
         --wgsm-mask-accesorii: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 4v10l-7 4-7-4V7l7-4z'/%3E%3Cpath d='M12 11v10M5 7l7 4 7-4'/%3E%3C/svg%3E");
@@ -55,14 +57,18 @@
     a.webgsm-menu-link-has-icon::before {
         content: "";
         display: inline-block;
-        width: 18px;
-        height: 18px;
-        margin-right: 6px;
+        width: var(--wgsm-menu-icon-size);
+        height: var(--wgsm-menu-icon-size);
+        margin-right: 4px;
         flex-shrink: 0;
         background-color: currentColor;
-        -webkit-mask: center / contain no-repeat;
-        mask: center / contain no-repeat;
-        transition: background-color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        -webkit-mask-size: contain;
+        mask-repeat: no-repeat;
+        mask-position: center;
+        mask-size: contain;
+        transition: background-color 0.25s ease;
     }
     a.webgsm-menu-link-has-icon:has(.led-icon)::before {
         display: none !important;
@@ -82,23 +88,28 @@
     .site-header .col-header-menu .primary-nav.nav a.webgsm-menu-link-has-icon::before,
     .site-header.header-department-top .main-menu .primary-nav.nav a.webgsm-menu-link-has-icon::before {
         background-color: #ffffff;
-        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
     }
 
-    /* ========== LED Glow – line-art SVG / FA (currentColor pe .led-icon) ========== */
+    /* ========== LED Glow – line-art SVG (glow pe svg, nu pe cutia pătrată) ========== */
     .led-icon {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         flex-shrink: 0 !important;
+        width: var(--wgsm-menu-icon-size) !important;
+        height: var(--wgsm-menu-icon-size) !important;
         line-height: 1 !important;
-        transition: color 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        filter: drop-shadow(0 0 0 transparent) !important;
+        filter: none !important;
+        transform: none !important;
+        transition: color 0.25s ease !important;
     }
     .led-icon svg {
         display: block !important;
-        width: 18px !important;
-        height: 18px !important;
+        width: var(--wgsm-menu-icon-size) !important;
+        height: var(--wgsm-menu-icon-size) !important;
+        overflow: visible !important;
+        transition: color 0.25s ease, filter 0.25s ease, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)) !important;
     }
     .vertical-menu .led-icon,
     .main-navigation .led-icon,
@@ -117,87 +128,85 @@
     .site-header .col-header-menu .primary-nav.nav .led-icon,
     .site-header.header-department-top .main-menu .primary-nav.nav .led-icon {
         color: #ffffff !important;
-        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)) !important;
+    }
+    .site-header .col-header-menu .primary-nav.nav .led-icon svg,
+    .site-header.header-department-top .main-menu .primary-nav.nav .led-icon svg {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
     }
 
-    /* ========== LED Glow – Hover: iconița rămâne vizibilă, glow foarte subtil ========== */
-    .vertical-menu li:hover .led-icon,
-    .main-navigation li:hover .led-icon,
-    .site-header .primary-nav.nav > ul.menu > li:hover .led-icon,
-    .site-header .primary-nav.nav > ul.menu > li.active .led-icon {
-        filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)) !important;
-        transform: scale(1.1) !important;
+    /* Hover generic pe svg (nu pe span — evită glow pătrat) */
+    .vertical-menu li:hover .led-icon svg,
+    .main-navigation li:hover .led-icon svg,
+    .site-header .primary-nav.nav > ul.menu > li:hover .led-icon svg,
+    .site-header .primary-nav.nav > ul.menu > li.active .led-icon svg {
+        transform: scale(1.06) !important;
     }
-    /* Culori LED per categorie – doar culoare icon + glow minim (lineart vizibil); include .col-header-menu pentru banda albastră */
+    /* Culori LED — culoare pe .led-icon / ::before; glow doar pe svg (contur vizibil) */
+    .site-header .webgsm-nav-piese:hover .led-icon,
+    .site-header .webgsm-nav-piese.active .led-icon,
     .vertical-menu li:hover .led-icon.led-cyan,
-    .main-navigation li:hover .led-icon.led-cyan,
-    .site-header .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-piese.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-piese.active .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-piese:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .primary-nav.nav .webgsm-nav-piese.active > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-piese.active > a.webgsm-menu-link-has-icon::before { color: #00e5ff !important; background-color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; transform: scale(1.1); }
+    .main-navigation li:hover .led-icon.led-cyan { color: #00e5ff !important; }
+    .site-header .webgsm-nav-piese:hover .led-icon svg,
+    .site-header .webgsm-nav-piese.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-cyan svg,
+    .main-navigation li:hover .led-icon.led-cyan svg { filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 6px rgba(0, 229, 255, 0.45)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-piese:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-piese.active > a.webgsm-menu-link-has-icon::before { background-color: #00e5ff !important; filter: none !important; transform: none !important; }
+
+    .site-header .webgsm-nav-unelte:hover .led-icon,
+    .site-header .webgsm-nav-unelte.active .led-icon,
     .vertical-menu li:hover .led-icon.led-orange,
-    .main-navigation li:hover .led-icon.led-orange,
-    .site-header .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-unelte.active .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-unelte:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .primary-nav.nav .webgsm-nav-unelte.active > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-unelte.active > a.webgsm-menu-link-has-icon::before { color: #ff9100 !important; background-color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; transform: scale(1.1); }
+    .main-navigation li:hover .led-icon.led-orange { color: #ff9100 !important; }
+    .site-header .webgsm-nav-unelte:hover .led-icon svg,
+    .site-header .webgsm-nav-unelte.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-orange svg,
+    .main-navigation li:hover .led-icon.led-orange svg { filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 6px rgba(255, 145, 0, 0.45)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-unelte:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-unelte.active > a.webgsm-menu-link-has-icon::before { background-color: #ff9100 !important; filter: none !important; transform: none !important; }
+
+    .site-header .webgsm-nav-accesorii:hover .led-icon,
+    .site-header .webgsm-nav-accesorii.active .led-icon,
     .vertical-menu li:hover .led-icon.led-magenta,
-    .main-navigation li:hover .led-icon.led-magenta,
-    .site-header .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-accesorii.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-accesorii.active > a.webgsm-menu-link-has-icon::before { color: #ff38f0 !important; background-color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; transform: scale(1.1); }
+    .main-navigation li:hover .led-icon.led-magenta { color: #ff38f0 !important; }
+    .site-header .webgsm-nav-accesorii:hover .led-icon svg,
+    .site-header .webgsm-nav-accesorii.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-magenta svg,
+    .main-navigation li:hover .led-icon.led-magenta svg { filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 6px rgba(255, 56, 240, 0.4)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-accesorii:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-accesorii.active > a.webgsm-menu-link-has-icon::before { background-color: #ff38f0 !important; filter: none !important; transform: none !important; }
+
+    .site-header .webgsm-nav-dispozitive:hover .led-icon,
+    .site-header .webgsm-nav-dispozitive.active .led-icon,
     .vertical-menu li:hover .led-icon.led-blue,
-    .main-navigation li:hover .led-icon.led-blue,
-    .site-header .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-dispozitive.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-dispozitive.active > a.webgsm-menu-link-has-icon::before { color: #7dd3fc !important; background-color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; transform: scale(1.1); }
+    .main-navigation li:hover .led-icon.led-blue { color: #7dd3fc !important; }
+    .site-header .webgsm-nav-dispozitive:hover .led-icon svg,
+    .site-header .webgsm-nav-dispozitive.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-blue svg,
+    .main-navigation li:hover .led-icon.led-blue svg { filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 6px rgba(103, 232, 249, 0.45)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-dispozitive:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-dispozitive.active > a.webgsm-menu-link-has-icon::before { background-color: #7dd3fc !important; filter: none !important; transform: none !important; }
+
+    .site-header .webgsm-nav-supraveghere:hover .led-icon,
+    .site-header .webgsm-nav-supraveghere.active .led-icon,
     .vertical-menu li:hover .led-icon.led-gold,
-    .main-navigation li:hover .led-icon.led-gold,
-    .site-header .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-supraveghere.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-supraveghere.active > a.webgsm-menu-link-has-icon::before { color: #ffd600 !important; background-color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; transform: scale(1.1); }
+    .main-navigation li:hover .led-icon.led-gold { color: #ffd600 !important; }
+    .site-header .webgsm-nav-supraveghere:hover .led-icon svg,
+    .site-header .webgsm-nav-supraveghere.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-gold svg,
+    .main-navigation li:hover .led-icon.led-gold svg { filter: drop-shadow(0 0 3px rgba(255, 214, 0, 0.95)) drop-shadow(0 0 8px rgba(255, 193, 7, 0.5)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-supraveghere:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-supraveghere.active > a.webgsm-menu-link-has-icon::before { background-color: #ffd600 !important; filter: none !important; transform: none !important; }
+
+    .site-header .webgsm-nav-servicii:hover .led-icon,
+    .site-header .webgsm-nav-servicii.active .led-icon,
     .vertical-menu li:hover .led-icon.led-green,
-    .main-navigation li:hover .led-icon.led-green,
-    .site-header .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
-    .site-header .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii:hover .led-icon,
-    .site-header.header-department-top .main-menu .primary-nav.nav .webgsm-nav-servicii.active .led-icon,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii:hover > a.webgsm-menu-link-has-icon::before,
-    .site-header .col-header-menu .primary-nav.nav .webgsm-nav-servicii.active > a.webgsm-menu-link-has-icon::before { color: #4ade80 !important; background-color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; transform: scale(1.1); }
-    /* Fallback când .led-icon nu are clasă de culoare */
-    .vertical-menu li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
-    .main-navigation li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
-    .site-header .col-header-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green),
-    .site-header.header-department-top .main-menu .primary-nav.nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .main-navigation li:hover .led-icon.led-green { color: #4ade80 !important; }
+    .site-header .webgsm-nav-servicii:hover .led-icon svg,
+    .site-header .webgsm-nav-servicii.active .led-icon svg,
+    .vertical-menu li:hover .led-icon.led-green svg,
+    .main-navigation li:hover .led-icon.led-green svg { filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 6px rgba(52, 211, 153, 0.45)) !important; transform: scale(1.06) !important; }
+    .site-header .webgsm-nav-servicii:hover > a.webgsm-menu-link-has-icon::before,
+    .site-header .webgsm-nav-servicii.active > a.webgsm-menu-link-has-icon::before { background-color: #4ade80 !important; filter: none !important; transform: none !important; }
 
     /* Text meniu – font-weight mai mare la hover (aspect premium) */
     .vertical-menu li:hover > a,
@@ -212,9 +221,9 @@
     .site-header .col-header-menu .primary-nav.nav > ul.menu > li:hover > a,
     .site-header .col-header-menu .primary-nav.nav > ul.menu > li.active > a {
         color: #ffffff !important;
-        background: rgba(255, 255, 255, 0.28) !important;
+        background: rgba(0, 0, 0, 0.14) !important;
         box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.55),
+            0 0 0 1px rgba(255, 255, 255, 0.35),
             0 1px 3px rgba(0, 0, 0, 0.2) !important;
         text-shadow:
             0 1px 2px rgba(0, 0, 0, 0.5),
@@ -259,30 +268,34 @@
         margin-right: 0 !important;
     }
     .primary-mobile-nav ul.menu > li > a .led-icon { margin-right: 0; }
-    .primary-mobile-nav li:hover .led-icon,
-    .primary-mobile-nav li.active .led-icon {
-        filter: drop-shadow(0 0 2px currentColor) !important;
-        transform: scale(1.1) !important;
+    .primary-mobile-nav .led-icon svg {
+        width: var(--wgsm-menu-icon-size) !important;
+        height: var(--wgsm-menu-icon-size) !important;
     }
-    .primary-mobile-nav li:hover .led-icon.led-cyan,
     .primary-mobile-nav .webgsm-nav-piese:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-piese.active .led-icon { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon.led-orange,
+    .primary-mobile-nav .webgsm-nav-piese.active .led-icon { color: #00e5ff !important; }
+    .primary-mobile-nav .webgsm-nav-piese:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-piese.active .led-icon svg { filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.9)) drop-shadow(0 0 6px rgba(0, 229, 255, 0.45)) !important; }
     .primary-mobile-nav .webgsm-nav-unelte:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon { color: #ff9100 !important; filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 145, 0, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon.led-magenta,
+    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon { color: #ff9100 !important; }
+    .primary-mobile-nav .webgsm-nav-unelte:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-unelte.active .led-icon svg { filter: drop-shadow(0 0 2px rgba(255, 171, 0, 0.9)) drop-shadow(0 0 6px rgba(255, 145, 0, 0.45)) !important; }
     .primary-mobile-nav .webgsm-nav-accesorii:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon { color: #ff38f0 !important; filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.95)) drop-shadow(0 0 10px rgba(255, 56, 240, 0.5)) !important; }
-    .primary-mobile-nav li:hover .led-icon.led-blue,
+    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon { color: #ff38f0 !important; }
+    .primary-mobile-nav .webgsm-nav-accesorii:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-accesorii.active .led-icon svg { filter: drop-shadow(0 0 2px rgba(255, 80, 240, 0.9)) !important; }
     .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon { color: #7dd3fc !important; filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 10px rgba(103, 232, 249, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon.led-gold,
+    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon { color: #7dd3fc !important; }
+    .primary-mobile-nav .webgsm-nav-dispozitive:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-dispozitive.active .led-icon svg { filter: drop-shadow(0 0 2px rgba(125, 211, 252, 0.9)) !important; }
     .primary-mobile-nav .webgsm-nav-supraveghere:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon { color: #ffd600 !important; filter: drop-shadow(0 0 3px rgba(255, 214, 0, 1)) drop-shadow(0 0 12px rgba(255, 193, 7, 0.85)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.45)) !important; }
-    .primary-mobile-nav li:hover .led-icon.led-green,
+    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon { color: #ffd600 !important; }
+    .primary-mobile-nav .webgsm-nav-supraveghere:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-supraveghere.active .led-icon svg { filter: drop-shadow(0 0 3px rgba(255, 214, 0, 0.95)) !important; }
     .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon,
-    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon { color: #4ade80 !important; filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.95)) drop-shadow(0 0 10px rgba(52, 211, 153, 0.55)) !important; }
-    .primary-mobile-nav li:hover .led-icon:not(.led-cyan):not(.led-orange):not(.led-magenta):not(.led-blue):not(.led-gold):not(.led-green) { color: #00e5ff !important; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 10px rgba(0, 229, 255, 0.55)) !important; }
+    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon { color: #4ade80 !important; }
+    .primary-mobile-nav .webgsm-nav-servicii:hover .led-icon svg,
+    .primary-mobile-nav .webgsm-nav-servicii.active .led-icon svg { filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.9)) !important; }
     .primary-mobile-nav li:hover > a,
     .primary-mobile-nav li.active > a {
         font-weight: 700 !important;
@@ -314,8 +327,8 @@
     @media (max-width: 991px) {
         .site-header.header-department-top .main-menu .primary-nav.nav > ul.menu > li > a,
         .site-header .col-header-menu .primary-nav.nav > ul.menu > li > a {
-            padding: 7px 11px !important;
-            font-size: 14px !important;
+            padding: 8px 12px !important;
+            font-size: 15px !important;
             touch-action: manipulation !important;
             -webkit-tap-highlight-color: rgba(0, 164, 235, 0.12) !important;
         }
