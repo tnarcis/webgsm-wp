@@ -171,6 +171,21 @@ function webgsm_child_request_is_account_context() {
     return false;
 }
 
+/** POST register (formular Woo) — trebuie încărcat înainte de wp_loaded (WC process_registration). */
+function webgsm_child_is_registration_post_request() {
+    if (empty($_POST['register'])) {
+        return false;
+    }
+    return isset($_POST['email']) || isset($_POST['woocommerce-register-nonce']);
+}
+
+function webgsm_child_should_load_registration_modules() {
+    if (webgsm_child_is_registration_post_request()) {
+        return true;
+    }
+    return webgsm_child_request_is_account_context();
+}
+
 function webgsm_child_load_account_registration_modules() {
     static $done = false;
     if ($done) {
@@ -193,14 +208,21 @@ function webgsm_child_load_myaccount_presentation_modules() {
     webgsm_child_require_include('webgsm-myaccount-modals.php');
 }
 
+/**
+ * Înregistrarea e în child (registration-enhanced.php), nu într-un plugin WebGSM.
+ * B2B doar reacționează la woocommerce_created_customer.
+ * Încărcare la init — înainte de WC::process_registration (wp_loaded:20).
+ */
 add_action(
-    'after_setup_theme',
+    'init',
     static function () {
-        if (webgsm_child_request_is_account_context()) {
-            webgsm_child_load_account_registration_modules();
+        if (!webgsm_child_should_load_registration_modules()) {
+            return;
         }
+        webgsm_child_require_include('login-register-ux.php');
+        webgsm_child_load_account_registration_modules();
     },
-    5
+    1
 );
 
 add_action(
@@ -208,10 +230,6 @@ add_action(
     static function () {
         if (function_exists('is_account_page') && is_account_page()) {
             webgsm_child_load_myaccount_presentation_modules();
-            return;
-        }
-        if (webgsm_child_request_is_account_context()) {
-            webgsm_child_load_account_registration_modules();
         }
     },
     0

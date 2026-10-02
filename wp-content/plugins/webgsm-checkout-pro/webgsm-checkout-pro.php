@@ -52,10 +52,31 @@ class WebGSM_Checkout_Pro {
             });
             return;
         }
+        // Endpoint My Account — mereu (nu depinde de should_load); altfel /adrese-salvate → 404 pe live.
+        add_action('init', [$this, 'register_myaccount_endpoints'], 4);
+        add_action('init', [$this, 'maybe_flush_myaccount_rewrites'], 99);
+        add_filter('woocommerce_account_menu_items', [$this, 'add_addresses_menu']);
+        add_action('woocommerce_account_adrese-salvate_endpoint', [$this, 'addresses_page_content']);
+
         // AJAX: init e suficient. Front: is_checkout() etc. funcționează după `wp`. Admin: după admin_init + screen.
         add_action('init', [$this, 'maybe_bootstrap'], 1);
         add_action('wp', [$this, 'maybe_bootstrap'], 1);
         add_action('admin_init', [$this, 'maybe_bootstrap'], 1);
+    }
+
+    /** @return void */
+    public function register_myaccount_endpoints() {
+        add_rewrite_endpoint('adrese-salvate', EP_ROOT | EP_PAGES);
+    }
+
+    /** Flush permalinks o dată la deploy (endpoint adrese-salvate). */
+    public function maybe_flush_myaccount_rewrites() {
+        $key = 'webgsm_checkout_endpoints_ver';
+        $ver = '2';
+        if (get_option($key) !== $ver) {
+            flush_rewrite_rules(false);
+            update_option($key, $ver, false);
+        }
     }
 
     /**
@@ -194,9 +215,6 @@ class WebGSM_Checkout_Pro {
         add_action('wp_ajax_webgsm_apply_coupon', [$this, 'ajax_apply_coupon']);
         add_action('wp_ajax_nopriv_webgsm_apply_coupon', [$this, 'ajax_apply_coupon']);
         
-        add_filter('woocommerce_account_menu_items', [$this, 'add_addresses_menu']);
-        add_action('woocommerce_account_adrese-salvate_endpoint', [$this, 'addresses_page_content']);
-        add_action('init', [$this, 'add_endpoints']);
         add_action('wp_head', [$this, 'cart_page_css']);
         add_action('woocommerce_thankyou', [$this, 'custom_thankyou_content'], 999);
         add_filter('woocommerce_get_order_item_totals', [$this, 'filter_order_item_totals_ro'], 10, 3);
@@ -305,10 +323,6 @@ class WebGSM_Checkout_Pro {
         echo '<div class="webgsm-native-shipping-sr" aria-hidden="true">';
         wc_get_template('checkout/review-order.php');
         echo '</div>';
-    }
-    
-    public function add_endpoints() {
-        add_rewrite_endpoint('adrese-salvate', EP_ROOT | EP_PAGES);
     }
     
     public function add_addresses_menu($items) {
