@@ -465,6 +465,10 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
     /** Tipuri piesă din WooCommerce (nivel 3: ecrane, mufe-incarcare etc. – prefix din ecrane-iphone, mufe-incarcare-iphone). */
     public static function get_tip_slugs_from_wc() {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
         $parent = get_term_by('slug', 'piese', 'product_cat');
         if (!$parent || is_wp_error($parent)) {
             return array_values(self::$tip_config);
@@ -494,7 +498,8 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
             }
         }
         $tip_slugs = array_values(array_unique($tip_slugs));
-        return $tip_slugs ?: array_values(self::$tip_config);
+        $cached = $tip_slugs ?: array_values(self::$tip_config);
+        return $cached;
     }
 
     /** Curăță lista de slug-uri din query string. */
@@ -934,6 +939,7 @@ class WebGSM_Widget_Piese_Filter extends WP_Widget {
 
         $all_under_piese = get_terms([
             'taxonomy' => 'product_cat',
+            'child_of' => (int) $piese->term_id,
             'hide_empty' => false,
         ]);
         if (is_wp_error($all_under_piese) || empty($all_under_piese)) {
@@ -2012,10 +2018,9 @@ class WebGSM_Setup_Wizard_V2 {
         return $result;
     }
 
-    /** Debug runtime în consola browserului: adaugă ?webgsm_debug_filters=1 la URL. */
+    /** Debug runtime în consola browserului: doar cu ?webgsm_debug_filters=1 (fără HTML comment — evită timeout esc_html pe payload mare). */
     public function render_filters_debug_console() {
-        $has_filter_params = isset($_GET['filter_piese_subcat']) || isset($_GET['filter_piese_tip']) || isset($_GET['filter_unelte']) || isset($_GET['filter_accesorii']) || isset($_GET['filter_dispozitive']) || isset($_GET['filter_supraveghere']) || isset($_GET['filter_servicii']);
-        if (!isset($_GET['webgsm_debug_filters']) && !$has_filter_params) {
+        if (!isset($_GET['webgsm_debug_filters']) || sanitize_text_field(wp_unslash($_GET['webgsm_debug_filters'])) !== '1') {
             return;
         }
         if (!function_exists('is_shop') || (!is_shop() && !is_product_category() && !is_product_taxonomy())) {
@@ -2040,7 +2045,6 @@ class WebGSM_Setup_Wizard_V2 {
             } catch (e) {}
         })();
         </script>
-        <!-- WebGSM Filter Debug: <?php echo esc_html(wp_json_encode($payload)); ?> -->
         <?php
     }
 
