@@ -14,8 +14,17 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_style('martfury-parent', get_template_directory_uri() . '/style.css');
 });
 
-// PRIORITATE: Încarcă header-account-menu.php ÎNAINTE de tema părinte
-require_once get_stylesheet_directory() . '/includes/header-account-menu.php';
+// Header account menu — nu pe archive catalog (comportament ca tema părinte, fără override în loop).
+add_action(
+    'after_setup_theme',
+    static function () {
+        if (webgsm_child_should_skip_heavy_child_on_catalog()) {
+            return;
+        }
+        require_once get_stylesheet_directory() . '/includes/header-account-menu.php';
+    },
+    4
+);
 
 // Evită "Undefined array key taxonomy-product_brand" în WC Admin Brands (coloana există doar dacă taxonomia e înregistrată)
 add_filter('manage_product_posts_columns', function($columns) {
@@ -73,20 +82,24 @@ add_action('wp_footer', function() {
 }, 999);
 
 /**
- * Modul catalog ratings — doar shop/categorii (nu homepage: zeci de produse Elementor).
+ * Stele în loop catalog — oprit implicit (parent merge; activare: define WEBGSM_CHILD_CATALOG_RATINGS true).
  */
-add_action('wp', function () {
-    if (is_admin()) {
-        return;
-    }
-    if (!function_exists('is_shop')) {
-        return;
-    }
-    if (!is_shop() && !is_product_category() && !is_product_tag() && !is_product_taxonomy()) {
-        return;
-    }
-    require_once get_stylesheet_directory() . '/includes/webgsm-catalog-ratings.php';
-}, 1);
+add_action(
+    'wp',
+    static function () {
+        if (!defined('WEBGSM_CHILD_CATALOG_RATINGS') || !WEBGSM_CHILD_CATALOG_RATINGS) {
+            return;
+        }
+        if (is_admin() || !function_exists('is_shop')) {
+            return;
+        }
+        if (!is_shop() && !is_product_category() && !is_product_tag() && !is_product_taxonomy()) {
+            return;
+        }
+        require_once get_stylesheet_directory() . '/includes/webgsm-catalog-ratings.php';
+    },
+    1
+);
 
 /**
  * Repair Reel — ~65KB PHP; încarcă doar pe rutele /r/ și /estimeaza-reparatia/ (+ flush rewrite).
@@ -148,30 +161,123 @@ add_filter('nonce_life', function($seconds) {
 });
 
 // ============================================
-// ÎNCARCĂ NORMAL - Fișiere cu hook-uri globale sau multiple contexte
-// ============================================
-require_once get_stylesheet_directory() . '/includes/webgsm-order-fiscal.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-anaf.php';
-require_once get_stylesheet_directory() . '/includes/retururi.php';
-require_once get_stylesheet_directory() . '/includes/garantie.php';
-require_once get_stylesheet_directory() . '/includes/awb-tracking.php';
-require_once get_stylesheet_directory() . '/includes/facturi.php';
-require_once get_stylesheet_directory() . '/includes/notificari.php';
-require_once get_stylesheet_directory() . '/includes/n8n-webhooks.php';
-require_once get_stylesheet_directory() . '/includes/facturare-pj.php';
-require_once get_stylesheet_directory() . '/includes/login-register-ux.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-design-system.php';
-require_once get_stylesheet_directory() . '/includes/fix-catalog-duplicate-add-to-cart.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-header-primary-menu.php';
-require_once get_stylesheet_directory() . '/includes/setup-categories.php';
-require_once get_stylesheet_directory() . '/includes/setup-attributes.php';
-require_once get_stylesheet_directory() . '/includes/setup-acf-fields.php';
-require_once get_stylesheet_directory() . '/includes/product-specs-tab.php';
-require_once get_stylesheet_directory() . '/includes/product-inventory-gestiune.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-stock-display.php';
-require_once get_stylesheet_directory() . '/includes/checkout-persist-selections.php';
-require_once get_stylesheet_directory() . '/includes/webgsm-montaj.php';
+// Încărcare module child — pe catalog nu tragem comenzi/facturi/checkout (memorie + timeout).
 // repair-reel.php — lazy load (after_setup_theme) doar pe /r/ și /estimeaza-reparatia/
+// ============================================
+function webgsm_child_require_include($basename) {
+    $path = get_stylesheet_directory() . '/includes/' . $basename;
+    if (is_readable($path)) {
+        require_once $path;
+    }
+}
+
+function webgsm_child_is_likely_catalog_request() {
+    if (is_admin() && !(defined('DOING_AJAX') && DOING_AJAX)) {
+        return false;
+    }
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+    if ($uri === '') {
+        return false;
+    }
+    if (strpos($uri, '/categorie-produs/') !== false) {
+        return true;
+    }
+    return (bool) preg_match('#/(shop|magazin)(/|\?|$)#', $uri);
+}
+
+/** Archive shop/categorii: child minimal ≈ parent + CSS brand. */
+function webgsm_child_is_catalog_archive() {
+    if (!function_exists('is_shop')) {
+        return false;
+    }
+    return is_shop() || is_product_category() || is_product_tag() || is_product_taxonomy();
+}
+
+function webgsm_child_should_skip_heavy_child_on_catalog() {
+    if (defined('WEBGSM_CHILD_FULL_CATALOG') && WEBGSM_CHILD_FULL_CATALOG) {
+        return false;
+    }
+    if (webgsm_child_is_catalog_archive()) {
+        return true;
+    }
+    return webgsm_child_is_likely_catalog_request();
+}
+
+function webgsm_child_load_shared_modules($context = 'full') {
+    static $loaded = array();
+    if (isset($loaded[$context])) {
+        return;
+    }
+    $loaded[$context] = true;
+
+    if ($context === 'catalog') {
+        webgsm_child_require_include('webgsm-design-system.php');
+        webgsm_child_require_include('webgsm-header-primary-menu.php');
+        return;
+    }
+
+    webgsm_child_require_include('login-register-ux.php');
+    webgsm_child_require_include('webgsm-design-system.php');
+    webgsm_child_require_include('webgsm-header-primary-menu.php');
+    webgsm_child_require_include('setup-categories.php');
+    webgsm_child_require_include('setup-attributes.php');
+    webgsm_child_require_include('setup-acf-fields.php');
+    webgsm_child_require_include('product-inventory-gestiune.php');
+}
+
+function webgsm_child_load_catalog_modules() {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    webgsm_child_load_shared_modules('catalog');
+    if (defined('WEBGSM_CHILD_FIX_CATALOG_LOOP') && WEBGSM_CHILD_FIX_CATALOG_LOOP) {
+        webgsm_child_require_include('fix-catalog-duplicate-add-to-cart.php');
+    }
+}
+
+function webgsm_child_load_full_modules() {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    webgsm_child_load_catalog_modules();
+    webgsm_child_require_include('webgsm-order-fiscal.php');
+    webgsm_child_require_include('webgsm-anaf.php');
+    webgsm_child_require_include('retururi.php');
+    webgsm_child_require_include('garantie.php');
+    webgsm_child_require_include('awb-tracking.php');
+    webgsm_child_require_include('facturi.php');
+    webgsm_child_require_include('notificari.php');
+    webgsm_child_require_include('n8n-webhooks.php');
+    webgsm_child_require_include('facturare-pj.php');
+    webgsm_child_require_include('product-specs-tab.php');
+    webgsm_child_require_include('webgsm-stock-display.php');
+    webgsm_child_require_include('checkout-persist-selections.php');
+    webgsm_child_require_include('webgsm-montaj.php');
+}
+
+if (webgsm_child_is_likely_catalog_request()) {
+    webgsm_child_load_catalog_modules();
+    add_action(
+        'wp',
+        static function () {
+            if (!function_exists('is_shop')) {
+                webgsm_child_load_full_modules();
+                return;
+            }
+            if (is_shop() || is_product_category() || is_product_tag() || is_product_taxonomy()) {
+                return;
+            }
+            webgsm_child_load_full_modules();
+        },
+        0
+    );
+} else {
+    webgsm_child_load_full_modules();
+}
 
 // ============================================
 // WebGSM B2B Teaser - mesaj simplu, fără preț/discount (performanță)
