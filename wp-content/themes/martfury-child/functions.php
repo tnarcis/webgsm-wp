@@ -117,33 +117,105 @@ add_action('after_setup_theme', function () {
 }, 6);
 
 // ============================================
-// LAZY LOAD - My Account + înregistrare (nu pe catalog/shop)
+// LAZY LOAD - My Account + înregistrare (slug Woo poate fi /contul-meu/, nu doar my-account)
 // ============================================
-add_action('after_setup_theme', function () {
+function webgsm_child_request_is_account_context() {
     if (is_admin() && !(defined('DOING_AJAX') && DOING_AJAX)) {
-        return;
+        return false;
     }
-    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-    $account_ctx = (strpos($uri, 'my-account') !== false || strpos($uri, 'wp-login.php') !== false);
-    if (!$account_ctx && defined('DOING_AJAX') && DOING_AJAX) {
-        $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
-        $account_ctx = (strpos($action, 'webgsm_') === 0)
-            || in_array($action, array('resend_confirmation', 'admin_confirm_email'), true);
-    }
-    if (!$account_ctx) {
-        return;
-    }
-    require_once get_stylesheet_directory() . '/includes/webgsm-myaccount.php';
-    require_once get_stylesheet_directory() . '/includes/registration-enhanced.php';
-}, 5);
 
-add_action('wp', function() {
-    if (is_account_page()) {
-        require_once get_stylesheet_directory() . '/includes/my-account-styling.php';
-        require_once get_stylesheet_directory() . '/includes/webgsm-myaccount-headers.php';
-        require_once get_stylesheet_directory() . '/includes/webgsm-myaccount-modals.php';
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+    if ($uri === '') {
+        return false;
     }
-});
+
+    if (stripos($uri, 'wp-login.php') !== false || stripos($uri, 'my-account') !== false) {
+        return true;
+    }
+
+    $request_path = wp_parse_url($uri, PHP_URL_PATH);
+    if (!is_string($request_path) || $request_path === '') {
+        return false;
+    }
+    $request_path = untrailingslashit(strtolower($request_path)) ?: '/';
+
+    foreach (array('woocommerce_myaccount_page_id', 'woocommerce_checkout_page_id', 'woocommerce_cart_page_id') as $option) {
+        $page_id = (int) get_option($option);
+        if ($page_id <= 0) {
+            continue;
+        }
+        $permalink = get_permalink($page_id);
+        if (!$permalink) {
+            continue;
+        }
+        $page_path = wp_parse_url($permalink, PHP_URL_PATH);
+        if (!is_string($page_path)) {
+            continue;
+        }
+        $page_path = untrailingslashit(strtolower($page_path)) ?: '/';
+        if ($request_path === $page_path || strpos($request_path, $page_path . '/') === 0) {
+            return true;
+        }
+    }
+
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+        if (strpos($action, 'webgsm_') === 0) {
+            return true;
+        }
+        if (in_array($action, array('resend_confirmation', 'admin_confirm_email', 'woocommerce_register'), true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function webgsm_child_load_account_registration_modules() {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    webgsm_child_require_include('webgsm-myaccount.php');
+    webgsm_child_require_include('registration-enhanced.php');
+}
+
+function webgsm_child_load_myaccount_presentation_modules() {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    webgsm_child_load_account_registration_modules();
+    webgsm_child_require_include('my-account-styling.php');
+    webgsm_child_require_include('webgsm-myaccount-headers.php');
+    webgsm_child_require_include('webgsm-myaccount-modals.php');
+}
+
+add_action(
+    'after_setup_theme',
+    static function () {
+        if (webgsm_child_request_is_account_context()) {
+            webgsm_child_load_account_registration_modules();
+        }
+    },
+    5
+);
+
+add_action(
+    'wp',
+    static function () {
+        if (function_exists('is_account_page') && is_account_page()) {
+            webgsm_child_load_myaccount_presentation_modules();
+            return;
+        }
+        if (webgsm_child_request_is_account_context()) {
+            webgsm_child_load_account_registration_modules();
+        }
+    },
+    0
+);
 
 // ============================================
 // LAZY LOAD - Admin files (doar în admin)
@@ -211,6 +283,7 @@ function webgsm_child_load_shared_modules($context = 'full') {
     $loaded[$context] = true;
 
     if ($context === 'catalog') {
+        webgsm_child_require_include('login-register-ux.php');
         webgsm_child_require_include('webgsm-design-system.php');
         webgsm_child_require_include('webgsm-header-primary-menu.php');
         return;
