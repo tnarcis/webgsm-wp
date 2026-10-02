@@ -47,14 +47,16 @@ function webgsm_product_loop_footer_buttons_no_duplicate_cart() {
     // NU afișăm add_to_cart aici - e deja la prioritate 90 din product_loop_hover
     echo '<div class="action-button">';
 
-    if (shortcode_exists('wcboost_wishlist_button')) {
-        echo do_shortcode('[wcboost_wishlist_button]');
-    } elseif (shortcode_exists('yith_wcwl_add_to_wishlist')) {
-        echo do_shortcode('[yith_wcwl_add_to_wishlist]');
-    }
-
-    if (is_object($martfury_woocommerce) && method_exists($martfury_woocommerce, 'product_compare')) {
-        $martfury_woocommerce->product_compare();
+    // WCBoost wishlist/compare în loop = shortcode per produs → timeout pe live (helper.php, object cache).
+    if (defined('WEBGSM_ENABLE_CATALOG_WCBOOST') && WEBGSM_ENABLE_CATALOG_WCBOOST) {
+        if (shortcode_exists('wcboost_wishlist_button')) {
+            echo do_shortcode('[wcboost_wishlist_button]');
+        } elseif (shortcode_exists('yith_wcwl_add_to_wishlist')) {
+            echo do_shortcode('[yith_wcwl_add_to_wishlist]');
+        }
+        if (is_object($martfury_woocommerce) && method_exists($martfury_woocommerce, 'product_compare')) {
+            $martfury_woocommerce->product_compare();
+        }
     }
 
     echo '</div>';

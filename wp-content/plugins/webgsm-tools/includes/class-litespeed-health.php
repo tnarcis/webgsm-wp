@@ -172,12 +172,25 @@ class WebGSM_Tools_LiteSpeed_Health {
             return $issues;
         }
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        $env = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+        if (defined('WP_DEBUG') && WP_DEBUG && !in_array($env, ['local', 'development'], true)) {
             $issues[] = [
                 'level'   => 'warn',
                 'id'      => 'wp_debug',
                 'message' => 'WP_DEBUG este ON — pe producție încetinește și umple loguri.',
                 'fix'     => 'wp-config: WP_DEBUG false pe live.',
+            ];
+        }
+
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if (is_plugin_active('query-monitor/query-monitor.php') && !in_array($env, ['local', 'development'], true)) {
+            $issues[] = [
+                'level'   => 'error',
+                'id'      => 'query_monitor_live',
+                'message' => 'Query Monitor activ pe live — contribuie la timeout (ClassLoader, memorie).',
+                'fix'     => 'Plugins → dezactivează Query Monitor pe producție.',
             ];
         }
 
@@ -360,7 +373,7 @@ class WebGSM_Tools_LiteSpeed_Health {
 
         return [
             'ok'      => true,
-            'message' => 'Preset WebGSM aplicat (' . count($normalized) . ' setări). Cache golit. Purge la salvare produs activat.',
+            'message' => 'Preset WebGSM aplicat (' . count($for_api) . ' setări). Cache golit. Purge la salvare produs activat.',
         ];
     }
 
