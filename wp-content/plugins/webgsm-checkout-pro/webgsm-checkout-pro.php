@@ -52,8 +52,8 @@ class WebGSM_Checkout_Pro {
             });
             return;
         }
-        // Endpoint My Account — mereu (nu depinde de should_load); altfel /adrese-salvate → 404 pe live.
-        add_action('init', [$this, 'register_myaccount_endpoints'], 4);
+        // Endpoint My Account — mereu (nu depinde de should_load). Trebuie în query vars Woo, nu doar add_rewrite_endpoint.
+        add_filter('woocommerce_get_query_vars', [$this, 'register_adrese_salvate_query_var'], 0);
         add_action('init', [$this, 'maybe_flush_myaccount_rewrites'], 99);
         add_filter('woocommerce_account_menu_items', [$this, 'add_addresses_menu']);
         add_action('woocommerce_account_adrese-salvate_endpoint', [$this, 'addresses_page_content']);
@@ -64,15 +64,19 @@ class WebGSM_Checkout_Pro {
         add_action('admin_init', [$this, 'maybe_bootstrap'], 1);
     }
 
-    /** @return void */
-    public function register_myaccount_endpoints() {
-        add_rewrite_endpoint('adrese-salvate', EP_ROOT | EP_PAGES);
+    /**
+     * @param array<string, string> $vars
+     * @return array<string, string>
+     */
+    public function register_adrese_salvate_query_var($vars) {
+        $vars['adrese-salvate'] = 'adrese-salvate';
+        return $vars;
     }
 
     /** Flush permalinks o dată la deploy (endpoint adrese-salvate). */
     public function maybe_flush_myaccount_rewrites() {
         $key = 'webgsm_checkout_endpoints_ver';
-        $ver = '2';
+        $ver = '3';
         if (get_option($key) !== $ver) {
             flush_rewrite_rules(false);
             update_option($key, $ver, false);
