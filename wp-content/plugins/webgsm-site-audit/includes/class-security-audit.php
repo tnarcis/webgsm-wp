@@ -27,14 +27,32 @@ class WebGSM_Site_Audit_Security {
         ];
         foreach ($sensitive_files as $item) {
             if (file_exists($item[0]) && is_readable($item[0])) {
+                $repair = null;
+                if ($item[1] === 'readme.html' || $item[1] === 'license.txt') {
+                    $repair = 'security_wp_fingerprint';
+                } elseif ($item[1] === 'wp-content/debug.log') {
+                    $repair = 'security_debug_log';
+                }
                 $issues[] = [
                     'type' => 'exposed_file',
                     'severity' => 'high',
                     'title' => 'Fișier sensibil: ' . $item[1],
                     'path' => $item[1],
                     'fix' => $item[2],
+                    'repair' => $repair,
                 ];
             }
+        }
+
+        $env = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+        if (defined('WP_DEBUG') && WP_DEBUG && !in_array($env, ['local', 'development'], true)) {
+            $issues[] = [
+                'type' => 'wp_debug_live',
+                'severity' => 'high',
+                'title' => 'WP_DEBUG este ON pe producție',
+                'path' => 'wp-config.php',
+                'fix' => "În wp-config.php: define('WP_DEBUG', false); define('WP_DEBUG_LOG', false); define('WP_DEBUG_DISPLAY', false);",
+            ];
         }
 
         if (defined('WP_DEBUG') && WP_DEBUG && (!defined('WP_DEBUG_DISPLAY') || WP_DEBUG_DISPLAY)) {
@@ -130,6 +148,7 @@ class WebGSM_Site_Audit_Security {
                 'title' => 'Lipsă headere de securitate (X-Frame-Options, CSP)',
                 'path' => '.htaccess',
                 'fix' => 'Adaugă în .htaccess: Header set X-Frame-Options "SAMEORIGIN" și Header set X-Content-Type-Options "nosniff"',
+                'repair' => 'security_htaccess_hardening',
             ];
         }
 

@@ -33,6 +33,9 @@ class WebGSM_Packeta_Carrier_Tracking {
             '4329' => 'postnl',
             '8000' => 'dhl',
             '8001' => 'dhl',
+            '39103' => 'dhl',
+            '6373' => 'hermes',
+            '13613' => 'unknown',
         ];
 
         return $map[$carrier_id] ?? 'unknown';
@@ -45,6 +48,7 @@ class WebGSM_Packeta_Carrier_Tracking {
             'cargus' => 'Cargus',
             'postnl' => 'PostNL',
             'dhl' => 'DHL',
+            'hermes' => 'Hermes',
             'unknown' => 'Curier',
         ];
 

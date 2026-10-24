@@ -12,9 +12,9 @@ $webgsm_packeta_ro_price_line = static function (float $net_ex_vat) use ($webgsm
     $gross = WebGSM_Packeta_Ro_Pricelist::net_to_gross($net_ex_vat);
 
     return sprintf(
-        '%s RON fără TVA → %s RON cu TVA 21%%',
-        number_format($net_ex_vat, 2, ',', ''),
-        number_format($gross, 2, ',', '')
+        '%s RON cu TVA 21%% (listă: %s fără TVA)',
+        number_format($gross, 2, ',', ''),
+        number_format($net_ex_vat, 2, ',', '')
     );
 };
 
@@ -25,6 +25,8 @@ $ref_grids = [
     'fan_box',
     'nl_dutch_post',
     'nl_dhl_hd',
+    'de_home_hd',
+    'de_hermes_pp',
 ];
 $all_grids = WebGSM_Packeta_Ro_Pricelist::grids();
 $synced_at = get_option('webgsm_packeta_pricelist_synced_at', '');
@@ -32,9 +34,10 @@ $synced_at = get_option('webgsm_packeta_pricelist_synced_at', '');
 <div class="webgsm-packeta-card webgsm-packeta-pricing-ref" style="margin-top:16px;">
     <h2>Referință tarife contract (RO) — valabil din <?php echo esc_html(WebGSM_Packeta_Ro_Pricelist::EFFECTIVE_FROM); ?></h2>
     <p class="webgsm-packeta-help">
-        Sursă: lista de prețuri Packeta pentru <strong>webgsm</strong> (expediere din România) — valori <strong>fără TVA</strong>.
-        La sincronizare în magazin se salvează tot <strong>fără TVA</strong>.
-        Coloana „cu TVA 21%” e doar informativă.
+        Sursă: <a href="https://files.packeta.com/web/files/Packeta_Romania_price_list.pdf" target="_blank" rel="noopener noreferrer">lista Packeta România</a>
+        — prețurile din listă sunt <strong>fără TVA</strong> (confirmat și pe packeta.ro).
+        Mai jos vezi întâi <strong>cu TVA 21%</strong>, apoi valoarea din listă.
+        La sincronizare în magazin se salvează <strong>fără TVA</strong>.
         <strong>Prețurile la checkout</strong> se iau din setările carrier Packeta — le poți actualiza din
         <a href="<?php echo esc_url(admin_url('admin.php?page=webgsm-packeta&tab=settings')); ?>">Packeta → Setări → Actualizează prețuri curieri</a>.
         <?php if (is_string($synced_at) && $synced_at !== '') : ?>

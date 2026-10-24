@@ -128,14 +128,31 @@
         };
     }
 
+    function fillProvinceSelect(map, selected) {
+        var $sel = $('#province');
+        if (!$sel.length || !map) {
+            return;
+        }
+        var html = '';
+        Object.keys(map).forEach(function (code) {
+            html += '<option value="' + String(code).replace(/"/g, '&quot;') + '"'
+                + (String(code) === String(selected || '') ? ' selected' : '')
+                + '>' + String(map[code]) + '</option>';
+        });
+        $sel.html(html);
+    }
+
     function applyHomeDestinationUi() {
         var meta = getSelectedHomeCarrierMeta();
         var isNl = meta.country === 'NL';
+        var isDe = meta.country === 'DE';
         var $provinceWrap = $('#packeta_province_wrap');
         var $hint = $('#webgsm_packeta_home_carrier_hint');
         var $fieldsHelp = $('#webgsm_packeta_home_fields_help');
         var $zip = $('#zip');
         var $cod = $('#cod');
+        var prevProvince = ($('#province').val() || '').trim();
+        var cfg = window.webgsmPacketaAdmin || {};
 
         if (isNl) {
             $provinceWrap.hide();
@@ -153,11 +170,31 @@
             if ($fieldsHelp.length) {
                 $fieldsHelp.html('Destinație <strong>Olanda</strong>: stradă, număr, oraș, cod poștal <code>1234AB</code>, telefon <code>31XXXXXXXXX</code>, monedă tipic <code>EUR</code>. Fără județ RO. COD = 0.');
             }
+        } else if (isDe) {
+            $provinceWrap.show();
+            $('#province_label').text('Land (Bundesland) *');
+            fillProvinceSelect(cfg.deStates || {}, prevProvince);
+            $('#province').prop('required', true);
+            $zip.attr('maxlength', 5).attr('placeholder', '10115');
+            $('#zip_help').text('DE: 5 cifre (ex. 10115).');
+            $('#recipient_phone').attr('placeholder', '4915123456789');
+            $cod.val('0').prop('readonly', true);
+            if (($('#currency').val() || '').toUpperCase() === 'RON') {
+                $('#currency').val('EUR');
+            }
+            if ($hint.length) {
+                $hint.text(msg('deHomeHint'));
+            }
+            if ($fieldsHelp.length) {
+                $fieldsHelp.html('Destinație <strong>Germania</strong>: stradă, număr, oraș, zip <code>5 cifre</code>, land, telefon <code>49…</code>, monedă <code>EUR</code>. COD = 0. Preferat <strong>DE DHL HD (39103)</strong>.');
+            }
         } else {
             $provinceWrap.show();
+            $('#province_label').text('Județ (RO) *');
+            fillProvinceSelect(cfg.roCounties || {}, prevProvince);
             $('#province').prop('required', true);
             $zip.attr('maxlength', 6).attr('placeholder', '');
-            $('#zip_help').text('RO: 6 cifre. NL: 1234AB.');
+            $('#zip_help').text('RO: 6 cifre. NL: 1234AB. DE: 5 cifre.');
             $('#recipient_phone').attr('placeholder', '+40…');
             $cod.prop('readonly', false);
             if (($('#currency').val() || '').toUpperCase() === 'EUR') {
@@ -279,6 +316,33 @@
                 if (codVal > 0) {
                     e.preventDefault();
                     window.alert(msg('nlCodUnsupported'));
+                    return false;
+                }
+            }
+            if (meta.country === 'DE') {
+                var deZip = zip.replace(/\D/g, '');
+                if (!/^[0-9]{5}$/.test(deZip)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidDeZip'));
+                    return false;
+                }
+                var dePhone = String($('#recipient_phone').val() || '').replace(/\D/g, '');
+                if (dePhone.indexOf('0049') === 0) dePhone = dePhone.slice(2);
+                if (dePhone.charAt(0) === '0' && dePhone.indexOf('49') !== 0) dePhone = '49' + dePhone.slice(1);
+                if (!/^49[0-9]{7,13}$/.test(dePhone)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidDePhone'));
+                    return false;
+                }
+                if (meta.provinceRequired && !province) {
+                    e.preventDefault();
+                    window.alert(msg('missingDeProvince'));
+                    return false;
+                }
+                var deCod = parseFloat(String($('#cod').val() || '0').replace(',', '.'));
+                if (deCod > 0) {
+                    e.preventDefault();
+                    window.alert(msg('deCodUnsupported'));
                     return false;
                 }
             }

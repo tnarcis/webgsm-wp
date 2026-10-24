@@ -302,12 +302,26 @@ class WebGSM_Site_Audit_Performance {
             ];
         }
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        $env = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+        if (defined('WP_DEBUG') && WP_DEBUG && !in_array($env, ['local', 'development'], true)) {
             $issues[] = [
                 'type'     => 'wp_debug',
                 'severity' => 'high',
                 'title'    => 'WP_DEBUG este ON',
                 'fix'      => 'În wp-config.php pe live: define(\'WP_DEBUG\', false); — nu se poate opri din admin în siguranță.',
+            ];
+        }
+
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if (is_plugin_active('query-monitor/query-monitor.php') && !in_array($env, ['local', 'development'], true)) {
+            $issues[] = [
+                'type'     => 'query_monitor',
+                'severity' => 'high',
+                'title'    => 'Query Monitor activ pe live',
+                'fix'      => 'Dezactivează Query Monitor pe producție (reduce timeout și memorie).',
+                'repair'   => 'deactivate_query_monitor',
             ];
         }
 
@@ -370,6 +384,23 @@ class WebGSM_Site_Audit_Performance {
             wp_send_json_success([
                 'message' => $deleted ? 'Transientele expirate au fost șterse.' : 'Funcția delete_expired_transients nu e disponibilă.',
             ]);
+        }
+
+        if (class_exists('WebGSM_Site_Audit_Repair')) {
+            $security_actions = [
+                'security_wp_fingerprint',
+                'security_debug_log',
+                'security_htaccess_hardening',
+                'seo_enable_indexing',
+                'deactivate_query_monitor',
+            ];
+            if (in_array($action, $security_actions, true)) {
+                $result = WebGSM_Site_Audit_Repair::run($action);
+                if (empty($result['ok'])) {
+                    wp_send_json_error(['message' => $result['message'] ?? 'Reparare eșuată.']);
+                }
+                wp_send_json_success(['message' => $result['message']]);
+            }
         }
 
         wp_send_json_error(['message' => 'Acțiune de reparare necunoscută.']);

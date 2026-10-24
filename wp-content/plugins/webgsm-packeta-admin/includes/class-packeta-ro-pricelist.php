@@ -29,6 +29,11 @@ class WebGSM_Packeta_Ro_Pricelist {
             '4329' => 'nl_dutch_post',
             '8000' => 'nl_dhl_hd',
             '8001' => 'nl_dhl_pp',
+            // DE: în lista Packeta RO apar DE Home Delivery HD + DE Hermes PP (valori fără TVA).
+            '13613' => 'de_home_hd',
+            '39103' => 'de_home_hd',
+            '6373' => 'de_home_hd',
+            '6828' => 'de_hermes_pp',
         ];
     }
 
@@ -163,6 +168,26 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 10, 'net' => 60.00, 'label' => '5–10 kg'],
                 ],
                 'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată.',
+            ],
+            'de_home_hd' => [
+                'label' => 'Germania — DE Home Delivery HD',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 39.00, 'label' => '0–1 kg (max 60×30×15)'],
+                    ['max_kg' => 2, 'net' => 43.00, 'label' => '1–2 kg (max 60×30×15)'],
+                    ['max_kg' => 5, 'net' => 49.00, 'label' => '2–5 kg (max 60×30×15)'],
+                    ['max_kg' => 10, 'net' => 59.00, 'label' => '5–10 kg (max 70×60×50)'],
+                ],
+                'cod_note' => 'Listă Packeta RO (fără TVA, injectare depozit). Ramburs listă: 35 RON — la DHL HD API COD e de obicei indisponibil. Asigurare ≤ 700 EUR: 1%.',
+            ],
+            'de_hermes_pp' => [
+                'label' => 'Germania — DE Hermes PP',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 42.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 44.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 51.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 61.00, 'label' => '5–10 kg'],
+                ],
+                'cod_note' => 'Listă Packeta RO (fără TVA, injectare depozit). Ramburs: indisponibil. Insule DE: +35 RON.',
             ],
         ];
     }

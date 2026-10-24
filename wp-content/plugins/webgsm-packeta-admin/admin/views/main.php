@@ -34,6 +34,10 @@ $notices = [
     'nl_cod_unsupported' => ['class' => 'notice-error', 'text' => 'Olanda HD (PostNL/DHL) nu suportă ramburs (COD). Lasă COD = 0.'],
     'invalid_nl_phone' => ['class' => 'notice-error', 'text' => 'Telefon NL invalid. Format Packeta: 31 + 9 cifre (ex. 31612345678).'],
     'invalid_nl_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal NL invalid. Format: 1234AB (4 cifre + 2 litere).'],
+    'de_cod_unsupported' => ['class' => 'notice-error', 'text' => 'Germania HD (DHL/Hermes) nu suportă ramburs (COD). Lasă COD = 0.'],
+    'invalid_de_phone' => ['class' => 'notice-error', 'text' => 'Telefon DE invalid. Format Packeta: 49 + 7–13 cifre (ex. 4915123456789).'],
+    'invalid_de_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal DE invalid. Format: 5 cifre (ex. 10115).'],
+    'missing_de_province' => ['class' => 'notice-error', 'text' => 'Selectează landul (Bundesland) pentru Germania.'],
 ];
 
 ?>

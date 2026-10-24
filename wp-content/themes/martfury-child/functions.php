@@ -250,6 +250,18 @@ add_filter('nonce_life', function($seconds) {
     return $seconds;
 });
 
+// Securitate live (XML-RPC off, fără erori PHP pe frontend) — mereu activ.
+add_action(
+    'after_setup_theme',
+    static function () {
+        $path = get_stylesheet_directory() . '/includes/webgsm-live-hardening.php';
+        if (is_readable($path)) {
+            require_once $path;
+        }
+    },
+    1
+);
+
 // ============================================
 // Încărcare module child — pe catalog nu tragem comenzi/facturi/checkout (memorie + timeout).
 // repair-reel.php — lazy load (after_setup_theme) doar pe /r/ și /estimeaza-reparatia/

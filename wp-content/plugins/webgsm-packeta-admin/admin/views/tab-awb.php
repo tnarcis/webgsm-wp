@@ -133,7 +133,7 @@ $awb_is_home = $awb_flow_current === 'home';
 
 <div id="webgsm_packeta_home_carrier_section" class="webgsm-packeta-card webgsm-packeta-home-carrier-card"<?php echo ($has_pickup && !$awb_is_home) ? ' hidden' : ''; ?>>
     <h2>2. Curier — livrare la adresă</h2>
-    <p class="webgsm-packeta-help">Selectează transportatorul HD. Pentru <strong>Olanda</strong> apar PostNL (4329) și DHL HD (8000) — setate direct <code>addressId</code>.</p>
+    <p class="webgsm-packeta-help">Selectează transportatorul HD. <strong>Olanda:</strong> PostNL (4329), DHL HD (8000). <strong>Germania:</strong> Home Delivery HD (13613), DHL HD (39103), Hermes HD (6373) — setate ca <code>addressId</code>. Tarife listă: <strong>fără TVA</strong>; în UI vezi și cu TVA.</p>
     <?php if ($has_home) : ?>
         <div class="webgsm-packeta-field webgsm-packeta-home-carrier-select-wrap">
             <label for="webgsm_packeta_home_carrier_select"><?php echo esc_html__('Curier livrare la adresă', 'webgsm-packeta'); ?> *</label>
@@ -222,7 +222,7 @@ $awb_is_home = $awb_flow_current === 'home';
                 <input type="text" name="city" id="city" value="<?php echo esc_attr($awb_v('city')); ?>" autocomplete="address-level2" />
             </div>
             <div class="webgsm-packeta-field" id="packeta_province_wrap">
-                <label for="province">Județ (RO) *</label>
+                <label for="province" id="province_label">Județ / Land *</label>
                 <select name="province" id="province" autocomplete="address-level1">
                     <?php foreach ($ro_counties as $code => $label) : ?>
                         <option value="<?php echo esc_attr($code); ?>" <?php selected($awb_v('province'), (string) $code); ?>><?php echo esc_html($label); ?></option>
@@ -232,7 +232,7 @@ $awb_is_home = $awb_flow_current === 'home';
             <div class="webgsm-packeta-field">
                 <label for="zip" id="zip_label">Cod poștal *</label>
                 <input type="text" name="zip" id="zip" value="<?php echo esc_attr($awb_v('zip')); ?>" autocomplete="postal-code" maxlength="10" />
-                <p class="webgsm-packeta-help" id="zip_help">RO: 6 cifre. NL: 1234AB.</p>
+                <p class="webgsm-packeta-help" id="zip_help">RO: 6 cifre. NL: 1234AB. DE: 5 cifre.</p>
             </div>
         </div>
 
@@ -253,8 +253,8 @@ $awb_is_home = $awb_flow_current === 'home';
             </div>
             <div class="webgsm-packeta-field">
                 <label for="recipient_phone">Telefon *</label>
-                <input type="text" name="recipient_phone" id="recipient_phone" value="<?php echo esc_attr($awb_v('recipient_phone')); ?>" required placeholder="+40… / 31…" />
-                <p class="webgsm-packeta-help" id="recipient_phone_help">RO: mobil local. NL: 31 + 9 cifre (ex. 31612345678).</p>
+                <input type="text" name="recipient_phone" id="recipient_phone" value="<?php echo esc_attr($awb_v('recipient_phone')); ?>" required placeholder="+40… / 31… / 49…" />
+                <p class="webgsm-packeta-help" id="recipient_phone_help">RO: mobil local. NL: 31 + 9 cifre. DE: 49 + 7–13 cifre (ex. 4915123456789).</p>
             </div>
         </div>
 
@@ -280,7 +280,7 @@ $awb_is_home = $awb_flow_current === 'home';
             <div class="webgsm-packeta-field">
                 <label for="cod">Ramburs la livrare (COD)</label>
                 <input type="text" name="cod" id="cod" value="<?php echo esc_attr($awb_v('cod', '0')); ?>" inputmode="decimal" />
-                <p class="webgsm-packeta-help" id="cod_help"><strong>Fără ramburs:</strong> lasă 0. <strong>Olanda:</strong> COD indisponibil — lasă obligatoriu 0.</p>
+                <p class="webgsm-packeta-help" id="cod_help"><strong>Fără ramburs:</strong> lasă 0. <strong>NL / DE:</strong> COD indisponibil — obligatoriu 0.</p>
             </div>
         </div>
 

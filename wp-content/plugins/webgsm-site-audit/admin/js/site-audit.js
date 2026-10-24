@@ -253,15 +253,22 @@
         $el.html(html);
     }
 
-    function runRepair(repair, $status) {
+    function runRepair(repair, $status, rescanSelector) {
         if (!repair) return;
         if (repair === 'litespeed_preset' && !confirm('Aplici presetul LiteSpeed WebGSM și golești cache-ul?')) return;
+        if (repair === 'deactivate_query_monitor' && !confirm('Dezactivezi Query Monitor pe acest site?')) return;
+        if (repair === 'seo_enable_indexing' && !confirm('Activezi indexarea în motoarele de căutare (blog_public=1)?')) return;
+        if (repair === 'security_wp_fingerprint' && !confirm('Ștergi readme.html și license.txt din rădăcina site-ului?')) return;
+        if (repair === 'security_debug_log' && !confirm('Golești/ștergi wp-content/debug.log și adaugi blocare .htaccess dacă lipsește?')) return;
+        if (repair === 'security_htaccess_hardening' && !confirm('Adaugi reguli WebGSM în .htaccess (headere + debug.log)?')) return;
         setStatus(spinner() + ' Se repară…', false, $status);
         post('webgsm_audit_performance_repair', { repair: repair })
             .done(function(res) {
                 if (res.success) {
                     setStatus(res.data.message || 'Gata.', false, $status);
-                    $('#wsa-perf-scan').trigger('click');
+                    if (rescanSelector) {
+                        $(rescanSelector).trigger('click');
+                    }
                 } else {
                     setStatus(res.data && res.data.message ? res.data.message : 'Eroare', true, $status);
                 }
@@ -269,11 +276,17 @@
             .fail(function() { setStatus('Eroare de rețea.', true, $status); });
     }
 
-    $('#wsa-repair-litespeed').on('click', function() { runRepair('litespeed_preset', '#wsa-perf-status'); });
-    $('#wsa-repair-purge').on('click', function() { runRepair('litespeed_purge', '#wsa-perf-status'); });
-    $('#wsa-repair-transients').on('click', function() { runRepair('expired_transients', '#wsa-perf-status'); });
+    $('#wsa-repair-litespeed').on('click', function() { runRepair('litespeed_preset', '#wsa-perf-status', '#wsa-perf-scan'); });
+    $('#wsa-repair-purge').on('click', function() { runRepair('litespeed_purge', '#wsa-perf-status', '#wsa-perf-scan'); });
+    $('#wsa-repair-transients').on('click', function() { runRepair('expired_transients', '#wsa-perf-status', '#wsa-perf-scan'); });
     $('#wsa-perf-results').on('click', '.wsa-repair-btn', function() {
-        runRepair($(this).data('repair'), '#wsa-perf-status');
+        runRepair($(this).data('repair'), '#wsa-perf-status', '#wsa-perf-scan');
+    });
+    $('#wsa-security-results').on('click', '.wsa-repair-btn', function() {
+        runRepair($(this).data('repair'), '#wsa-security-status', '#wsa-security-scan');
+    });
+    $('#wsa-seo-results').on('click', '.wsa-repair-btn', function() {
+        runRepair($(this).data('repair'), '#wsa-seo-status', '#wsa-seo-scan');
     });
 
     // --- JURNAL LENT (webgsm-perf-audit.log) ---

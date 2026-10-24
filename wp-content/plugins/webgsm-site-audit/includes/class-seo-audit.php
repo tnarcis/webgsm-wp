@@ -125,7 +125,15 @@ class WebGSM_Site_Audit_SEO {
         }
 
         if (!get_option('blog_public')) {
-            $issues[] = ['type' => 'search_engines', 'severity' => 'high', 'title' => 'Motorii de căutare sunt blocați (noindex)', 'url' => admin_url('options-reading.php'), 'page' => 'Setări', 'fix' => 'Debifează „Descurajează motoarele de căutare" în Setări → Citire.'];
+            $issues[] = [
+                'type' => 'search_engines',
+                'severity' => 'high',
+                'title' => 'Motorii de căutare sunt blocați (noindex)',
+                'url' => admin_url('options-reading.php'),
+                'page' => 'Setări',
+                'fix' => 'Debifează „Descurajează motoarele de căutare" în Setări → Citire.',
+                'repair' => 'seo_enable_indexing',
+            ];
         }
 
         $home_id = get_option('page_on_front');

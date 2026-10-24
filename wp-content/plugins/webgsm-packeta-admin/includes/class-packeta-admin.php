@@ -122,8 +122,16 @@ class WebGSM_Packeta_Admin {
                 'invalidNlPhone' => 'Telefon NL invalid. Format: 31 + 9 cifre (ex. 31612345678).',
                 'invalidNlZip' => 'Cod poștal NL invalid. Format: 1234AB.',
                 'nlHomeHint' => 'Destinație Olanda: stradă, număr, oraș, cod poștal 1234AB, telefon 31XXXXXXXXX. Fără județ RO. COD indisponibil.',
+                'deCodUnsupported' => 'Germania HD (DHL/Hermes) nu suportă ramburs (COD). Lasă COD = 0.',
+                'invalidDePhone' => 'Telefon DE invalid. Format Packeta: 49 + 7–13 cifre (ex. 4915123456789).',
+                'invalidDeZip' => 'Cod poștal DE invalid. Format: 5 cifre (ex. 10115).',
+                'missingDeProvince' => 'Selectează landul (Bundesland) pentru Germania.',
+                'deHomeHint' => 'Destinație Germania: stradă, număr, oraș, zip 5 cifre, land, telefon 49…, monedă EUR. COD = 0. Recomandat DE DHL HD (39103).',
             ],
             'nlCarrierIds' => ['4329', '8000', '8001'],
+            'deCarrierIds' => ['39103', '6373', '13613'],
+            'roCounties' => WebGSM_Packeta_Config::get_ro_counties(),
+            'deStates' => WebGSM_Packeta_Config::get_de_states(),
         ]);
     }
 
@@ -705,6 +713,24 @@ class WebGSM_Packeta_Admin {
                 return null;
             }
 
+            if ($dest === 'DE') {
+                if (!WebGSM_Packeta_Carriers::carrier_allows_cod((string) $aid) && $cod > 0) {
+                    return 'de_cod_unsupported';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_de_zip($zip)) {
+                    return 'invalid_de_zip';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_de_phone($phone)) {
+                    return 'invalid_de_phone';
+                }
+                if (WebGSM_Packeta_Carriers::carrier_requires_province((string) $aid)
+                    && !WebGSM_Packeta_Config::is_valid_de_state_code($province_code)) {
+                    return 'missing_de_province';
+                }
+
+                return null;
+            }
+
             if (WebGSM_Packeta_Carriers::carrier_requires_province((string) $aid)
                 && !WebGSM_Packeta_Config::is_valid_ro_county_code($province_code)) {
                 return 'missing_home_province';
@@ -790,7 +816,11 @@ class WebGSM_Packeta_Admin {
         $dest_country = WebGSM_Packeta_Carriers::destination_country_for_carrier((string) ($attrs['addressId'] ?? 0));
         if ($dest_country === 'NL') {
             $attrs['phone'] = WebGSM_Packeta_Config::normalize_nl_phone((string) $attrs['phone']);
-            // Packeta NL: valoarea declarată e tipic în EUR (COD indisponibil).
+            if (($attrs['currency'] ?? '') === '' || ($attrs['currency'] ?? '') === 'RON') {
+                $attrs['currency'] = 'EUR';
+            }
+        } elseif ($dest_country === 'DE') {
+            $attrs['phone'] = WebGSM_Packeta_Config::normalize_de_phone((string) $attrs['phone']);
             if (($attrs['currency'] ?? '') === '' || ($attrs['currency'] ?? '') === 'RON') {
                 $attrs['currency'] = 'EUR';
             }
@@ -822,6 +852,8 @@ class WebGSM_Packeta_Admin {
 
             if ($dest_country === 'NL') {
                 $zip = WebGSM_Packeta_Config::normalize_nl_zip($zip);
+            } elseif ($dest_country === 'DE') {
+                $zip = WebGSM_Packeta_Config::normalize_de_zip($zip);
             }
 
             if ($street !== '') {
@@ -836,8 +868,14 @@ class WebGSM_Packeta_Admin {
             if ($zip !== '') {
                 $attrs['zip'] = $zip;
             }
-            if ($dest_country !== 'NL' && WebGSM_Packeta_Carriers::carrier_requires_province((string) ($attrs['addressId'] ?? 0))) {
-                $province = WebGSM_Packeta_Config::ro_province_for_api($province_code);
+            if (WebGSM_Packeta_Carriers::carrier_requires_province((string) ($attrs['addressId'] ?? 0))) {
+                if ($dest_country === 'DE') {
+                    $province = WebGSM_Packeta_Config::de_province_for_api($province_code);
+                } elseif ($dest_country !== 'NL') {
+                    $province = WebGSM_Packeta_Config::ro_province_for_api($province_code);
+                } else {
+                    $province = '';
+                }
                 if ($province !== '') {
                     $attrs['province'] = $province;
                 }

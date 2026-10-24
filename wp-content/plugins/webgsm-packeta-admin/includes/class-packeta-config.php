@@ -273,6 +273,84 @@ class WebGSM_Packeta_Config {
     }
 
     /**
+     * Bundesländer DE (ISO 3166-2:DE) — Packeta acceptă codul în province (ex. BE).
+     *
+     * @return array<string, string>
+     */
+    public static function get_de_states(): array {
+        return [
+            '' => '-- Selectează landul (Bundesland) --',
+            'BW' => 'Baden-Württemberg',
+            'BY' => 'Bayern',
+            'BE' => 'Berlin',
+            'BB' => 'Brandenburg',
+            'HB' => 'Bremen',
+            'HH' => 'Hamburg',
+            'HE' => 'Hessen',
+            'MV' => 'Mecklenburg-Vorpommern',
+            'NI' => 'Niedersachsen',
+            'NW' => 'Nordrhein-Westfalen',
+            'RP' => 'Rheinland-Pfalz',
+            'SL' => 'Saarland',
+            'SN' => 'Sachsen',
+            'ST' => 'Sachsen-Anhalt',
+            'SH' => 'Schleswig-Holstein',
+            'TH' => 'Thüringen',
+        ];
+    }
+
+    public static function is_valid_de_state_code(string $code): bool {
+        $code = strtoupper(trim($code));
+
+        return $code !== '' && isset(self::get_de_states()[$code]);
+    }
+
+    /** Packeta API: province pentru DE = cod land (ex. BE). */
+    public static function de_province_for_api(string $value): string {
+        $value = strtoupper(trim($value));
+        if ($value === '' || !isset(self::get_de_states()[$value]) || self::get_de_states()[$value] === '') {
+            return '';
+        }
+
+        return $value;
+    }
+
+    /**
+     * Telefon DE Packeta: 49 + 7–13 cifre.
+     */
+    public static function normalize_de_phone(string $phone): string {
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+        if (str_starts_with($digits, '0049')) {
+            $digits = substr($digits, 2);
+        }
+        if (str_starts_with($digits, '0') && !str_starts_with($digits, '49')) {
+            $digits = '49' . substr($digits, 1);
+        }
+
+        return $digits;
+    }
+
+    public static function is_valid_de_phone(string $phone): bool {
+        $normalized = self::normalize_de_phone($phone);
+
+        return (bool) preg_match('/^49[0-9]{7,13}$/', $normalized);
+    }
+
+    /** Cod poștal DE: 5 cifre. */
+    public static function normalize_de_zip(string $zip): string {
+        return preg_replace('/\D/', '', trim($zip)) ?? '';
+    }
+
+    public static function is_valid_de_zip(string $zip): bool {
+        $zip = self::normalize_de_zip($zip);
+
+        return (bool) preg_match('/^[0-9]{5}$/', $zip);
+    }
+
+    /**
      * Packeta name/surname/company: /^[\p{L}\p{N} ,.'\-&()]+$/ui , max 32.
      * Înlocuiește caractere interzise (ex. ":") cu spațiu.
      */

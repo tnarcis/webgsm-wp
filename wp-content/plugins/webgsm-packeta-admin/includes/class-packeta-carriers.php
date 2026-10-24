@@ -172,7 +172,7 @@ class WebGSM_Packeta_Carriers {
                 'title' => 'Olanda — NL Dutch Post HD (PostNL)',
                 'vendor' => ['carrierId' => '4329'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~46 lei fără TVA (1 kg)',
+                'pricing_hint' => 'de la ~55,66 lei cu TVA (46 fără TVA, 1 kg)',
                 'wc_method_id' => '',
                 'destination_country' => 'NL',
                 'cod_allowed' => false,
@@ -184,9 +184,57 @@ class WebGSM_Packeta_Carriers {
                 'title' => 'Olanda — NL DHL HD',
                 'vendor' => ['carrierId' => '8000'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~46 lei fără TVA (1 kg)',
+                'pricing_hint' => 'de la ~55,66 lei cu TVA (46 fără TVA, 1 kg)',
                 'wc_method_id' => '',
                 'destination_country' => 'NL',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '13613',
+                'title' => 'Germania — DE Home Delivery HD',
+                'vendor' => ['carrierId' => '13613'],
+                'is_pickup' => false,
+                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'DE',
+                'cod_allowed' => false,
+                'province_required' => true,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '39103',
+                'title' => 'Germania — DE DHL HD',
+                'vendor' => ['carrierId' => '39103'],
+                'is_pickup' => false,
+                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'DE',
+                'cod_allowed' => false,
+                'province_required' => true,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '6373',
+                'title' => 'Germania — DE Hermes HD',
+                'vendor' => ['carrierId' => '6373'],
+                'is_pickup' => false,
+                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'DE',
+                'cod_allowed' => false,
+                'province_required' => true,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '6828',
+                'title' => 'Germania — DE Hermes PP',
+                'vendor' => ['carrierId' => '6828'],
+                'is_pickup' => true,
+                'pricing_hint' => 'de la ~50,82 lei cu TVA (42 fără TVA, 1 kg)',
+                'wc_method_id' => '',
+                'destination_country' => 'DE',
                 'cod_allowed' => false,
                 'province_required' => false,
                 'manual' => true,
@@ -197,7 +245,7 @@ class WebGSM_Packeta_Carriers {
     }
 
     /**
-     * Lista curieri HD pentru tab AWB: checkout RO + Olanda HD manual.
+     * Lista curieri HD pentru tab AWB: checkout RO + NL/DE HD manual.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -220,6 +268,9 @@ class WebGSM_Packeta_Carriers {
         }
 
         foreach (self::get_manual_international_home_carriers() as $c) {
+            if (!empty($c['is_pickup'])) {
+                continue;
+            }
             $cid = (string) ($c['carrier_id'] ?? '');
             if ($cid === '' || isset($seen[$cid])) {
                 continue;
