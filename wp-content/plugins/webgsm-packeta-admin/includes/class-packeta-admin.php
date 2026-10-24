@@ -131,12 +131,14 @@ class WebGSM_Packeta_Admin {
                 'invalidFrPhone' => 'Telefon FR invalid. Format Packeta: 33 + 9 cifre (ex. 33612345678).',
                 'invalidFrZip' => 'Cod poștal FR invalid. Format: 5 cifre (ex. 75001).',
                 'frHomeHint' => 'Destinație Franța: stradă, număr, oraș, zip 5 cifre, telefon 33XXXXXXXXX, monedă EUR. COD = 0. Colis Privé (16080) sau Colissimo HD (4309).',
+                'oradeaHubApplied' => 'Preset hub Oradea aplicat (Cargus HD + adresă Packeta). Completează greutatea și valoarea declarată, apoi Trimite AWB.',
             ],
             'nlCarrierIds' => ['4329', '8000', '8001'],
             'deCarrierIds' => ['13613', '6373'],
             'frCarrierIds' => ['16080', '4309'],
             'roCounties' => WebGSM_Packeta_Config::get_ro_counties(),
             'deStates' => WebGSM_Packeta_Config::get_de_states(),
+            'oradeaHubPreset' => WebGSM_Packeta_Config::get_oradea_hub_preset(),
         ]);
     }
 

@@ -164,6 +164,11 @@ $awb_is_home = $awb_flow_current === 'home';
                 <?php endforeach; ?>
             </select>
             <p class="webgsm-packeta-help" id="webgsm_packeta_home_carrier_hint" style="margin-top:8px;"></p>
+            <p style="margin:12px 0 0;">
+                <button type="button" class="button button-secondary" id="webgsm_packeta_preset_oradea_hub_top">
+                    <?php esc_html_e('Preset hub Oradea (International consolidate)', 'webgsm-packeta'); ?>
+                </button>
+            </p>
         </div>
     <?php else : ?>
         <p class="notice notice-warning inline" style="margin:0;">
@@ -291,11 +296,12 @@ $awb_is_home = $awb_flow_current === 'home';
 
         <div class="webgsm-packeta-presets" style="margin:0 0 12px;">
             <p style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <button type="button" class="button button-primary" id="webgsm_packeta_preset_oradea_hub"><?php esc_html_e('Preset: hub Oradea (colete International)', 'webgsm-packeta'); ?></button>
                 <button type="button" class="button" id="webgsm_packeta_preset_acte"><?php esc_html_e('Preset: acte (fără ramburs)', 'webgsm-packeta'); ?></button>
                 <button type="button" class="button" id="webgsm_packeta_preset_no_cod"><?php esc_html_e('Preset: colet fără ramburs (doar COD 0)', 'webgsm-packeta'); ?></button>
             </p>
             <p class="webgsm-packeta-help" style="margin:0;">
-                <?php esc_html_e('„Transport gratuit” în WooCommerce = clientul nu plătește livrarea la comandă; nu înseamnă automat altceva în Packeta. Aici, „Ramburs (COD)” = bani încasați de curier la ușă. Dacă nu se încasează nimic la livrare, pune COD 0. Valoarea declarată a coletului rămâne pentru asigurare (conținutul expediat), nu este taxa de transport.', 'webgsm-packeta'); ?>
+                <?php esc_html_e('Preset hub Oradea: livrare RO Cargus HD + adresă Packeta (Anghel Saligny 40, CTP Oradea, Bihor, contact Rădulescu Horia). Pentru coletele International consolidate. Compleezi greutatea/valoarea; apoi mail Excel la depo.oradea@packeta.ro.', 'webgsm-packeta'); ?>
             </p>
             <p class="webgsm-packeta-help" style="margin:8px 0 0;">
                 <?php esc_html_e('Preset „acte”: COD 0, valoare 1, greutate 0,1 kg. Preset „colet fără ramburs”: doar COD 0; completezi tu valoarea și greutatea produselor.', 'webgsm-packeta'); ?>

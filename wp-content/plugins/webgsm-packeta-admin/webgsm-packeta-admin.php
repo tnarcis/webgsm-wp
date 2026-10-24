@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('WEBGSM_PACKETA_VERSION', '1.10.2');
+define('WEBGSM_PACKETA_VERSION', '1.10.4');
 define('WEBGSM_PACKETA_DB_VERSION_OPTION', 'webgsm_packeta_db_version');
 define('WEBGSM_PACKETA_PATH', plugin_dir_path(__FILE__));
 define('WEBGSM_PACKETA_URL', plugin_dir_url(__FILE__));

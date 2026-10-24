@@ -26,6 +26,10 @@ class WebGSM_Packeta_Ro_Pricelist {
             '32428' => 'fan_box',
             '590' => 'cargus_hd',
             '4161' => 'packeta_hd',
+            'rozbox' => 'z_box',
+            'rozpoint' => 'z_point_pp',
+            '39233' => 'ro_post_hd',
+            '39234' => 'ro_post_pp',
             '4329' => 'nl_dutch_post',
             '8000' => 'nl_dhl_hd',
             '8001' => 'nl_dhl_pp',
@@ -59,7 +63,7 @@ class WebGSM_Packeta_Ro_Pricelist {
     public static function grids(): array {
         return [
             'sameday_hd' => [
-                'label' => 'Sameday — livrare la adresă (HD)',
+                'label' => 'RO Sameday HD',
                 'tiers' => [
                     ['max_kg' => 2, 'net' => 17.85, 'label' => '0–2 kg'],
                     ['max_kg' => 3, 'net' => 22.50, 'label' => '2–3 kg'],
@@ -70,20 +74,20 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 25, 'net' => 53.00, 'label' => '20–25 kg'],
                     ['max_kg' => 30, 'net' => 58.00, 'label' => '25–30 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 2,00 RON (fără TVA). Asigurare max. 3.500 RON.',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 2,00 RON. Asigurare max. 3.500 RON.',
             ],
             'sameday_box' => [
-                'label' => 'Sameday Box / Easybox',
+                'label' => 'RO Sameday Box / Easybox',
                 'tiers' => [
                     ['max_kg' => 3, 'net' => 12.00, 'label' => '0–3 kg'],
                     ['max_kg' => 5, 'net' => 14.00, 'label' => '3–5 kg'],
                     ['max_kg' => 10, 'net' => 18.00, 'label' => '5–10 kg'],
                     ['max_kg' => 15, 'net' => 20.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs: gratuit (0%). Asigurare max. 3.500 RON.',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs: gratuit. Asigurare max. 3.500 RON.',
             ],
             'fan_hd' => [
-                'label' => 'Fan Courier — livrare la adresă (HD)',
+                'label' => 'RO FAN Courier HD',
                 'tiers' => [
                     ['max_kg' => 3, 'net' => 14.00, 'label' => '0–3 kg'],
                     ['max_kg' => 5, 'net' => 16.50, 'label' => '3–5 kg'],
@@ -93,19 +97,19 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 25, 'net' => 42.50, 'label' => '20–25 kg'],
                     ['max_kg' => 30, 'net' => 49.10, 'label' => '25–30 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 2,60 RON (fără TVA).',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 2,60 RON.',
             ],
             'fan_box' => [
-                'label' => 'Fan Box',
+                'label' => 'RO FAN Courier Box',
                 'tiers' => [
                     ['max_kg' => 5, 'net' => 8.50, 'label' => '0–5 kg'],
                     ['max_kg' => 10, 'net' => 11.50, 'label' => '5–10 kg'],
                     ['max_kg' => 15, 'net' => 18.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs: 0,8% din valoare.',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs: 0,8% din valoare.',
             ],
             'cargus_hd' => [
-                'label' => 'Cargus — livrare la adresă (HD)',
+                'label' => 'RO Cargus HD',
                 'tiers' => [
                     ['max_kg' => 3, 'net' => 13.50, 'label' => '0–3 kg'],
                     ['max_kg' => 5, 'net' => 15.00, 'label' => '3–5 kg'],
@@ -115,10 +119,10 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 25, 'net' => 33.00, 'label' => '20–25 kg'],
                     ['max_kg' => 30, 'net' => 38.00, 'label' => '25–30 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 1,60 RON (fără TVA).',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 1,60 RON.',
             ],
             'packeta_hd' => [
-                'label' => 'Packeta — livrare la adresă (HD)',
+                'label' => 'RO Packeta Home Delivery HD',
                 'tiers' => [
                     ['max_kg' => 1, 'net' => 17.00, 'label' => '0–1 kg'],
                     ['max_kg' => 2, 'net' => 18.50, 'label' => '1–2 kg'],
@@ -131,25 +135,59 @@ class WebGSM_Packeta_Ro_Pricelist {
                     ['max_kg' => 25, 'net' => 51.00, 'label' => '20–25 kg'],
                     ['max_kg' => 30, 'net' => 56.00, 'label' => '25–30 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 3,00 RON (fără TVA).',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 3,00 RON.',
+            ],
+            'ro_post_hd' => [
+                'label' => 'RO Romanian Post HD',
+                'tiers' => [
+                    ['max_kg' => 3, 'net' => 15.64, 'label' => '0–3 kg'],
+                    ['max_kg' => 4, 'net' => 16.62, 'label' => '3–4 kg'],
+                    ['max_kg' => 5, 'net' => 17.59, 'label' => '4–5 kg'],
+                    ['max_kg' => 6, 'net' => 18.57, 'label' => '5–6 kg'],
+                    ['max_kg' => 7, 'net' => 19.54, 'label' => '6–7 kg'],
+                    ['max_kg' => 8, 'net' => 20.52, 'label' => '7–8 kg'],
+                    ['max_kg' => 9, 'net' => 21.49, 'label' => '8–9 kg'],
+                    ['max_kg' => 10, 'net' => 22.47, 'label' => '9–10 kg'],
+                    ['max_kg' => 15, 'net' => 27.34, 'label' => '10–15 kg'],
+                    ['max_kg' => 20, 'net' => 32.22, 'label' => '15–20 kg'],
+                    ['max_kg' => 25, 'net' => 37.09, 'label' => '20–25 kg'],
+                    ['max_kg' => 30, 'net' => 41.97, 'label' => '25–30 kg'],
+                ],
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 4,00 RON.',
+            ],
+            'ro_post_pp' => [
+                'label' => 'RO Romanian Post PP',
+                'tiers' => [
+                    ['max_kg' => 5, 'net' => 12.64, 'label' => '0–5 kg'],
+                    ['max_kg' => 6, 'net' => 13.54, 'label' => '5–6 kg'],
+                    ['max_kg' => 7, 'net' => 14.44, 'label' => '6–7 kg'],
+                    ['max_kg' => 8, 'net' => 15.34, 'label' => '7–8 kg'],
+                    ['max_kg' => 9, 'net' => 16.24, 'label' => '8–9 kg'],
+                    ['max_kg' => 10, 'net' => 17.14, 'label' => '9–10 kg'],
+                    ['max_kg' => 15, 'net' => 21.64, 'label' => '10–15 kg'],
+                    ['max_kg' => 20, 'net' => 26.14, 'label' => '15–20 kg'],
+                    ['max_kg' => 25, 'net' => 30.64, 'label' => '20–25 kg'],
+                    ['max_kg' => 30, 'net' => 35.14, 'label' => '25–30 kg'],
+                ],
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 4,00 RON.',
             ],
             'z_point_pp' => [
-                'label' => 'Packeta Z-Point (puncte)',
+                'label' => 'RO Packeta Z-Point PP',
                 'tiers' => [
                     ['max_kg' => 5, 'net' => 7.50, 'label' => '0–5 kg'],
                     ['max_kg' => 10, 'net' => 15.81, 'label' => '5–10 kg'],
                     ['max_kg' => 15, 'net' => 16.87, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 1,00 RON · ≤ 8.000 RON: 10,54 RON (fără TVA).',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 1,00 RON · ≤ 8.000 RON: 10,54 RON.',
             ],
             'z_box' => [
-                'label' => 'Packeta Z-Box',
+                'label' => 'RO Packeta Z-Box',
                 'tiers' => [
                     ['max_kg' => 5, 'net' => 7.50, 'label' => '0–5 kg'],
                     ['max_kg' => 10, 'net' => 15.81, 'label' => '5–10 kg'],
                     ['max_kg' => 15, 'net' => 16.87, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs ≤ 3.500 RON: 1,00 RON · ≤ 8.000 RON: 10,54 RON (fără TVA).',
+                'cod_note' => 'Contract 24.10.2026 (fără TVA). Ramburs ≤ 3.500 RON: 1,00 RON · ≤ 8.000 RON: 10,54 RON.',
             ],
             'nl_dutch_post' => [
                 'label' => 'Olanda — NL Dutch Post HD (PostNL)',
@@ -298,6 +336,7 @@ class WebGSM_Packeta_Ro_Pricelist {
     }
 
     public static function grid_key_for_carrier_id(string $carrier_id): ?string {
+        $carrier_id = strtolower(trim($carrier_id));
         $map = self::carrier_map();
 
         return $map[$carrier_id] ?? null;

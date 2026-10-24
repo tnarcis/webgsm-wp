@@ -419,4 +419,28 @@ class WebGSM_Packeta_Config {
 
         return $value;
     }
+
+    /**
+     * Preset AWB: colete consolidate International → hub Packeta Oradea (din instrucțiunile Packeta).
+     *
+     * @return array<string, string>
+     */
+    public static function get_oradea_hub_preset(): array {
+        return [
+            'carrier_id' => '590',
+            'street' => 'Anghel Saligny',
+            'house_number' => '40',
+            'city' => 'Oradea',
+            'province' => 'BH',
+            'zip' => '410085',
+            'recipient_name' => 'Horia',
+            'recipient_surname' => 'Radulescu',
+            'recipient_email' => 'depo.oradea@packeta.ro',
+            'recipient_phone' => '0728011330',
+            'company' => 'Packeta CTP Oradea Cargo Terminal',
+            'currency' => 'RON',
+            'cod' => '0',
+            'note' => 'Colete consolidate International — hub Oradea. Contact: 0728.011.330',
+        ];
+    }
 }

@@ -491,6 +491,50 @@
             openMap();
         });
 
+        function applyOradeaHubPreset() {
+            var cfg = typeof webgsmPacketaAdmin !== 'undefined' ? webgsmPacketaAdmin : {};
+            var p = cfg.oradeaHubPreset || {};
+            if (!p.street) {
+                return;
+            }
+
+            $('#awb_flow_home').prop('checked', true);
+            syncFlowFromUi();
+
+            var carrierId = String(p.carrier_id || '590');
+            var $sel = $('#webgsm_packeta_home_carrier_select');
+            if ($sel.length && $sel.find('option[value="' + carrierId + '"]').length) {
+                $sel.val(carrierId).trigger('change');
+            } else {
+                $('#address_id').val(carrierId);
+                $('#carrier_filter').val(carrierId);
+                applyHomeDestinationUi();
+            }
+
+            $('#street').val(p.street || '');
+            $('#house_number').val(p.house_number || '');
+            $('#city').val(p.city || '');
+            $('#province').val(p.province || 'BH');
+            $('#zip').val(p.zip || '');
+            $('#recipient_name').val(p.recipient_name || '');
+            $('#recipient_surname').val(p.recipient_surname || '');
+            $('#recipient_email').val(p.recipient_email || '');
+            $('#recipient_phone').val(p.recipient_phone || '');
+            $('#company').val(p.company || '');
+            $('#currency').val(p.currency || 'RON');
+            $('#cod').val(p.cod || '0');
+            if (p.note) {
+                $('#note').val(p.note);
+            }
+
+            window.alert(msg('oradeaHubApplied'));
+        }
+
+        $(document).on('click', '#webgsm_packeta_preset_oradea_hub, #webgsm_packeta_preset_oradea_hub_top', function (e) {
+            e.preventDefault();
+            applyOradeaHubPreset();
+        });
+
         $(document).on('click', '#webgsm_packeta_preset_acte', function (e) {
             e.preventDefault();
             $('#cod').val('0');
