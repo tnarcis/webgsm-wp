@@ -4,17 +4,17 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Tarife contract Packeta RO — pricelist 2026-07-02 (fără TVA).
+ * Tarife contract Packeta RO — client webgsm, listă 24.10.2026 (fără TVA).
  *
- * @see Lista de prețuri webgsm, valabilă din 2.7.2026
+ * Sursă: pricelist Packeta România pentru webgsm. În UI afișăm și cu TVA 21%.
  */
 class WebGSM_Packeta_Ro_Pricelist {
 
-    public const EFFECTIVE_FROM = '2026-07-02';
+    public const EFFECTIVE_FROM = '2026-10-24';
     public const VAT_RATE = 0.21;
 
     /**
-     * carrier_id Packeta => cheie internă grilă.
+     * carrier_id Packeta => cheie internă grilă (doar curieri din contractul RO).
      *
      * @return array<string, string>
      */
@@ -29,12 +29,24 @@ class WebGSM_Packeta_Ro_Pricelist {
             '4329' => 'nl_dutch_post',
             '8000' => 'nl_dhl_hd',
             '8001' => 'nl_dhl_pp',
-            // DE: în lista Packeta RO apar DE Home Delivery HD + DE Hermes PP (valori fără TVA).
             '13613' => 'de_home_hd',
-            '39103' => 'de_home_hd',
-            '6373' => 'de_home_hd',
+            '6373' => 'de_hermes_hd',
             '6828' => 'de_hermes_pp',
+            '16080' => 'fr_colis_prive_hd',
+            '4309' => 'fr_colissimo_hd',
+            '4307' => 'fr_colissimo_pp',
+            '12889' => 'fr_mondial_relay_pp',
         ];
+    }
+
+    /** Hint UI: întâi cu TVA, apoi fără (ca în listă). */
+    public static function format_price_hint(float $net_ex_vat, string $weight_note = '1 kg'): string {
+        return sprintf(
+            'de la ~%s lei cu TVA (%s fără TVA, %s)',
+            number_format(self::net_to_gross($net_ex_vat), 2, ',', ''),
+            number_format($net_ex_vat, 2, ',', ''),
+            $weight_note
+        );
     }
 
     /**
@@ -142,52 +154,120 @@ class WebGSM_Packeta_Ro_Pricelist {
             'nl_dutch_post' => [
                 'label' => 'Olanda — NL Dutch Post HD (PostNL)',
                 'tiers' => [
-                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
-                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
-                    ['max_kg' => 5, 'net' => 56.00, 'label' => '2–5 kg'],
-                    ['max_kg' => 10, 'net' => 66.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 0.5, 'net' => 55.00, 'label' => '0–0,5 kg'],
+                    ['max_kg' => 1, 'net' => 57.00, 'label' => '0,5–1 kg'],
+                    ['max_kg' => 2, 'net' => 60.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 73.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 95.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 115.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată. Tarife listă Packeta RO 01.02.2026 (injectare depozit).',
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs indisponibil.',
             ],
             'nl_dhl_hd' => [
                 'label' => 'Olanda — NL DHL HD',
                 'tiers' => [
-                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
-                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
-                    ['max_kg' => 5, 'net' => 53.00, 'label' => '2–5 kg'],
-                    ['max_kg' => 10, 'net' => 60.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 1, 'net' => 55.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 56.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 61.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 63.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 75.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată.',
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs indisponibil.',
             ],
             'nl_dhl_pp' => [
                 'label' => 'Olanda — NL DHL PP',
                 'tiers' => [
-                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0–1 kg'],
-                    ['max_kg' => 2, 'net' => 48.00, 'label' => '1–2 kg'],
-                    ['max_kg' => 5, 'net' => 53.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 1, 'net' => 52.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 54.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 56.00, 'label' => '2–5 kg'],
                     ['max_kg' => 10, 'net' => 60.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 75.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Ramburs indisponibil. Asigurare ≤ 700 EUR: 1% din valoarea declarată.',
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs indisponibil.',
             ],
             'de_home_hd' => [
                 'label' => 'Germania — DE Home Delivery HD',
                 'tiers' => [
-                    ['max_kg' => 1, 'net' => 39.00, 'label' => '0–1 kg (max 60×30×15)'],
-                    ['max_kg' => 2, 'net' => 43.00, 'label' => '1–2 kg (max 60×30×15)'],
-                    ['max_kg' => 5, 'net' => 49.00, 'label' => '2–5 kg (max 60×30×15)'],
-                    ['max_kg' => 10, 'net' => 59.00, 'label' => '5–10 kg (max 70×60×50)'],
+                    ['max_kg' => 1, 'net' => 32.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 35.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 39.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 44.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 55.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Listă Packeta RO (fără TVA, injectare depozit). Ramburs listă: 35 RON — la DHL HD API COD e de obicei indisponibil. Asigurare ≤ 700 EUR: 1%.',
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs listă ≤700 EUR: 32 RON — la creare AWB lăsăm COD 0 dacă API respinge.',
+            ],
+            'de_hermes_hd' => [
+                'label' => 'Germania — DE Hermes HD',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 36.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 37.50, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 41.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 45.50, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 70.00, 'label' => '10–15 kg'],
+                ],
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs listă ≤700 EUR: 39 RON.',
             ],
             'de_hermes_pp' => [
                 'label' => 'Germania — DE Hermes PP',
                 'tiers' => [
-                    ['max_kg' => 1, 'net' => 42.00, 'label' => '0–1 kg'],
-                    ['max_kg' => 2, 'net' => 44.00, 'label' => '1–2 kg'],
-                    ['max_kg' => 5, 'net' => 51.00, 'label' => '2–5 kg'],
-                    ['max_kg' => 10, 'net' => 61.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 1, 'net' => 33.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 36.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 40.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 45.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 68.00, 'label' => '10–15 kg'],
                 ],
-                'cod_note' => 'Listă Packeta RO (fără TVA, injectare depozit). Ramburs: indisponibil. Insule DE: +35 RON.',
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs: indisponibil. Puncte PP (nu HD).',
+            ],
+            'fr_colis_prive_hd' => [
+                'label' => 'Franța — FR Colis Privé HD',
+                'tiers' => [
+                    ['max_kg' => 0.5, 'net' => 46.00, 'label' => '0–0,5 kg'],
+                    ['max_kg' => 1, 'net' => 46.00, 'label' => '0,5–1 kg'],
+                    ['max_kg' => 2, 'net' => 51.50, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 56.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 65.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 79.00, 'label' => '10–15 kg'],
+                ],
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs: de obicei indisponibil la FR.',
+            ],
+            'fr_colissimo_hd' => [
+                'label' => 'Franța — FR Colissimo HD',
+                'tiers' => [
+                    ['max_kg' => 0.25, 'net' => 45.00, 'label' => '0–0,25 kg'],
+                    ['max_kg' => 0.5, 'net' => 50.00, 'label' => '0,25–0,5 kg'],
+                    ['max_kg' => 0.75, 'net' => 51.00, 'label' => '0,5–0,75 kg'],
+                    ['max_kg' => 1, 'net' => 51.00, 'label' => '0,75–1 kg'],
+                    ['max_kg' => 2, 'net' => 55.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 69.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 93.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 115.00, 'label' => '10–15 kg'],
+                ],
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Ramburs: indisponibil.',
+            ],
+            'fr_colissimo_pp' => [
+                'label' => 'Franța — FR Colissimo PP',
+                'tiers' => [
+                    ['max_kg' => 0.25, 'net' => 40.00, 'label' => '0–0,25 kg'],
+                    ['max_kg' => 0.5, 'net' => 45.00, 'label' => '0,25–0,5 kg'],
+                    ['max_kg' => 0.75, 'net' => 50.00, 'label' => '0,5–0,75 kg'],
+                    ['max_kg' => 1, 'net' => 55.00, 'label' => '0,75–1 kg'],
+                    ['max_kg' => 2, 'net' => 60.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 78.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 105.00, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 130.00, 'label' => '10–15 kg'],
+                ],
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Puncte PP. Ramburs: indisponibil.',
+            ],
+            'fr_mondial_relay_pp' => [
+                'label' => 'Franța — FR Mondial Relay PP',
+                'tiers' => [
+                    ['max_kg' => 1, 'net' => 34.00, 'label' => '0–1 kg'],
+                    ['max_kg' => 2, 'net' => 36.00, 'label' => '1–2 kg'],
+                    ['max_kg' => 5, 'net' => 44.00, 'label' => '2–5 kg'],
+                    ['max_kg' => 10, 'net' => 60.50, 'label' => '5–10 kg'],
+                    ['max_kg' => 15, 'net' => 85.00, 'label' => '10–15 kg'],
+                ],
+                'cod_note' => 'Contract webgsm 24.10.2026 (fără TVA). Puncte PP.',
             ],
         ];
     }

@@ -166,13 +166,15 @@ class WebGSM_Packeta_Carriers {
      * }>
      */
     public static function get_manual_international_home_carriers(): array {
+        // Doar curieri HD din contractul Packeta RO (webgsm, listă 24.10.2026).
+        // Fără Italia — nu apare în listă. Fără DE DHL 39103 (invalid pe cont RO).
         $out = [
             [
                 'carrier_id' => '4329',
                 'title' => 'Olanda — NL Dutch Post HD (PostNL)',
                 'vendor' => ['carrierId' => '4329'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~55,66 lei cu TVA (46 fără TVA, 1 kg)',
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(57.00),
                 'wc_method_id' => '',
                 'destination_country' => 'NL',
                 'cod_allowed' => false,
@@ -184,7 +186,7 @@ class WebGSM_Packeta_Carriers {
                 'title' => 'Olanda — NL DHL HD',
                 'vendor' => ['carrierId' => '8000'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~55,66 lei cu TVA (46 fără TVA, 1 kg)',
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(55.00),
                 'wc_method_id' => '',
                 'destination_country' => 'NL',
                 'cod_allowed' => false,
@@ -196,19 +198,7 @@ class WebGSM_Packeta_Carriers {
                 'title' => 'Germania — DE Home Delivery HD',
                 'vendor' => ['carrierId' => '13613'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
-                'wc_method_id' => '',
-                'destination_country' => 'DE',
-                'cod_allowed' => false,
-                'province_required' => true,
-                'manual' => true,
-            ],
-            [
-                'carrier_id' => '39103',
-                'title' => 'Germania — DE DHL HD',
-                'vendor' => ['carrierId' => '39103'],
-                'is_pickup' => false,
-                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(32.00),
                 'wc_method_id' => '',
                 'destination_country' => 'DE',
                 'cod_allowed' => false,
@@ -220,7 +210,7 @@ class WebGSM_Packeta_Carriers {
                 'title' => 'Germania — DE Hermes HD',
                 'vendor' => ['carrierId' => '6373'],
                 'is_pickup' => false,
-                'pricing_hint' => 'de la ~47,19 lei cu TVA (39 fără TVA, 1 kg)',
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(36.00),
                 'wc_method_id' => '',
                 'destination_country' => 'DE',
                 'cod_allowed' => false,
@@ -228,13 +218,25 @@ class WebGSM_Packeta_Carriers {
                 'manual' => true,
             ],
             [
-                'carrier_id' => '6828',
-                'title' => 'Germania — DE Hermes PP',
-                'vendor' => ['carrierId' => '6828'],
-                'is_pickup' => true,
-                'pricing_hint' => 'de la ~50,82 lei cu TVA (42 fără TVA, 1 kg)',
+                'carrier_id' => '16080',
+                'title' => 'Franța — FR Colis Privé HD',
+                'vendor' => ['carrierId' => '16080'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(46.00),
                 'wc_method_id' => '',
-                'destination_country' => 'DE',
+                'destination_country' => 'FR',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '4309',
+                'title' => 'Franța — FR Colissimo HD',
+                'vendor' => ['carrierId' => '4309'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(51.00),
+                'wc_method_id' => '',
+                'destination_country' => 'FR',
                 'cod_allowed' => false,
                 'province_required' => false,
                 'manual' => true,
@@ -245,7 +247,7 @@ class WebGSM_Packeta_Carriers {
     }
 
     /**
-     * Lista curieri HD pentru tab AWB: checkout RO + NL/DE HD manual.
+     * Lista curieri HD pentru tab AWB: checkout RO + NL/DE/FR HD manual.
      *
      * @return array<int, array<string, mixed>>
      */

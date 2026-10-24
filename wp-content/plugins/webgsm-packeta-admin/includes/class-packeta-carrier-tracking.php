@@ -33,9 +33,12 @@ class WebGSM_Packeta_Carrier_Tracking {
             '4329' => 'postnl',
             '8000' => 'dhl',
             '8001' => 'dhl',
-            '39103' => 'dhl',
             '6373' => 'hermes',
             '13613' => 'unknown',
+            '16080' => 'colisprive',
+            '4309' => 'colissimo',
+            '4307' => 'colissimo',
+            '12889' => 'mondialrelay',
         ];
 
         return $map[$carrier_id] ?? 'unknown';
@@ -49,6 +52,9 @@ class WebGSM_Packeta_Carrier_Tracking {
             'postnl' => 'PostNL',
             'dhl' => 'DHL',
             'hermes' => 'Hermes',
+            'colisprive' => 'Colis Privé',
+            'colissimo' => 'Colissimo',
+            'mondialrelay' => 'Mondial Relay',
             'unknown' => 'Curier',
         ];
 

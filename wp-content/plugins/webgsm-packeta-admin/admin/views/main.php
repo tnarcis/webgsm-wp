@@ -21,7 +21,7 @@ $notices = [
     'awb_deleted' => ['class' => 'notice-success', 'text' => 'AWB șters din listă.'],
     'packet_id_invalid' => ['class' => 'notice-error', 'text' => 'Packet ID invalid — vezi detaliile de mai jos. Verifică că folosești ID-ul Packeta (nu AWB Sameday).'],
     'missing_packet_id' => ['class' => 'notice-error', 'text' => 'Introdu Packet ID sau barcode (ex. Z 383 2892 743).'],
-    'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos.'],
+    'api_error' => ['class' => 'notice-error', 'text' => 'Eroare API — vezi detaliile de mai jos. Dacă scrie „pick up point is not valid”: pentru Germania HD folosește addressId 13613 (Home Delivery), nu 39103 (DHL). La puncte Easybox/PP, alege alt punct pe hartă — cel selectat nu acceptă colete acum.'],
     'missing_point' => ['class' => 'notice-error', 'text' => 'Pentru Box / punct fix selectează punctul pe harta Packeta.'],
     'missing_sender' => ['class' => 'notice-error', 'text' => 'Expeditor (sender) lipsă — setează „No Limit Tech” în Setări (exact ca în client.packeta.com).'],
     'missing_home_carrier' => ['class' => 'notice-error', 'text' => 'Pentru livrare la adresă completează addressId (transportator).'],
@@ -38,6 +38,9 @@ $notices = [
     'invalid_de_phone' => ['class' => 'notice-error', 'text' => 'Telefon DE invalid. Format Packeta: 49 + 7–13 cifre (ex. 4915123456789).'],
     'invalid_de_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal DE invalid. Format: 5 cifre (ex. 10115).'],
     'missing_de_province' => ['class' => 'notice-error', 'text' => 'Selectează landul (Bundesland) pentru Germania.'],
+    'fr_cod_unsupported' => ['class' => 'notice-error', 'text' => 'Franța HD nu suportă ramburs (COD). Lasă COD = 0.'],
+    'invalid_fr_phone' => ['class' => 'notice-error', 'text' => 'Telefon FR invalid. Format Packeta: 33 + 9 cifre (ex. 33612345678).'],
+    'invalid_fr_zip' => ['class' => 'notice-error', 'text' => 'Cod poștal FR invalid. Format: 5 cifre (ex. 75001).'],
 ];
 
 ?>

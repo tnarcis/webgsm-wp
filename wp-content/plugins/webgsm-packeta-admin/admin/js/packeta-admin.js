@@ -146,6 +146,7 @@
         var meta = getSelectedHomeCarrierMeta();
         var isNl = meta.country === 'NL';
         var isDe = meta.country === 'DE';
+        var isFr = meta.country === 'FR';
         var $provinceWrap = $('#packeta_province_wrap');
         var $hint = $('#webgsm_packeta_home_carrier_hint');
         var $fieldsHelp = $('#webgsm_packeta_home_fields_help');
@@ -186,7 +187,23 @@
                 $hint.text(msg('deHomeHint'));
             }
             if ($fieldsHelp.length) {
-                $fieldsHelp.html('Destinație <strong>Germania</strong>: stradă, număr, oraș, zip <code>5 cifre</code>, land, telefon <code>49…</code>, monedă <code>EUR</code>. COD = 0. Preferat <strong>DE DHL HD (39103)</strong>.');
+                $fieldsHelp.html('Destinație <strong>Germania</strong>: stradă, număr, oraș, zip <code>5 cifre</code>, land, telefon <code>49…</code>, monedă <code>EUR</code>. COD = 0. Folosește <strong>DE Home Delivery HD (13613)</strong> sau Hermes HD (6373).');
+            }
+        } else if (isFr) {
+            $provinceWrap.hide();
+            $('#province').prop('required', false);
+            $zip.attr('maxlength', 5).attr('placeholder', '75001');
+            $('#zip_help').text('FR: 5 cifre (ex. 75001).');
+            $('#recipient_phone').attr('placeholder', '33612345678');
+            $cod.val('0').prop('readonly', true);
+            if (($('#currency').val() || '').toUpperCase() === 'RON') {
+                $('#currency').val('EUR');
+            }
+            if ($hint.length) {
+                $hint.text(msg('frHomeHint'));
+            }
+            if ($fieldsHelp.length) {
+                $fieldsHelp.html('Destinație <strong>Franța</strong>: stradă, număr, oraș, zip <code>5 cifre</code>, telefon <code>33XXXXXXXXX</code>, monedă <code>EUR</code>. COD = 0. Colis Privé (16080) sau Colissimo HD (4309).');
             }
         } else {
             $provinceWrap.show();
@@ -194,7 +211,7 @@
             fillProvinceSelect(cfg.roCounties || {}, prevProvince);
             $('#province').prop('required', true);
             $zip.attr('maxlength', 6).attr('placeholder', '');
-            $('#zip_help').text('RO: 6 cifre. NL: 1234AB. DE: 5 cifre.');
+            $('#zip_help').text('RO: 6 cifre. NL: 1234AB. DE/FR: 5 cifre.');
             $('#recipient_phone').attr('placeholder', '+40…');
             $cod.prop('readonly', false);
             if (($('#currency').val() || '').toUpperCase() === 'EUR') {
@@ -343,6 +360,28 @@
                 if (deCod > 0) {
                     e.preventDefault();
                     window.alert(msg('deCodUnsupported'));
+                    return false;
+                }
+            }
+            if (meta.country === 'FR') {
+                var frZip = zip.replace(/\D/g, '');
+                if (!/^[0-9]{5}$/.test(frZip)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidFrZip'));
+                    return false;
+                }
+                var frPhone = String($('#recipient_phone').val() || '').replace(/\D/g, '');
+                if (frPhone.indexOf('0033') === 0) frPhone = frPhone.slice(2);
+                if (frPhone.charAt(0) === '0' && frPhone.indexOf('33') !== 0) frPhone = '33' + frPhone.slice(1);
+                if (!/^33[0-9]{9}$/.test(frPhone)) {
+                    e.preventDefault();
+                    window.alert(msg('invalidFrPhone'));
+                    return false;
+                }
+                var frCod = parseFloat(String($('#cod').val() || '0').replace(',', '.'));
+                if (frCod > 0) {
+                    e.preventDefault();
+                    window.alert(msg('frCodUnsupported'));
                     return false;
                 }
             }

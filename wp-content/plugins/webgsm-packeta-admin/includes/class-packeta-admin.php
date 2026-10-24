@@ -126,10 +126,15 @@ class WebGSM_Packeta_Admin {
                 'invalidDePhone' => 'Telefon DE invalid. Format Packeta: 49 + 7–13 cifre (ex. 4915123456789).',
                 'invalidDeZip' => 'Cod poștal DE invalid. Format: 5 cifre (ex. 10115).',
                 'missingDeProvince' => 'Selectează landul (Bundesland) pentru Germania.',
-                'deHomeHint' => 'Destinație Germania: stradă, număr, oraș, zip 5 cifre, land, telefon 49…, monedă EUR. COD = 0. Recomandat DE DHL HD (39103).',
+                'deHomeHint' => 'Destinație Germania: stradă, număr, oraș, zip 5 cifre, land, telefon 49…, monedă EUR. COD = 0. Preferat DE Home Delivery HD (13613) sau Hermes HD (6373).',
+                'frCodUnsupported' => 'Franța HD nu suportă ramburs (COD). Lasă COD = 0.',
+                'invalidFrPhone' => 'Telefon FR invalid. Format Packeta: 33 + 9 cifre (ex. 33612345678).',
+                'invalidFrZip' => 'Cod poștal FR invalid. Format: 5 cifre (ex. 75001).',
+                'frHomeHint' => 'Destinație Franța: stradă, număr, oraș, zip 5 cifre, telefon 33XXXXXXXXX, monedă EUR. COD = 0. Colis Privé (16080) sau Colissimo HD (4309).',
             ],
             'nlCarrierIds' => ['4329', '8000', '8001'],
-            'deCarrierIds' => ['39103', '6373', '13613'],
+            'deCarrierIds' => ['13613', '6373'],
+            'frCarrierIds' => ['16080', '4309'],
             'roCounties' => WebGSM_Packeta_Config::get_ro_counties(),
             'deStates' => WebGSM_Packeta_Config::get_de_states(),
         ]);
@@ -731,6 +736,20 @@ class WebGSM_Packeta_Admin {
                 return null;
             }
 
+            if ($dest === 'FR') {
+                if (!WebGSM_Packeta_Carriers::carrier_allows_cod((string) $aid) && $cod > 0) {
+                    return 'fr_cod_unsupported';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_fr_zip($zip)) {
+                    return 'invalid_fr_zip';
+                }
+                if (!WebGSM_Packeta_Config::is_valid_fr_phone($phone)) {
+                    return 'invalid_fr_phone';
+                }
+
+                return null;
+            }
+
             if (WebGSM_Packeta_Carriers::carrier_requires_province((string) $aid)
                 && !WebGSM_Packeta_Config::is_valid_ro_county_code($province_code)) {
                 return 'missing_home_province';
@@ -824,6 +843,11 @@ class WebGSM_Packeta_Admin {
             if (($attrs['currency'] ?? '') === '' || ($attrs['currency'] ?? '') === 'RON') {
                 $attrs['currency'] = 'EUR';
             }
+        } elseif ($dest_country === 'FR') {
+            $attrs['phone'] = WebGSM_Packeta_Config::normalize_fr_phone((string) $attrs['phone']);
+            if (($attrs['currency'] ?? '') === '' || ($attrs['currency'] ?? '') === 'RON') {
+                $attrs['currency'] = 'EUR';
+            }
         }
 
         $cod = isset($_POST['cod']) ? (float) str_replace(',', '.', (string) wp_unslash($_POST['cod'])) : 0;
@@ -854,6 +878,8 @@ class WebGSM_Packeta_Admin {
                 $zip = WebGSM_Packeta_Config::normalize_nl_zip($zip);
             } elseif ($dest_country === 'DE') {
                 $zip = WebGSM_Packeta_Config::normalize_de_zip($zip);
+            } elseif ($dest_country === 'FR') {
+                $zip = WebGSM_Packeta_Config::normalize_fr_zip($zip);
             }
 
             if ($street !== '') {

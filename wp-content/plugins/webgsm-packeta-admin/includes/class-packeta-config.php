@@ -351,6 +351,41 @@ class WebGSM_Packeta_Config {
     }
 
     /**
+     * Telefon FR Packeta: 33 + 9 cifre.
+     */
+    public static function normalize_fr_phone(string $phone): string {
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+        if (str_starts_with($digits, '0033')) {
+            $digits = substr($digits, 2);
+        }
+        if (str_starts_with($digits, '0') && !str_starts_with($digits, '33')) {
+            $digits = '33' . substr($digits, 1);
+        }
+
+        return $digits;
+    }
+
+    public static function is_valid_fr_phone(string $phone): bool {
+        $normalized = self::normalize_fr_phone($phone);
+
+        return (bool) preg_match('/^33[0-9]{9}$/', $normalized);
+    }
+
+    /** Cod poștal FR: 5 cifre. */
+    public static function normalize_fr_zip(string $zip): string {
+        return preg_replace('/\D/', '', trim($zip)) ?? '';
+    }
+
+    public static function is_valid_fr_zip(string $zip): bool {
+        $zip = self::normalize_fr_zip($zip);
+
+        return (bool) preg_match('/^[0-9]{5}$/', $zip);
+    }
+
+    /**
      * Packeta name/surname/company: /^[\p{L}\p{N} ,.'\-&()]+$/ui , max 32.
      * Înlocuiește caractere interzise (ex. ":") cu spațiu.
      */
