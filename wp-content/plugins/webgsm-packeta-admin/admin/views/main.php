@@ -7,7 +7,7 @@ $notice = isset($_GET['packeta_notice']) ? sanitize_key((string) $_GET['packeta_
 
 $notices = [
     'settings_saved' => ['class' => 'notice-success', 'text' => 'Setările au fost salvate.'],
-    'prices_synced' => ['class' => 'notice-success', 'text' => 'Prețurile curierilor activi au fost actualizate din lista Packeta 2026-07-02 (fără TVA).'],
+    'prices_synced' => ['class' => 'notice-success', 'text' => 'Prețurile curierilor activi au fost actualizate din lista Packeta (fără TVA; în UI AWB vezi și cu TVA 21%).'],
     'prices_sync_partial' => ['class' => 'notice-warning', 'text' => 'Sincronizare prețuri parțială — vezi detaliile de mai jos.'],
     'no_password' => ['class' => 'notice-error', 'text' => 'Completează parola API în WooCommerce → Packeta (sau vezi Setări aici).'],
     'packet_ok' => ['class' => 'notice-success', 'text' => 'Pachet creat în Packeta.'],

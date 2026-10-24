@@ -39,37 +39,59 @@ class WebGSM_Packeta_Carriers {
      * Indiciu preț din opțiunea Packeta (același lucru ca la calculul din magazin).
      */
     public static function get_pricing_hint_from_site(string $carrier_id): string {
-        $data = get_option('packetery_carrier_' . $carrier_id, null);
-        if (!is_array($data)) {
-            return '';
-        }
-
         $hints = [];
 
-        if (isset($data['free_shipping_limit']) && is_numeric($data['free_shipping_limit']) && (float) $data['free_shipping_limit'] > 0) {
+        // Preferă grila contract (fără TVA) → afișează și cu TVA 21%.
+        $grid_key = WebGSM_Packeta_Ro_Pricelist::grid_key_for_carrier_id($carrier_id);
+        if ($grid_key !== null) {
+            $grids = WebGSM_Packeta_Ro_Pricelist::grids();
+            $tiers = $grids[$grid_key]['tiers'] ?? [];
+            $min_net = null;
+            $weight_note = '1 kg';
+            foreach ($tiers as $tier) {
+                if (!is_array($tier) || !isset($tier['net'])) {
+                    continue;
+                }
+                $net = (float) $tier['net'];
+                if ($min_net === null || $net < $min_net) {
+                    $min_net = $net;
+                    $weight_note = (string) ($tier['label'] ?? '1 kg');
+                }
+            }
+            if ($min_net !== null) {
+                $hints[] = WebGSM_Packeta_Ro_Pricelist::format_price_hint($min_net, $weight_note);
+            }
+        }
+
+        $data = get_option('packetery_carrier_' . $carrier_id, null);
+        if (is_array($data)
+            && isset($data['free_shipping_limit'])
+            && is_numeric($data['free_shipping_limit'])
+            && (float) $data['free_shipping_limit'] > 0
+        ) {
             $v = wc_format_decimal((string) $data['free_shipping_limit']);
             $hints[] = sprintf('Gratuit coș ≥ %s lei', $v);
         }
 
-        $limits = $data['weight_limits'] ?? $data['weightLimits'] ?? null;
-        if (is_array($limits)) {
-            $min_price = null;
-            foreach ($limits as $rule) {
-                if (!is_array($rule)) {
-                    continue;
+        // Fallback: prețuri din setările Packeta (salvate fără TVA).
+        if ($hints === [] || ($hints !== [] && $grid_key === null)) {
+            if (is_array($data)) {
+                $limits = $data['weight_limits'] ?? $data['weightLimits'] ?? null;
+                if (is_array($limits)) {
+                    $min_price = null;
+                    foreach ($limits as $rule) {
+                        if (!is_array($rule) || !isset($rule['price'])) {
+                            continue;
+                        }
+                        $p = (float) $rule['price'];
+                        if ($p >= 0 && ($min_price === null || $p < $min_price)) {
+                            $min_price = $p;
+                        }
+                    }
+                    if ($min_price !== null) {
+                        $hints[] = WebGSM_Packeta_Ro_Pricelist::format_price_hint($min_price);
+                    }
                 }
-                if (!isset($rule['price'])) {
-                    continue;
-                }
-                $p = (float) $rule['price'];
-                if ($p >= 0 && ($min_price === null || $p < $min_price)) {
-                    $min_price = $p;
-                }
-            }
-            if ($min_price !== null && function_exists('wc_price')) {
-                $hints[] = 'de la ' . wp_strip_all_tags(wc_price($min_price));
-            } elseif ($min_price !== null) {
-                $hints[] = 'de la ' . number_format($min_price, 2, ',', '') . ' lei';
             }
         }
 
@@ -150,7 +172,21 @@ class WebGSM_Packeta_Carriers {
     }
 
     /**
-     * Curieri HD internaționali disponibili mereu la AWB manual (nu depind de checkout WC).
+     * Ordine grupuri în dropdown AWB: RO → DE → FR → NL.
+     *
+     * @return array<string, int>
+     */
+    public static function destination_sort_order(): array {
+        return [
+            'RO' => 10,
+            'DE' => 20,
+            'FR' => 30,
+            'NL' => 40,
+        ];
+    }
+
+    /**
+     * Curieri HD din contract (RO + internațional) — mereu în AWB, indiferent de checkout WC.
      *
      * @return array<int, array{
      *   carrier_id: string,
@@ -165,37 +201,60 @@ class WebGSM_Packeta_Carriers {
      *   manual: bool
      * }>
      */
-    public static function get_manual_international_home_carriers(): array {
-        // Doar curieri HD din contractul Packeta RO (webgsm, listă 24.10.2026).
-        // Fără Italia — nu apare în listă. Fără DE DHL 39103 (invalid pe cont RO).
+    public static function get_manual_home_carriers(): array {
+        // HD din contract Packeta webgsm (24.10.2026). Fără Italia. Fără DE DHL 39103.
         $out = [
             [
-                'carrier_id' => '4329',
-                'title' => 'Olanda — NL Dutch Post HD (PostNL)',
-                'vendor' => ['carrierId' => '4329'],
+                'carrier_id' => '590',
+                'title' => 'RO Cargus HD',
+                'vendor' => ['carrierId' => '590'],
                 'is_pickup' => false,
-                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(57.00),
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(13.50, '0–3 kg'),
                 'wc_method_id' => '',
-                'destination_country' => 'NL',
-                'cod_allowed' => false,
-                'province_required' => false,
+                'destination_country' => 'RO',
+                'cod_allowed' => true,
+                'province_required' => true,
                 'manual' => true,
             ],
             [
-                'carrier_id' => '8000',
-                'title' => 'Olanda — NL DHL HD',
-                'vendor' => ['carrierId' => '8000'],
+                'carrier_id' => '762',
+                'title' => 'RO FAN Courier HD',
+                'vendor' => ['carrierId' => '762'],
                 'is_pickup' => false,
-                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(55.00),
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(14.00, '0–3 kg'),
                 'wc_method_id' => '',
-                'destination_country' => 'NL',
-                'cod_allowed' => false,
-                'province_required' => false,
+                'destination_country' => 'RO',
+                'cod_allowed' => true,
+                'province_required' => true,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '4161',
+                'title' => 'RO Packeta Home Delivery HD',
+                'vendor' => ['carrierId' => '4161'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(17.00, '0–1 kg'),
+                'wc_method_id' => '',
+                'destination_country' => 'RO',
+                'cod_allowed' => true,
+                'province_required' => true,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '7397',
+                'title' => 'RO Sameday HD',
+                'vendor' => ['carrierId' => '7397'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(17.85, '0–2 kg'),
+                'wc_method_id' => '',
+                'destination_country' => 'RO',
+                'cod_allowed' => true,
+                'province_required' => true,
                 'manual' => true,
             ],
             [
                 'carrier_id' => '13613',
-                'title' => 'Germania — DE Home Delivery HD',
+                'title' => 'DE Home Delivery HD',
                 'vendor' => ['carrierId' => '13613'],
                 'is_pickup' => false,
                 'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(32.00),
@@ -207,7 +266,7 @@ class WebGSM_Packeta_Carriers {
             ],
             [
                 'carrier_id' => '6373',
-                'title' => 'Germania — DE Hermes HD',
+                'title' => 'DE Hermes HD',
                 'vendor' => ['carrierId' => '6373'],
                 'is_pickup' => false,
                 'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(36.00),
@@ -219,7 +278,7 @@ class WebGSM_Packeta_Carriers {
             ],
             [
                 'carrier_id' => '16080',
-                'title' => 'Franța — FR Colis Privé HD',
+                'title' => 'FR Colis Privé HD',
                 'vendor' => ['carrierId' => '16080'],
                 'is_pickup' => false,
                 'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(46.00),
@@ -231,7 +290,7 @@ class WebGSM_Packeta_Carriers {
             ],
             [
                 'carrier_id' => '4309',
-                'title' => 'Franța — FR Colissimo HD',
+                'title' => 'FR Colissimo HD',
                 'vendor' => ['carrierId' => '4309'],
                 'is_pickup' => false,
                 'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(51.00),
@@ -241,35 +300,55 @@ class WebGSM_Packeta_Carriers {
                 'province_required' => false,
                 'manual' => true,
             ],
+            [
+                'carrier_id' => '8000',
+                'title' => 'NL DHL HD',
+                'vendor' => ['carrierId' => '8000'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(55.00),
+                'wc_method_id' => '',
+                'destination_country' => 'NL',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
+            [
+                'carrier_id' => '4329',
+                'title' => 'NL Dutch Post HD (PostNL)',
+                'vendor' => ['carrierId' => '4329'],
+                'is_pickup' => false,
+                'pricing_hint' => WebGSM_Packeta_Ro_Pricelist::format_price_hint(57.00),
+                'wc_method_id' => '',
+                'destination_country' => 'NL',
+                'cod_allowed' => false,
+                'province_required' => false,
+                'manual' => true,
+            ],
         ];
+
+        $out = apply_filters('webgsm_packeta_admin_manual_home_carriers', $out);
 
         return apply_filters('webgsm_packeta_admin_manual_international_home_carriers', $out);
     }
 
     /**
-     * Lista curieri HD pentru tab AWB: checkout RO + NL/DE/FR HD manual.
+     * @deprecated Folosește get_manual_home_carriers()
+     * @return array<int, array<string, mixed>>
+     */
+    public static function get_manual_international_home_carriers(): array {
+        return self::get_manual_home_carriers();
+    }
+
+    /**
+     * Lista curieri HD pentru tab AWB: contract RO/DE/FR/NL + eventual alții din checkout.
      *
      * @return array<int, array<string, mixed>>
      */
     public static function get_awb_home_carriers(): array {
         $home = [];
-        foreach (self::get_checkout_carriers() as $c) {
-            if (!empty($c['is_pickup'])) {
-                continue;
-            }
-            $c['destination_country'] = $c['destination_country'] ?? 'RO';
-            $c['cod_allowed'] = $c['cod_allowed'] ?? true;
-            $c['province_required'] = $c['province_required'] ?? true;
-            $c['manual'] = false;
-            $home[] = $c;
-        }
-
         $seen = [];
-        foreach ($home as $c) {
-            $seen[(string) ($c['carrier_id'] ?? '')] = true;
-        }
 
-        foreach (self::get_manual_international_home_carriers() as $c) {
+        foreach (self::get_manual_home_carriers() as $c) {
             if (!empty($c['is_pickup'])) {
                 continue;
             }
@@ -281,9 +360,39 @@ class WebGSM_Packeta_Carriers {
             $seen[$cid] = true;
         }
 
+        foreach (self::get_checkout_carriers() as $c) {
+            if (!empty($c['is_pickup'])) {
+                continue;
+            }
+            $cid = (string) ($c['carrier_id'] ?? '');
+            if ($cid === '' || isset($seen[$cid])) {
+                continue;
+            }
+            $dest = strtoupper((string) ($c['destination_country'] ?? 'RO'));
+            $title = (string) ($c['title'] ?? '');
+            if ($dest === 'RO' && $title !== '' && !preg_match('/^RO\b/i', $title)) {
+                $c['title'] = 'RO ' . $title;
+            }
+            $c['destination_country'] = $dest;
+            $c['cod_allowed'] = $c['cod_allowed'] ?? true;
+            $c['province_required'] = $c['province_required'] ?? true;
+            $c['manual'] = false;
+            $home[] = $c;
+            $seen[$cid] = true;
+        }
+
+        $order = self::destination_sort_order();
         usort(
             $home,
-            static function ($a, $b) {
+            static function ($a, $b) use ($order) {
+                $ca = strtoupper((string) ($a['destination_country'] ?? 'RO'));
+                $cb = strtoupper((string) ($b['destination_country'] ?? 'RO'));
+                $oa = $order[$ca] ?? 90;
+                $ob = $order[$cb] ?? 90;
+                if ($oa !== $ob) {
+                    return $oa <=> $ob;
+                }
+
                 return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
             }
         );
@@ -293,7 +402,7 @@ class WebGSM_Packeta_Carriers {
 
     public static function destination_country_for_carrier(string $carrier_id): string {
         $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
-        foreach (self::get_manual_international_home_carriers() as $c) {
+        foreach (self::get_manual_home_carriers() as $c) {
             if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
                 return strtoupper((string) ($c['destination_country'] ?? 'RO'));
             }
@@ -304,7 +413,7 @@ class WebGSM_Packeta_Carriers {
 
     public static function carrier_allows_cod(string $carrier_id): bool {
         $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
-        foreach (self::get_manual_international_home_carriers() as $c) {
+        foreach (self::get_manual_home_carriers() as $c) {
             if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
                 return !empty($c['cod_allowed']);
             }
@@ -315,7 +424,7 @@ class WebGSM_Packeta_Carriers {
 
     public static function carrier_requires_province(string $carrier_id): bool {
         $carrier_id = preg_replace('/\D/', '', $carrier_id) ?? '';
-        foreach (self::get_manual_international_home_carriers() as $c) {
+        foreach (self::get_manual_home_carriers() as $c) {
             if ((string) ($c['carrier_id'] ?? '') === $carrier_id) {
                 return !empty($c['province_required']);
             }

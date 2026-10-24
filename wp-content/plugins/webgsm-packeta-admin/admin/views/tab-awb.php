@@ -133,10 +133,11 @@ $awb_is_home = $awb_flow_current === 'home';
 
 <div id="webgsm_packeta_home_carrier_section" class="webgsm-packeta-card webgsm-packeta-home-carrier-card"<?php echo ($has_pickup && !$awb_is_home) ? ' hidden' : ''; ?>>
     <h2>2. Curier — livrare la adresă</h2>
-    <p class="webgsm-packeta-help">Curieri HD din contractul webgsm (listă 24.10.2026, prețuri fără TVA — în UI vezi și cu TVA):
-        <strong>NL</strong> PostNL 4329 / DHL 8000 ·
-        <strong>DE</strong> Home Delivery 13613 / Hermes 6373 ·
-        <strong>FR</strong> Colis Privé 16080 / Colissimo 4309.
+    <p class="webgsm-packeta-help">Curieri HD din contract (grupați RO → DE → FR → NL; preț cu + fără TVA):
+        <strong>RO</strong> Cargus 590 / FAN 762 / Packeta 4161 / Sameday 7397 ·
+        <strong>DE</strong> 13613 / Hermes 6373 ·
+        <strong>FR</strong> 16080 / 4309 ·
+        <strong>NL</strong> DHL 8000 / PostNL 4329.
         Italia: nu e pe contract.</p>
     <?php if ($has_home) : ?>
         <div class="webgsm-packeta-field webgsm-packeta-home-carrier-select-wrap">

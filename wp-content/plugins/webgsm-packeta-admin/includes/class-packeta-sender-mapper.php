@@ -20,6 +20,7 @@ class WebGSM_Packeta_Sender_Mapper {
             '762' => ' - FAN Courier',
             '32428' => ' - FAN Courier',
             '590' => ' - Cargus',
+            '4161' => '',
             // Internațional: același expeditor de bază (fără sufix RO).
             '4329' => '',
             '8000' => '',
