@@ -95,7 +95,11 @@ class WebGSM_Site_Audit_Repair {
         }
         $content = (string) file_get_contents($file);
         $marker = '# BEGIN WebGSM hardening';
-        if (strpos($content, $marker) !== false) {
+        if (
+            stripos($content, 'X-Frame-Options') !== false
+            || strpos($content, $marker) !== false
+            || strpos($content, '# BEGIN WebGSM Hardening') !== false
+        ) {
             return array('ok' => true, 'message' => 'Reguli WebGSM hardening — deja prezente în .htaccess.');
         }
 
